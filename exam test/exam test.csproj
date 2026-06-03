@@ -16,4 +16,10 @@
     <PackageReference Include="OpenAI" Version="2.10.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="credentials.json">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

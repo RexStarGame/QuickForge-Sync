@@ -39,18 +39,12 @@ namespace exam_test
                 FileAccess.Read
             );
 
-            string tokenFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "QuickForge",
-                "GoogleTokens"
-            );
-
             UserCredential credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                 GoogleClientSecrets.FromStream(stream).Secrets,
                 Scopes,
                 "user",
                 CancellationToken.None,
-                new FileDataStore(tokenFolder, true)
+                new FileDataStore(GetTokenFolderPath(), true)
             );
 
             DriveService service = new DriveService(new BaseClientService.Initializer
@@ -60,6 +54,40 @@ namespace exam_test
             });
 
             return service;
+        }
+
+        public static async Task<string> GetUserEmailAsync(DriveService driveService)
+        {
+            var request = driveService.About.Get();
+            request.Fields = "user";
+
+            var about = await request.ExecuteAsync();
+
+            if (about.User != null && !string.IsNullOrWhiteSpace(about.User.EmailAddress))
+            {
+                return about.User.EmailAddress;
+            }
+
+            return "Google account connected";
+        }
+
+        public static void Logout()
+        {
+            string tokenFolder = GetTokenFolderPath();
+
+            if (Directory.Exists(tokenFolder))
+            {
+                Directory.Delete(tokenFolder, true);
+            }
+        }
+
+        private static string GetTokenFolderPath()
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "QuickForge",
+                "GoogleTokens"
+            );
         }
     }
 }
