@@ -1,207 +1,237 @@
 using System;
-using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using System.Threading.Tasks;
 
 namespace exam_test
 {
     public partial class Form1 : Form
     {
-        private string axiom = "";
-        private Dictionary<char, string> rules = new Dictionary<char, string>();
+        private readonly System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer();
 
-        private float angle;
-        private float lineLength;
-        private int iterations;
+        private float time = 0f;
+
+        private const int TreeDepth = 9;
+        private const float BaseLength = 120f;
+        private const float BaseSpread = 28f;
+        private const float BranchMovement = 9f;
 
         public Form1()
         {
             InitializeComponent();
-            DoubleBuffered = true;
 
-            SetupKochSnowflake();
+            DoubleBuffered = true;
+            BackColor = Color.FromArgb(8, 10, 18);
+
+            SetStyle(
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.UserPaint |
+                ControlStyles.OptimizedDoubleBuffer,
+                true
+            );
+
+            animationTimer.Interval = 16;
+            animationTimer.Tick += AnimationTimer_Tick;
+            animationTimer.Start();
+
+            _ = TestGoogleLoginAsync();
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private void Form1_Load(object? sender, EventArgs e)
         {
-            // Empty method. It does not hurt to keep it here.
+            // Empty method, safe for Windows Forms Designer.
+        }
+
+        private void AnimationTimer_Tick(object? sender, EventArgs e)
+        {
+            time += 0.016f;
+
+            // Forces the form to redraw smoothly.
+            Invalidate();
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
 
-            string instructions = GenerateLSystem(axiom, rules, iterations);
+            Graphics g = e.Graphics;
 
-            TurtleState startState = new TurtleState
-            {
-                Position = new PointF(150, 400),
-                Angle = 0
-            };
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.CompositingQuality = CompositingQuality.HighQuality;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
 
-            Stack<TurtleState> savedStates = new Stack<TurtleState>();
+            DrawBackground(g);
 
-            DrawInstructionsRecursive(
-                e.Graphics,
-                instructions,
-                0,
-                ref startState,
-                savedStates
+            // Static tree base.
+            // The tree stays in the same place, but the branches move.
+            float startX = ClientSize.Width / 2f;
+            float startY = ClientSize.Height * 0.90f;
+
+            DrawOrganicBranchRecursive(
+                g,
+                startX,
+                startY,
+                BaseLength,
+                -90f,
+                TreeDepth
             );
         }
 
-        private void SetupKochCurve()
+        private void DrawBackground(Graphics g)
         {
-            axiom = "F";
-
-            rules = new Dictionary<char, string>
+            using (SolidBrush brush = new SolidBrush(Color.FromArgb(8, 10, 18)))
             {
-                { 'F', "F+F--F+F" }
-            };
-
-            angle = 60;
-            lineLength = 5;
-            iterations = 4;
-        }
-
-        private void SetupKochSnowflake()
-        {
-            axiom = "F--F--F";
-
-            rules = new Dictionary<char, string>
-            {
-                { 'F', "F+F--F+F" }
-            };
-
-            angle = 60;
-            lineLength = 4;
-            iterations = 4;
-        }
-
-        private void SetupSierpinskiArrowhead()
-        {
-            axiom = "F";
-
-            rules = new Dictionary<char, string>
-            {
-                { 'F', "G-F-G" },
-                { 'G', "F+G+F" }
-            };
-
-            angle = 60;
-            lineLength = 6;
-            iterations = 5;
-        }
-
-        private void SetupPlant()
-        {
-            axiom = "X";
-
-            rules = new Dictionary<char, string>
-            {
-                { 'F', "FF" },
-                { 'X', "-F[+F][--X]+F+F[++++X]-X" }
-            };
-
-            angle = 10;
-            lineLength = 5;
-            iterations = 4;
-        }
-
-        private string GenerateLSystem(string current, Dictionary<char, string> rules, int remainingIterations)
-        {
-            if (remainingIterations <= 0)
-            {
-                return current;
+                g.FillRectangle(brush, ClientRectangle);
             }
 
-            string next = ApplyRulesRecursive(current, rules);
+            // Dynamic background circles.
+            DrawSoftCircle(
+                g,
+                ClientSize.Width * 0.25f + (float)Math.Sin(time * 0.35f) * 25f,
+                ClientSize.Height * 0.35f + (float)Math.Cos(time * 0.25f) * 18f,
+                170f,
+                20,
+                0.2f
+            );
 
-            return GenerateLSystem(next, rules, remainingIterations - 1);
+            DrawSoftCircle(
+                g,
+                ClientSize.Width * 0.75f + (float)Math.Sin(time * 0.22f + 2f) * 30f,
+                ClientSize.Height * 0.45f + (float)Math.Cos(time * 0.30f + 1f) * 22f,
+                220f,
+                14,
+                1.4f
+            );
+
+            DrawSoftCircle(
+                g,
+                ClientSize.Width * 0.50f + (float)Math.Sin(time * 0.18f + 4f) * 20f,
+                ClientSize.Height * 0.70f + (float)Math.Cos(time * 0.20f + 3f) * 16f,
+                260f,
+                12,
+                2.8f
+            );
         }
 
-        private string ApplyRulesRecursive(string input, Dictionary<char, string> rules, int index = 0)
-        {
-            if (index >= input.Length)
-            {
-                return "";
-            }
-
-            char currentChar = input[index];
-
-            string replacement;
-
-            if (rules.TryGetValue(currentChar, out string? ruleReplacement))
-            {
-                replacement = ruleReplacement;
-            }
-            else
-            {
-                replacement = currentChar.ToString();
-            }
-
-            return replacement + ApplyRulesRecursive(input, rules, index + 1);
-        }
-
-        private void DrawInstructionsRecursive(
+        private void DrawSoftCircle(
             Graphics g,
-            string instructions,
-            int index,
-            ref TurtleState state,
-            Stack<TurtleState> savedStates)
+            float x,
+            float y,
+            float radius,
+            int alpha,
+            float phase)
         {
-            if (index >= instructions.Length)
+            float pulse = (float)Math.Sin(time * 0.8f + phase) * 18f;
+            float finalRadius = radius + pulse;
+
+            RectangleF rect = new RectangleF(
+                x - finalRadius / 2f,
+                y - finalRadius / 2f,
+                finalRadius,
+                finalRadius
+            );
+
+            using (SolidBrush brush = new SolidBrush(Color.FromArgb(alpha, 80, 120, 255)))
+            {
+                g.FillEllipse(brush, rect);
+            }
+        }
+        private async Task TestGoogleLoginAsync()
+        {
+            try
+            {
+                var driveService = await GoogleAuthService.LoginAsync();
+
+                MessageBox.Show("Google login virker. Drive service er klar.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Google login fejl: " + ex.Message);
+            }
+        }
+        private void DrawOrganicBranchRecursive(
+            Graphics g,
+            float x,
+            float y,
+            float length,
+            float angle,
+            int currentDepth)
+        {
+            if (currentDepth <= 0 || length < 2f)
             {
                 return;
             }
 
-            char command = instructions[index];
+            // This makes the trunk almost static.
+            // The smaller branches move more than the big main branch.
+            float branchLevel = (TreeDepth - currentDepth) / (float)TreeDepth;
 
-            if (command == 'F' || command == 'G')
+            float wave =
+                (float)Math.Sin(time * 1.6f + currentDepth * 0.75f) *
+                BranchMovement *
+                branchLevel;
+
+            float animatedAngle = angle + wave;
+
+            float radians = animatedAngle * (float)Math.PI / 180f;
+
+            float endX = x + length * (float)Math.Cos(radians);
+            float endY = y + length * (float)Math.Sin(radians);
+
+            int alpha = Math.Min(230, 45 + currentDepth * 22);
+            int red = Math.Min(255, 80 + currentDepth * 12);
+            int green = Math.Min(255, 135 + currentDepth * 8);
+            int blue = 220;
+
+            float thickness = Math.Max(1f, currentDepth * 0.5f);
+
+            using (Pen pen = new Pen(Color.FromArgb(alpha, red, green, blue), thickness))
             {
-                DrawForward(g, ref state);
-            }
-            else if (command == '+')
-            {
-                state.Angle += angle;
-            }
-            else if (command == '-')
-            {
-                state.Angle -= angle;
-            }
-            else if (command == '[')
-            {
-                savedStates.Push(state);
-            }
-            else if (command == ']')
-            {
-                if (savedStates.Count > 0)
-                {
-                    state = savedStates.Pop();
-                }
+                pen.StartCap = LineCap.Round;
+                pen.EndCap = LineCap.Round;
+
+                g.DrawLine(pen, x, y, endX, endY);
             }
 
-            DrawInstructionsRecursive(g, instructions, index + 1, ref state, savedStates);
+            float nextLength = length * 0.73f;
+
+            // Static spread with a small smooth movement.
+            // This makes the branches feel alive without moving the whole tree.
+            float spreadMovement = (float)Math.Sin(time * 1.2f + currentDepth) * 4f * branchLevel;
+            float nextSpread = BaseSpread + spreadMovement;
+
+            DrawOrganicBranchRecursive(
+                g,
+                endX,
+                endY,
+                nextLength,
+                animatedAngle - nextSpread,
+                currentDepth - 1
+            );
+
+            DrawOrganicBranchRecursive(
+                g,
+                endX,
+                endY,
+                nextLength,
+                animatedAngle + nextSpread,
+                currentDepth - 1
+            );
+
+            // Small middle branch on every second level.
+            // This keeps the shape simple but prettier.
+            if (currentDepth % 2 == 0)
+            {
+                DrawOrganicBranchRecursive(
+                    g,
+                    endX,
+                    endY,
+                    nextLength * 0.62f,
+                    animatedAngle,
+                    currentDepth - 2
+                );
+            }
         }
-
-        private void DrawForward(Graphics g, ref TurtleState state)
-        {
-            float radians = state.Angle * (float)Math.PI / 180;
-
-            float newX = state.Position.X + lineLength * (float)Math.Cos(radians);
-            float newY = state.Position.Y + lineLength * (float)Math.Sin(radians);
-
-            PointF newPosition = new PointF(newX, newY);
-
-            g.DrawLine(Pens.Black, state.Position, newPosition);
-
-            state.Position = newPosition;
-        }
-    }
-
-    public struct TurtleState
-    {
-        public PointF Position;
-        public float Angle;
     }
 }

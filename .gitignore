@@ -1,0 +1,15 @@
+
+# Visual Studio local files
+.vs/
+*.user
+
+# Build output
+bin/
+obj/
+
+# Secrets and tokens
+credentials.json
+client_secret*.json
+token.json
+tokens/
+GoogleTokens/
