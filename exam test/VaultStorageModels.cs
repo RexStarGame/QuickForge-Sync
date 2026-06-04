@@ -9,13 +9,13 @@ namespace exam_test
         public VaultSettings Settings { get; set; } = new VaultSettings();
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
-
     public class VaultSettings
     {
-        // 0 = never, 30 = every 30 days, 90 = every 90 days
         public int RecoveryKeyReminderDays { get; set; } = 0;
-
         public DateTime LastRecoveryKeyRotatedAt { get; set; } = DateTime.UtcNow;
+
+        public bool BackgroundAnimationEnabled { get; set; } = true;
+        public int AutoLockMinutes { get; set; } = 10;
     }
 
     public class EncryptedVaultFile

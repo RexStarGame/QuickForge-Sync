@@ -18,6 +18,7 @@ namespace exam_test
 
         private readonly System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer();
         private readonly System.Windows.Forms.Timer hideRevealTimer = new System.Windows.Forms.Timer();
+        private readonly System.Windows.Forms.Timer autoLockTimer = new System.Windows.Forms.Timer();
 
         private float time = 0f;
 
@@ -137,6 +138,13 @@ namespace exam_test
         private readonly Label recoveryReminderLabel = new Label();
         private readonly ComboBox recoveryReminderComboBox = new ComboBox();
         private readonly Button rotateRecoveryKeyButton = new Button();
+
+        private readonly Label performanceSettingsLabel = new Label();
+        private readonly CheckBox animationEnabledCheckBox = new CheckBox();
+        private readonly Label autoLockLabel = new Label();
+        private readonly ComboBox autoLockComboBox = new ComboBox();
+
+        private DateTime lastVaultActivityUtc = DateTime.UtcNow;
         // Colors
         private readonly Color backgroundColor = Color.FromArgb(8, 10, 18);
         private readonly Color panelColor = Color.FromArgb(18, 22, 36);
@@ -183,6 +191,10 @@ namespace exam_test
 
             hideRevealTimer.Interval = 15000;
             hideRevealTimer.Tick += HideRevealTimer_Tick;
+
+            autoLockTimer.Interval = 30000;
+            autoLockTimer.Tick += AutoLockTimer_Tick;
+            autoLockTimer.Start();
         }
 
         private void Form1_Load(object? sender, EventArgs e)
@@ -769,6 +781,100 @@ namespace exam_test
             vaultPanel.Controls.Add(recoveryReminderComboBox);
             vaultPanel.Controls.Add(rotateRecoveryKeyButton);
 
+            performanceSettingsLabel.Text = "Performance & safety";
+            performanceSettingsLabel.Left = 20;
+            performanceSettingsLabel.Top = 445;
+            performanceSettingsLabel.Width = 200;
+            performanceSettingsLabel.Height = 22;
+            performanceSettingsLabel.ForeColor = Color.White;
+            performanceSettingsLabel.BackColor = Color.Transparent;
+            performanceSettingsLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+            animationEnabledCheckBox.Text = "Background animation";
+            animationEnabledCheckBox.Left = 20;
+            animationEnabledCheckBox.Top = 475;
+            animationEnabledCheckBox.Width = 220;
+            animationEnabledCheckBox.Height = 24;
+            animationEnabledCheckBox.Checked = true;
+            animationEnabledCheckBox.ForeColor = softTextColor;
+            animationEnabledCheckBox.BackColor = Color.Transparent;
+            animationEnabledCheckBox.CheckedChanged += async (s, e) =>
+            {
+                currentVaultSettings.BackgroundAnimationEnabled = animationEnabledCheckBox.Checked;
+                UpdateAnimationState();
+
+                if (isVaultUnlocked)
+                {
+                    try
+                    {
+                        await SaveCurrentVaultToCloudAsync();
+                    }
+                    catch
+                    {
+                        // Ignore settings sync errors here.
+                    }
+                }
+            };
+
+            autoLockLabel.Text = "Lock after:";
+            autoLockLabel.Left = 20;
+            autoLockLabel.Top = 510;
+            autoLockLabel.Width = 75;
+            autoLockLabel.Height = 24;
+            autoLockLabel.ForeColor = softTextColor;
+            autoLockLabel.BackColor = Color.Transparent;
+            autoLockLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+
+            autoLockComboBox.Left = 95;
+            autoLockComboBox.Top = 507;
+            autoLockComboBox.Width = 130;
+            autoLockComboBox.Height = 28;
+            autoLockComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            autoLockComboBox.Items.Add("Never");
+            autoLockComboBox.Items.Add("5 minutes");
+            autoLockComboBox.Items.Add("10 minutes");
+            autoLockComboBox.Items.Add("30 minutes");
+            autoLockComboBox.SelectedIndex = 2;
+            autoLockComboBox.SelectionChangeCommitted += async (s, e) =>
+            {
+                if (autoLockComboBox.SelectedIndex == 1)
+                {
+                    currentVaultSettings.AutoLockMinutes = 5;
+                }
+                else if (autoLockComboBox.SelectedIndex == 2)
+                {
+                    currentVaultSettings.AutoLockMinutes = 10;
+                }
+                else if (autoLockComboBox.SelectedIndex == 3)
+                {
+                    currentVaultSettings.AutoLockMinutes = 30;
+                }
+                else
+                {
+                    currentVaultSettings.AutoLockMinutes = 0;
+                }
+
+                MarkVaultActivity();
+
+                if (isVaultUnlocked)
+                {
+                    try
+                    {
+                        await SaveCurrentVaultToCloudAsync();
+                        selectedPreviewLabel.Text = "Performance setting saved.";
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Could not save performance setting: " + ex.Message);
+                    }
+                }
+            };
+
+            vaultPanel.Controls.Add(performanceSettingsLabel);
+            vaultPanel.Controls.Add(animationEnabledCheckBox);
+            vaultPanel.Controls.Add(autoLockLabel);
+            vaultPanel.Controls.Add(autoLockComboBox);
+
             openSiteButton.Text = "Open site";
             openSiteButton.Left = 315;
             openSiteButton.Top = 372;
@@ -1067,24 +1173,7 @@ namespace exam_test
         }
         private void LockVaultButton_Click(object? sender, EventArgs e)
         {
-            isVaultUnlocked = false;
-            ClearSecretAccessWindow();
-            currentDataKey = null;
-            currentEncryptedVaultFile = null;
-
-            vaultCode = "";
-            currentDataKey = null;
-            currentEncryptedVaultFile = null;
-
-            vaultEntries.Clear();
-            RefreshVaultList();
-            ClearEntryInputs();
-            SetEntryEditMode(false);
-
-            selectedPreviewLabel.Text = "Vault locked.";
-
-            ConfigureVaultAccessForUnlock();
-            ShowVaultAccessUi();
+            LockVaultForSafety("Vault locked.");
         }
         private async void ChangeVaultCodeButton_Click(object? sender, EventArgs e)
         {
@@ -1204,6 +1293,8 @@ namespace exam_test
             isVaultUnlocked = true;
 
             ApplyRecoverySettingsToUi();
+            ApplyPerformanceSettingsToUi();
+            MarkVaultActivity();
             CheckRecoveryKeyReminder();
 
             loginCard.Visible = false;
@@ -2556,6 +2647,113 @@ namespace exam_test
                 Percent = percent;
                 Color = color;
             }
+        }
+        private void MarkVaultActivity()
+        {
+            lastVaultActivityUtc = DateTime.UtcNow;
+        }
+
+        private void ApplyPerformanceSettingsToUi()
+        {
+            animationEnabledCheckBox.Checked = currentVaultSettings.BackgroundAnimationEnabled;
+
+            if (currentVaultSettings.AutoLockMinutes == 5)
+            {
+                autoLockComboBox.SelectedIndex = 1;
+            }
+            else if (currentVaultSettings.AutoLockMinutes == 10)
+            {
+                autoLockComboBox.SelectedIndex = 2;
+            }
+            else if (currentVaultSettings.AutoLockMinutes == 30)
+            {
+                autoLockComboBox.SelectedIndex = 3;
+            }
+            else
+            {
+                autoLockComboBox.SelectedIndex = 0;
+            }
+
+            UpdateAnimationState();
+        }
+
+        private void UpdateAnimationState()
+        {
+            bool shouldAnimate =
+                animationEnabledCheckBox.Checked &&
+                Visible &&
+                WindowState != FormWindowState.Minimized;
+
+            if (shouldAnimate)
+            {
+                if (!animationTimer.Enabled)
+                {
+                    animationTimer.Start();
+                }
+            }
+            else
+            {
+                if (animationTimer.Enabled)
+                {
+                    animationTimer.Stop();
+                }
+            }
+        }
+
+        private void AutoLockTimer_Tick(object? sender, EventArgs e)
+        {
+            if (!isVaultUnlocked)
+            {
+                return;
+            }
+
+            int minutes = currentVaultSettings.AutoLockMinutes;
+
+            if (minutes <= 0)
+            {
+                return;
+            }
+
+            double idleMinutes = (DateTime.UtcNow - lastVaultActivityUtc).TotalMinutes;
+
+            if (idleMinutes >= minutes)
+            {
+                LockVaultForSafety("Vault locked for safety.");
+            }
+        }
+
+        private void LockVaultForSafety(string message)
+        {
+            quickFillForm?.Hide();
+
+            isVaultUnlocked = false;
+            ClearSecretAccessWindow();
+
+            vaultCode = "";
+            currentDataKey = null;
+            currentEncryptedVaultFile = null;
+
+            vaultEntries.Clear();
+            RefreshVaultList();
+            ClearEntryInputs();
+            SetEntryEditMode(false);
+
+            selectedPreviewLabel.Text = message;
+
+            try
+            {
+                if (Clipboard.ContainsText())
+                {
+                    Clipboard.Clear();
+                }
+            }
+            catch
+            {
+                // Ignore clipboard errors.
+            }
+
+            ConfigureVaultAccessForUnlock();
+            ShowVaultAccessUi();
         }
         private void ShowQuickFill()
         {
