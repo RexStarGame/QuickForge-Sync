@@ -1,15 +1,12 @@
+﻿# Local backup files
+*.bak
+*.bak2
 
-# Visual Studio local files
+# Visual Studio / build output
 .vs/
-*.user
-
-# Build output
 bin/
 obj/
 
-# Secrets and tokens
+# Local secrets
 credentials.json
-client_secret*.json
-token.json
-tokens/
-GoogleTokens/
+**/credentials.json
