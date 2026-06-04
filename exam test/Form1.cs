@@ -2624,6 +2624,114 @@ namespace exam_test
                 }
             }
         }
+        private bool ShowImportBackupPreviewDialog(VaultData importedVaultData)
+        {
+            bool confirmed = false;
+
+            int totalEntries = importedVaultData.Entries.Count;
+            int favoriteEntries = importedVaultData.Entries.Count(entry => entry.IsFavorite);
+            int missingWebsiteLinks = importedVaultData.Entries.Count(entry =>
+                string.IsNullOrWhiteSpace(entry.Website)
+            );
+
+            string updatedText = importedVaultData.UpdatedAt == DateTime.MinValue
+                ? "Unknown"
+                : importedVaultData.UpdatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 560;
+                dialog.Height = 365;
+                dialog.Text = "Import encrypted backup";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Encrypted backup verified";
+                titleLabel.Left = 22;
+                titleLabel.Top = 18;
+                titleLabel.Width = 500;
+                titleLabel.Height = 28;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+
+                Label summaryLabel = new Label();
+                summaryLabel.Text =
+                    "This backup contains:" + Environment.NewLine + Environment.NewLine +
+                    "Saved entries: " + totalEntries + Environment.NewLine +
+                    "Favorites: " + favoriteEntries + Environment.NewLine +
+                    "Missing website links: " + missingWebsiteLinks + Environment.NewLine +
+                    "Last updated: " + updatedText;
+                summaryLabel.Left = 22;
+                summaryLabel.Top = 58;
+                summaryLabel.Width = 500;
+                summaryLabel.Height = 120;
+                summaryLabel.ForeColor = softTextColor;
+                summaryLabel.BackColor = Color.Transparent;
+                summaryLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Label warningLabel = new Label();
+                warningLabel.Text =
+                    "Importing this backup will replace your current cloud vault after upload." +
+                    Environment.NewLine +
+                    "Cancel now if this is not the backup you expected.";
+                warningLabel.Left = 22;
+                warningLabel.Top = 190;
+                warningLabel.Width = 500;
+                warningLabel.Height = 55;
+                warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                warningLabel.BackColor = Color.Transparent;
+                warningLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 285;
+                cancelButton.Top = 275;
+                cancelButton.Width = 95;
+                cancelButton.Height = 34;
+                cancelButton.DialogResult = DialogResult.Cancel;
+                StyleActionButton(cancelButton);
+
+                Button importButton = new Button();
+                importButton.Text = "Import and replace vault";
+                importButton.Left = 395;
+                importButton.Top = 275;
+                importButton.Width = 135;
+                importButton.Height = 34;
+                StyleActionButton(importButton, true);
+
+                importButton.Click += (s, e) =>
+                {
+                    confirmed = true;
+                    dialog.DialogResult = DialogResult.OK;
+                    dialog.Close();
+                };
+
+                cancelButton.Click += (s, e) =>
+                {
+                    confirmed = false;
+                    dialog.DialogResult = DialogResult.Cancel;
+                    dialog.Close();
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(summaryLabel);
+                dialog.Controls.Add(warningLabel);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(importButton);
+
+                dialog.AcceptButton = importButton;
+                dialog.CancelButton = cancelButton;
+
+                dialog.ShowDialog(this);
+            }
+
+            return confirmed;
+        }
         private void ShowSecurityCenterDialog()
         {
             int totalEntries = vaultEntries.Count;
@@ -4394,5 +4502,6 @@ namespace exam_test
         }
     }
 }
+
 
 
