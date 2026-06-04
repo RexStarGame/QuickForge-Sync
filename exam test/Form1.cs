@@ -1340,7 +1340,10 @@ namespace exam_test
                 MessageBox.Show("Fill in at least one field before saving.");
                 return;
             }
-
+            if (!HandleDuplicatePasswordBeforeSave(secret, null))
+            {
+                return;
+            }
             VaultEntry entry = new VaultEntry
             {
                 Platform = platform,
@@ -1420,7 +1423,10 @@ namespace exam_test
                 MessageBox.Show("Fill in at least one field before saving changes.");
                 return;
             }
-
+            if (!HandleDuplicatePasswordBeforeSave(secret, editingEntry))
+            {
+                return;
+            }
             editingEntry.Platform = platform;
             editingEntry.Username = username;
             editingEntry.Secret = secret;
@@ -2326,10 +2332,151 @@ namespace exam_test
 
             return "********";
         }
+        private VaultEntry? FindDuplicateSecret(string secret, VaultEntry? ignoredEntry)
+        {
+            if (string.IsNullOrWhiteSpace(secret))
+            {
+                return null;
+            }
+
+            return vaultEntries.FirstOrDefault(entry =>
+                entry != ignoredEntry &&
+                !string.IsNullOrWhiteSpace(entry.Secret) &&
+                entry.Secret == secret
+            );
+        }
+
+        private bool HandleDuplicatePasswordBeforeSave(string secret, VaultEntry? ignoredEntry)
+        {
+            VaultEntry? duplicateEntry = FindDuplicateSecret(secret, ignoredEntry);
+
+            if (duplicateEntry == null)
+            {
+                return true;
+            }
+
+            DuplicatePasswordChoice choice = ShowDuplicatePasswordDialog(duplicateEntry);
+
+            if (choice == DuplicatePasswordChoice.SaveAnyway)
+            {
+                return true;
+            }
+
+            if (choice == DuplicatePasswordChoice.GenerateNewPassword)
+            {
+                string newPassword = GenerateUniquePassword("Strong");
+                secretTextBox.Text = newPassword;
+
+                selectedPreviewLabel.Text =
+                    "Generated a new password. Review it, then click save again.";
+
+                return false;
+            }
+
+            selectedPreviewLabel.Text = "Save cancelled.";
+            return false;
+        }
+
+        private DuplicatePasswordChoice ShowDuplicatePasswordDialog(VaultEntry duplicateEntry)
+        {
+            DuplicatePasswordChoice choice = DuplicatePasswordChoice.Cancel;
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 470;
+                dialog.Height = 250;
+                dialog.Text = "Password already used";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "This password is already used";
+                titleLabel.Left = 20;
+                titleLabel.Top = 18;
+                titleLabel.Width = 410;
+                titleLabel.Height = 28;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+
+                Label messageLabel = new Label();
+                messageLabel.Text =
+                    "This password is already used for:\n\n" +
+                    duplicateEntry.GetDisplayName() +
+                    "\n\nUsing the same password twice is risky.";
+                messageLabel.Left = 20;
+                messageLabel.Top = 55;
+                messageLabel.Width = 410;
+                messageLabel.Height = 90;
+                messageLabel.ForeColor = softTextColor;
+                messageLabel.BackColor = Color.Transparent;
+
+                Button saveAnywayButton = new Button();
+                saveAnywayButton.Text = "Save anyway";
+                saveAnywayButton.Left = 20;
+                saveAnywayButton.Top = 160;
+                saveAnywayButton.Width = 115;
+                saveAnywayButton.Height = 34;
+                StyleActionButton(saveAnywayButton);
+
+                Button generateButton = new Button();
+                generateButton.Text = "Generate new";
+                generateButton.Left = 150;
+                generateButton.Top = 160;
+                generateButton.Width = 125;
+                generateButton.Height = 34;
+                StyleActionButton(generateButton, true);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 290;
+                cancelButton.Top = 160;
+                cancelButton.Width = 100;
+                cancelButton.Height = 34;
+                StyleActionButton(cancelButton);
+
+                saveAnywayButton.Click += (s, e) =>
+                {
+                    choice = DuplicatePasswordChoice.SaveAnyway;
+                    dialog.Close();
+                };
+
+                generateButton.Click += (s, e) =>
+                {
+                    choice = DuplicatePasswordChoice.GenerateNewPassword;
+                    dialog.Close();
+                };
+
+                cancelButton.Click += (s, e) =>
+                {
+                    choice = DuplicatePasswordChoice.Cancel;
+                    dialog.Close();
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(messageLabel);
+                dialog.Controls.Add(saveAnywayButton);
+                dialog.Controls.Add(generateButton);
+                dialog.Controls.Add(cancelButton);
+
+                dialog.ShowDialog(this);
+            }
+
+            return choice;
+        }
         private enum PasswordGeneratorTarget
         {
             VaultField,
             QuickFill
+        }
+        private enum DuplicatePasswordChoice
+        {
+            Cancel,
+            SaveAnyway,
+            GenerateNewPassword
         }
         private async Task FillGeneratedPasswordAsync(string password)
         {
