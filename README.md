@@ -66,13 +66,11 @@ These backups are still encrypted. They require your vault code or recovery key 
 
 ## Screenshots
 
-Screenshots will be added here:
+### Main Vault
 
-- Main vault
-- QuickFill
-- Security Center
-- Encrypted backup dialog
+![Main vault](docs/screenshots/main-vault.png)
 
+More screenshots will be added later.
 ## Project Status
 
 This is an active student/prototype project.
@@ -87,3 +85,4 @@ Current focus:
 ## Disclaimer
 
 QuickForge Sync is a learning and prototype project. Do not rely on it as your only password manager until the code has been reviewed and tested properly.
+
