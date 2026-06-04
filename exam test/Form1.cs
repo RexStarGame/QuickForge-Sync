@@ -102,6 +102,9 @@ namespace exam_test
 
         private readonly Label secretLabel = new Label();
         private readonly TextBox secretTextBox = new TextBox();
+        private readonly Label passwordStrengthLabel = new Label();
+        private readonly Panel passwordStrengthTrack = new Panel();
+        private readonly Panel passwordStrengthFill = new Panel();
         private readonly Label websiteLabel = new Label();
         private readonly TextBox websiteTextBox = new TextBox();
         private readonly Label noteLabel = new Label();
@@ -483,6 +486,32 @@ namespace exam_test
             secretTextBox.PlaceholderText = "Optional password or code";
             secretTextBox.UseSystemPasswordChar = true;
 
+            passwordStrengthLabel.Text = "Strength: Not checked yet";
+            passwordStrengthLabel.Left = 20;
+            passwordStrengthLabel.Top = 244;
+            passwordStrengthLabel.Width = 250;
+            passwordStrengthLabel.Height = 20;
+            passwordStrengthLabel.ForeColor = softTextColor;
+            passwordStrengthLabel.BackColor = Color.Transparent;
+            passwordStrengthLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+            passwordStrengthTrack.Left = 20;
+            passwordStrengthTrack.Top = 266;
+            passwordStrengthTrack.Width = 250;
+            passwordStrengthTrack.Height = 7;
+            passwordStrengthTrack.BackColor = Color.FromArgb(35, 40, 60);
+
+            passwordStrengthFill.Left = 0;
+            passwordStrengthFill.Top = 0;
+            passwordStrengthFill.Width = 0;
+            passwordStrengthFill.Height = 7;
+            passwordStrengthFill.BackColor = softTextColor;
+
+            passwordStrengthTrack.Controls.Add(passwordStrengthFill);
+
+            secretTextBox.TextChanged += (s, e) => UpdatePasswordStrengthPreview();
+            platformTextBox.TextChanged += (s, e) => UpdatePasswordStrengthPreview();
+
             createPasswordButton.Text = "Generate";
             createPasswordButton.Left = 195;
             createPasswordButton.Top = 212;
@@ -501,10 +530,10 @@ namespace exam_test
             websiteLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             websiteLabel.AutoSize = true;
             websiteLabel.Left = 20;
-            websiteLabel.Top = 244;
+            websiteLabel.Top = 286;
 
             websiteTextBox.Left = 20;
-            websiteTextBox.Top = 266;
+            websiteTextBox.Top = 308;
             websiteTextBox.Width = 250;
             websiteTextBox.Height = 26;
             websiteTextBox.PlaceholderText = "Example: https://accounts.google.com";
@@ -514,17 +543,17 @@ namespace exam_test
             noteLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             noteLabel.AutoSize = true;
             noteLabel.Left = 20;
-            noteLabel.Top = 298;
+            noteLabel.Top = 340;
 
             noteTextBox.Left = 20;
-            noteTextBox.Top = 320;
+            noteTextBox.Top = 362;
             noteTextBox.Width = 250;
             noteTextBox.Height = 26;
             noteTextBox.PlaceholderText = "Optional note";
 
             saveEntryButton.Text = "Save entry";
             saveEntryButton.Left = 20;
-            saveEntryButton.Top = 356;
+            saveEntryButton.Top = 398;
             saveEntryButton.Width = 95;
             saveEntryButton.Height = 28;
             saveEntryButton.FlatStyle = FlatStyle.Flat;
@@ -535,7 +564,7 @@ namespace exam_test
 
             clearButton.Text = "Clear";
             clearButton.Left = 125;
-            clearButton.Top = 356;
+            clearButton.Top = 398;
             clearButton.Width = 80;
             clearButton.Height = 28;
             clearButton.FlatStyle = FlatStyle.Flat;
@@ -647,6 +676,8 @@ namespace exam_test
             vaultPanel.Controls.Add(secretLabel);
             vaultPanel.Controls.Add(secretTextBox);
             vaultPanel.Controls.Add(createPasswordButton);
+            vaultPanel.Controls.Add(passwordStrengthLabel);
+            vaultPanel.Controls.Add(passwordStrengthTrack);
 
             vaultPanel.Controls.Add(websiteLabel);
             vaultPanel.Controls.Add(websiteTextBox);
@@ -1132,6 +1163,7 @@ namespace exam_test
                 accountStatusLabel.ForeColor = softTextColor;
                 logoutButton.Enabled = false;
                 isVaultUnlocked = false;
+                ClearSecretAccessWindow();
                 currentDataKey = null;
                 currentEncryptedVaultFile = null;
                 currentVaultSettings = new VaultSettings();
@@ -2363,6 +2395,166 @@ namespace exam_test
                 button.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
                 button.FlatAppearance.MouseOverBackColor = Color.FromArgb(45, 52, 75);
                 button.FlatAppearance.MouseDownBackColor = Color.FromArgb(25, 30, 48);
+            }
+        }
+        private void UpdatePasswordStrengthPreview()
+        {
+            string password = secretTextBox.Text;
+            string platform = platformTextBox.Text;
+
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                passwordStrengthLabel.Text = "Strength: Not checked yet";
+                passwordStrengthLabel.ForeColor = softTextColor;
+                passwordStrengthFill.Width = 0;
+                passwordStrengthFill.BackColor = softTextColor;
+                return;
+            }
+
+            PasswordStrengthResult result = CheckPasswordStrength(password, platform);
+
+            passwordStrengthLabel.Text = "Strength: " + result.Title + " — " + result.Hint;
+            passwordStrengthLabel.ForeColor = result.Color;
+            passwordStrengthFill.BackColor = result.Color;
+
+            int maxWidth = passwordStrengthTrack.Width;
+            passwordStrengthFill.Width = Math.Max(8, (int)(maxWidth * (result.Percent / 100.0)));
+        }
+
+        private PasswordStrengthResult CheckPasswordStrength(string password, string platform)
+        {
+            bool alreadyUsed = vaultEntries.Any(entry =>
+                entry != editingEntry &&
+                !string.IsNullOrWhiteSpace(entry.Secret) &&
+                entry.Secret == password
+            );
+
+            if (alreadyUsed)
+            {
+                return new PasswordStrengthResult(
+                    "Risky",
+                    "already used",
+                    20,
+                    dangerColor
+                );
+            }
+
+            if (!string.IsNullOrWhiteSpace(platform) &&
+                password.Contains(platform, StringComparison.OrdinalIgnoreCase))
+            {
+                return new PasswordStrengthResult(
+                    "Risky",
+                    "avoid service name",
+                    25,
+                    dangerColor
+                );
+            }
+
+            int score = 0;
+
+            if (password.Length >= 20)
+            {
+                score += 4;
+            }
+            else if (password.Length >= 16)
+            {
+                score += 3;
+            }
+            else if (password.Length >= 12)
+            {
+                score += 2;
+            }
+            else if (password.Length >= 8)
+            {
+                score += 1;
+            }
+
+            bool hasLower = password.Any(char.IsLower);
+            bool hasUpper = password.Any(char.IsUpper);
+            bool hasDigit = password.Any(char.IsDigit);
+            bool hasSymbol = password.Any(ch => !char.IsLetterOrDigit(ch));
+
+            if (hasLower) score++;
+            if (hasUpper) score++;
+            if (hasDigit) score++;
+            if (hasSymbol) score++;
+
+            if (password.Length < 8)
+            {
+                return new PasswordStrengthResult(
+                    "Weak",
+                    "add more characters",
+                    20,
+                    dangerColor
+                );
+            }
+
+            if (score <= 3)
+            {
+                string hint = "add numbers or symbols";
+
+                if (!hasUpper)
+                {
+                    hint = "add uppercase";
+                }
+                else if (!hasDigit)
+                {
+                    hint = "add a number";
+                }
+                else if (!hasSymbol)
+                {
+                    hint = "add a symbol";
+                }
+
+                return new PasswordStrengthResult(
+                    "Weak",
+                    hint,
+                    30,
+                    dangerColor
+                );
+            }
+
+            if (score <= 5)
+            {
+                return new PasswordStrengthResult(
+                    "Okay",
+                    "can be stronger",
+                    55,
+                    Color.FromArgb(255, 190, 90)
+                );
+            }
+
+            if (score <= 6)
+            {
+                return new PasswordStrengthResult(
+                    "Strong",
+                    "good password",
+                    78,
+                    Color.FromArgb(120, 210, 255)
+                );
+            }
+
+            return new PasswordStrengthResult(
+                "Very strong",
+                "ready to save",
+                100,
+                successColor
+            );
+        }
+
+        private class PasswordStrengthResult
+        {
+            public string Title { get; }
+            public string Hint { get; }
+            public int Percent { get; }
+            public Color Color { get; }
+
+            public PasswordStrengthResult(string title, string hint, int percent, Color color)
+            {
+                Title = title;
+                Hint = hint;
+                Percent = percent;
+                Color = color;
             }
         }
         private void ShowQuickFill()
