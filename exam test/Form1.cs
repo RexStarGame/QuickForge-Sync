@@ -2196,6 +2196,7 @@ namespace exam_test
                 {
                     confirmed = true;
                     dialog.DialogResult = DialogResult.OK;
+                    keyTextBox.Clear();
                     dialog.Close();
                 };
 
@@ -2322,6 +2323,7 @@ namespace exam_test
                 {
                     confirmed = true;
                     dialog.DialogResult = DialogResult.OK;
+                    keyTextBox.Clear();
                     dialog.Close();
                 };
 
