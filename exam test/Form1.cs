@@ -2577,16 +2577,9 @@ namespace exam_test
                         out byte[] importedDataKey,
                         out EncryptedVaultFile importedEncryptedVaultFile
                     );
+                    bool importConfirmed = ShowImportBackupPreviewDialog(importedVaultData);
 
-                    DialogResult confirm = MessageBox.Show(
-                        "Import this encrypted backup?\n\n" +
-                        "This will replace the current cloud vault after upload.",
-                        "Import encrypted backup",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Warning
-                    );
-
-                    if (confirm != DialogResult.Yes)
+                    if (!importConfirmed)
                     {
                         selectedPreviewLabel.Text = "Import cancelled.";
                         return;
@@ -4502,6 +4495,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
