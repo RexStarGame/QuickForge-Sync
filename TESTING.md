@@ -1,4 +1,4 @@
-\# QuickForge Sync Test Checklist
+﻿# QuickForge Sync Test Checklist
 
 
 
@@ -6,21 +6,21 @@ Use this checklist before sharing the app with anyone.
 
 
 
-\## Test Rules
+## Test Rules
 
 
 
-\- Use test data only.
+- Use test data only.
 
-\- Do not use real passwords.
+- Do not use real passwords.
 
-\- Do not use real recovery keys.
+- Do not use real recovery keys.
 
-\- Close the app fully before rebuilding.
+- Close the app fully before rebuilding.
 
 
 
-\## 1. Build Test
+## 1. Build Test
 
 
 
@@ -28,7 +28,7 @@ Run this command:
 
 
 
-cd "C:\\Users\\patri\\source\\repos\\-verkun\\exam test"
+cd "C:\\Users\\patri\\source\\repos\-verkun\\exam test"
 
 dotnet build
 
@@ -38,45 +38,13 @@ Expected result:
 
 
 
-\- Build succeeded
+- Build succeeded
 
-\- No compile errors
-
-
-
-\## 2. Vault Setup
+- No compile errors
 
 
 
-Test steps:
-
-
-
-\- Sign in with Google
-
-\- Create a vault code
-
-\- Confirm vault code
-
-\- Save/copy/download recovery key
-
-\- Confirm that the vault opens
-
-
-
-Expected result:
-
-
-
-\- Vault is created
-
-\- Recovery key confirmation is required
-
-\- App does not continue if recovery key is not confirmed
-
-
-
-\## 3. Unlock Existing Vault
+## 2. Vault Setup
 
 
 
@@ -84,15 +52,15 @@ Test steps:
 
 
 
-\- Close and reopen app
+- Sign in with Google
 
-\- Sign in with Google
+- Create a vault code
 
-\- Unlock using vault code
+- Confirm vault code
 
-\- Lock vault
+- Save/copy/download recovery key
 
-\- Unlock using recovery key
+- Confirm that the vault opens
 
 
 
@@ -100,15 +68,15 @@ Expected result:
 
 
 
-\- Vault code works
+- Vault is created
 
-\- Recovery key works
+- Recovery key confirmation is required
 
-\- Wrong code/recovery key is rejected
+- App does not continue if recovery key is not confirmed
 
 
 
-\## 4. Saved Entries
+## 3. Unlock Existing Vault
 
 
 
@@ -116,17 +84,15 @@ Test steps:
 
 
 
-\- Add a test login
+- Close and reopen app
 
-\- Edit it
+- Sign in with Google
 
-\- Reveal it
+- Unlock using vault code
 
-\- Copy username/password
+- Lock vault
 
-\- Delete it and cancel first
-
-\- Delete it and confirm second time
+- Unlock using recovery key
 
 
 
@@ -134,19 +100,15 @@ Expected result:
 
 
 
-\- Entry saves and syncs
+- Vault code works
 
-\- Correct entry is edited
+- Recovery key works
 
-\- Reveal hides again after timer
-
-\- Clipboard cleanup runs
-
-\- Delete confirmation protects the entry
+- Wrong code/recovery key is rejected
 
 
 
-\## 5. Password Safety
+## 4. Saved Entries
 
 
 
@@ -154,13 +116,17 @@ Test steps:
 
 
 
-\- Save a weak password
+- Add a test login
 
-\- Save a reused password
+- Edit it
 
-\- Generate a password
+- Reveal it
 
-\- Open Security Center
+- Copy username/password
+
+- Delete it and cancel first
+
+- Delete it and confirm second time
 
 
 
@@ -168,17 +134,19 @@ Expected result:
 
 
 
-\- Weak password is detected
+- Entry saves and syncs
 
-\- Reused password is detected
+- Correct entry is edited
 
-\- Generator works
+- Reveal hides again after timer
 
-\- Security Center updates correctly
+- Clipboard cleanup runs
+
+- Delete confirmation protects the entry
 
 
 
-\## 6. QuickFill
+## 5. Password Safety
 
 
 
@@ -186,15 +154,13 @@ Test steps:
 
 
 
-\- Press Ctrl + Alt + Q
+- Save a weak password
 
-\- Search for a saved login
+- Save a reused password
 
-\- Copy password
+- Generate a password
 
-\- Fill password
-
-\- Add favorite and reopen QuickFill
+- Open Security Center
 
 
 
@@ -202,17 +168,17 @@ Expected result:
 
 
 
-\- QuickFill opens
+- Weak password is detected
 
-\- Search works
+- Reused password is detected
 
-\- Favorite entries appear first
+- Generator works
 
-\- Fill targets the intended text field
+- Security Center updates correctly
 
 
 
-\## 7. Backup
+## 6. QuickFill
 
 
 
@@ -220,13 +186,15 @@ Test steps:
 
 
 
-\- Export encrypted backup
+- Press Ctrl + Alt + Q
 
-\- Import encrypted backup
+- Search for a saved login
 
-\- Try wrong code
+- Copy password
 
-\- Try correct code
+- Fill password
+
+- Add favorite and reopen QuickFill
 
 
 
@@ -234,17 +202,17 @@ Expected result:
 
 
 
-\- Backup file is created
+- QuickFill opens
 
-\- Backup is not plain readable password data
+- Search works
 
-\- Wrong code fails
+- Favorite entries appear first
 
-\- Correct code imports entries
+- Fill targets the intended text field
 
 
 
-\## 8. Auto-Lock / Close / Logout
+## 7. Backup
 
 
 
@@ -252,13 +220,13 @@ Test steps:
 
 
 
-\- Set auto-lock
+- Export encrypted backup
 
-\- Wait until vault locks
+- Import encrypted backup
 
-\- Close app and reopen
+- Try wrong code
 
-\- Logout and reopen
+- Try correct code
 
 
 
@@ -266,15 +234,47 @@ Expected result:
 
 
 
-\- Auto-lock locks vault
+- Backup file is created
 
-\- Closing app keeps Google connected but vault locked
+- Backup is not plain readable password data
 
-\- Logout disconnects Google account
+- Wrong code fails
+
+- Correct code imports entries
 
 
 
-\## Current Alpha Verdict
+## 8. Auto-Lock / Close / Logout
+
+
+
+Test steps:
+
+
+
+- Set auto-lock
+
+- Wait until vault locks
+
+- Close app and reopen
+
+- Logout and reopen
+
+
+
+Expected result:
+
+
+
+- Auto-lock locks vault
+
+- Closing app keeps Google connected but vault locked
+
+- Logout disconnects Google account
+
+
+
+## Current Alpha Verdict
 
 
 
@@ -282,11 +282,12 @@ Only share with testers if:
 
 
 
-\- Build succeeds
+- Build succeeds
 
-\- All checklist items pass
+- All checklist items pass
 
-\- Testers use fake data only
+- Testers use fake data only
 
-\- No real passwords are stored
+- No real passwords are stored
+
 
