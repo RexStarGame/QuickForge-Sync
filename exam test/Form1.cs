@@ -166,6 +166,7 @@ namespace exam_test
         {
             InitializeComponent();
             ClientSize = new Size(800, 720);
+            Text = "QuickForge Sync";
             MinimumSize = new Size(800, 720);
             DoubleBuffered = true;
             BackColor = backgroundColor;
@@ -271,7 +272,7 @@ namespace exam_test
             appTitleLabel.Left = 18;
             appTitleLabel.Top = 13;
 
-            appSubtitleLabel.Text = "Encrypted local vault with Google Drive sync.";
+            appSubtitleLabel.Text = "Alpha prototype — use test data only. Encrypted Google Drive sync.";
             appSubtitleLabel.ForeColor = softTextColor;
             appSubtitleLabel.BackColor = Color.Transparent;
             appSubtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);

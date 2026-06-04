@@ -4,6 +4,8 @@ QuickForge Sync is a Windows password and private-code vault with encrypted Goog
 
 The goal is simple: keep passwords, game codes, license keys, recovery notes, and private snippets safe while still making them fast to use.
 
+> **Alpha notice:** QuickForge Sync is currently a prototype. Use test data only. Do not store real passwords until the app has been reviewed and tested properly.
+
 ## Main Features
 
 - Encrypted vault stored in Google Drive app data
