@@ -1160,6 +1160,8 @@ namespace exam_test
                 vaultCode = "";
                 currentDataKey = null;
                 currentEncryptedVaultFile = null;
+                vaultCodeTextBox.Clear();
+                confirmVaultCodeTextBox.Clear();
 
                 MessageBox.Show("Wrong vault code/recovery key or corrupted vault file.");
             }
