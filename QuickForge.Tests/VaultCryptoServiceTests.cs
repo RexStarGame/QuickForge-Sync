@@ -1,13 +1,146 @@
-﻿using Xunit;
+﻿using System;
+using System.Collections.Generic;
+using Xunit;
+using exam_test;
 
 namespace QuickForge.Tests
 {
     public class VaultCryptoServiceTests
     {
-        [Fact]
-        public void TestProject_Works()
+        private static VaultData CreateSampleVault()
         {
-            Assert.True(true);
+            return new VaultData
+            {
+                Entries = new List<VaultEntry>
+                {
+                    new VaultEntry
+                    {
+                        Platform = "SteamTest123",
+                        Username = "fake@example.com",
+                        Secret = "MyFakePassword123!",
+                        Website = "https://example.com",
+                        Note = "only test",
+                        CreatedAt = new DateTime(2026, 1, 1),
+                        IsFavorite = true
+                    }
+                },
+                Settings = new VaultSettings
+                {
+                    RecoveryKeyReminderDays = 90,
+                    LastRecoveryKeyRotatedAt = new DateTime(2026, 1, 1),
+                    BackgroundAnimationEnabled = true,
+                    AutoLockMinutes = 10
+                },
+                UpdatedAt = new DateTime(2026, 1, 1)
+            };
+        }
+
+        [Fact]
+        public void CorrectVaultCode_DecryptsVault()
+        {
+            string vaultCode = "correct-vault-code";
+            string recoveryKey = VaultCryptoService.GenerateRecoveryKey();
+
+            VaultData originalVault = CreateSampleVault();
+
+            string encryptedJson = VaultCryptoService.CreateEncryptedVault(
+                originalVault,
+                vaultCode,
+                recoveryKey,
+                out byte[] dataKey,
+                out EncryptedVaultFile encryptedVaultFile
+            );
+
+            VaultData decryptedVault = VaultCryptoService.DecryptVault(
+                encryptedJson,
+                vaultCode,
+                out byte[] decryptedDataKey,
+                out EncryptedVaultFile decryptedEncryptedVaultFile
+            );
+
+            Assert.Single(decryptedVault.Entries);
+            Assert.Equal("SteamTest123", decryptedVault.Entries[0].Platform);
+            Assert.Equal("fake@example.com", decryptedVault.Entries[0].Username);
+            Assert.Equal("MyFakePassword123!", decryptedVault.Entries[0].Secret);
+            Assert.True(decryptedVault.Entries[0].IsFavorite);
+        }
+
+        [Fact]
+        public void RecoveryKey_DecryptsVault()
+        {
+            string vaultCode = "correct-vault-code";
+            string recoveryKey = VaultCryptoService.GenerateRecoveryKey();
+
+            VaultData originalVault = CreateSampleVault();
+
+            string encryptedJson = VaultCryptoService.CreateEncryptedVault(
+                originalVault,
+                vaultCode,
+                recoveryKey,
+                out byte[] dataKey,
+                out EncryptedVaultFile encryptedVaultFile
+            );
+
+            VaultData decryptedVault = VaultCryptoService.DecryptVault(
+                encryptedJson,
+                recoveryKey,
+                out byte[] decryptedDataKey,
+                out EncryptedVaultFile decryptedEncryptedVaultFile
+            );
+
+            Assert.Single(decryptedVault.Entries);
+            Assert.Equal("SteamTest123", decryptedVault.Entries[0].Platform);
+            Assert.Equal("MyFakePassword123!", decryptedVault.Entries[0].Secret);
+        }
+
+        [Fact]
+        public void WrongVaultCode_Fails()
+        {
+            string vaultCode = "correct-vault-code";
+            string wrongCode = "wrong-vault-code";
+            string recoveryKey = VaultCryptoService.GenerateRecoveryKey();
+
+            VaultData originalVault = CreateSampleVault();
+
+            string encryptedJson = VaultCryptoService.CreateEncryptedVault(
+                originalVault,
+                vaultCode,
+                recoveryKey,
+                out byte[] dataKey,
+                out EncryptedVaultFile encryptedVaultFile
+            );
+
+            Assert.ThrowsAny<Exception>(() =>
+            {
+                VaultCryptoService.DecryptVault(
+                    encryptedJson,
+                    wrongCode,
+                    out byte[] decryptedDataKey,
+                    out EncryptedVaultFile decryptedEncryptedVaultFile
+                );
+            });
+        }
+
+        [Fact]
+        public void EncryptedJson_DoesNotContainPlaintextSecrets()
+        {
+            string vaultCode = "correct-vault-code";
+            string recoveryKey = VaultCryptoService.GenerateRecoveryKey();
+
+            VaultData originalVault = CreateSampleVault();
+
+            string encryptedJson = VaultCryptoService.CreateEncryptedVault(
+                originalVault,
+                vaultCode,
+                recoveryKey,
+                out byte[] dataKey,
+                out EncryptedVaultFile encryptedVaultFile
+            );
+
+            Assert.DoesNotContain("SteamTest123", encryptedJson);
+            Assert.DoesNotContain("fake@example.com", encryptedJson);
+            Assert.DoesNotContain("MyFakePassword123!", encryptedJson);
+            Assert.DoesNotContain("only test", encryptedJson);
         }
     }
 }
