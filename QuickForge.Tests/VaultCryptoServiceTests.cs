@@ -197,5 +197,59 @@ namespace QuickForge.Tests
                 );
             });
         }
+
+        [Fact]
+        public void ChangeVaultCode_NewVaultCodeWorks_OldVaultCodeFails()
+        {
+            string oldVaultCode = "old-vault-code";
+            string newVaultCode = "new-vault-code";
+            string recoveryKey = VaultCryptoService.GenerateRecoveryKey();
+
+            VaultData originalVault = CreateSampleVault();
+
+            string encryptedJson = VaultCryptoService.CreateEncryptedVault(
+                originalVault,
+                oldVaultCode,
+                recoveryKey,
+                out byte[] dataKey,
+                out EncryptedVaultFile encryptedVaultFile
+            );
+
+            VaultData decryptedWithOldCodeBeforeChange = VaultCryptoService.DecryptVault(
+                encryptedJson,
+                oldVaultCode,
+                out byte[] oldCodeDataKey,
+                out EncryptedVaultFile oldCodeEncryptedVaultFile
+            );
+
+            Assert.Equal("MyFakePassword123!", decryptedWithOldCodeBeforeChange.Entries[0].Secret);
+
+            VaultCryptoService.ChangeVaultCode(
+                encryptedVaultFile,
+                dataKey,
+                newVaultCode
+            );
+
+            string changedCodeEncryptedJson = JsonSerializer.Serialize(encryptedVaultFile);
+
+            VaultData decryptedWithNewCode = VaultCryptoService.DecryptVault(
+                changedCodeEncryptedJson,
+                newVaultCode,
+                out byte[] newCodeDataKey,
+                out EncryptedVaultFile newCodeEncryptedVaultFile
+            );
+
+            Assert.Equal("MyFakePassword123!", decryptedWithNewCode.Entries[0].Secret);
+
+            Assert.ThrowsAny<Exception>(() =>
+            {
+                VaultCryptoService.DecryptVault(
+                    changedCodeEncryptedJson,
+                    oldVaultCode,
+                    out byte[] failedOldCodeDataKey,
+                    out EncryptedVaultFile failedOldCodeEncryptedVaultFile
+                );
+            });
+        }
     }
 }
