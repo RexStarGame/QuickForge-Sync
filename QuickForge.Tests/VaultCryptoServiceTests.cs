@@ -353,6 +353,44 @@ namespace QuickForge.Tests
                 }
             }
         }
+
+        [Fact]
+        public void TamperedEncryptedBackupFile_FailsToImport()
+        {
+            string vaultCode = "correct-vault-code";
+            string recoveryKey = VaultCryptoService.GenerateRecoveryKey();
+
+            VaultData originalVault = CreateSampleVault();
+
+            string encryptedJson = VaultCryptoService.CreateEncryptedVault(
+                originalVault,
+                vaultCode,
+                recoveryKey,
+                out byte[] dataKey,
+                out EncryptedVaultFile encryptedVaultFile
+            );
+
+            byte[] cipherBytes = Convert.FromBase64String(encryptedVaultFile.VaultCipherText);
+
+            Assert.True(cipherBytes.Length > 0);
+
+            cipherBytes[0] = (byte)(cipherBytes[0] ^ 0xFF);
+
+            encryptedVaultFile.VaultCipherText = Convert.ToBase64String(cipherBytes);
+
+            string tamperedEncryptedJson = JsonSerializer.Serialize(encryptedVaultFile);
+
+            Assert.ThrowsAny<Exception>(() =>
+            {
+                VaultCryptoService.DecryptVault(
+                    tamperedEncryptedJson,
+                    vaultCode,
+                    out byte[] tamperedDataKey,
+                    out EncryptedVaultFile tamperedEncryptedVaultFile
+                );
+            });
+        }
     }
 }
+
 
