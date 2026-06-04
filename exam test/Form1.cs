@@ -3491,17 +3491,24 @@ namespace exam_test
         {
             try
             {
+                quickFillForm?.Hide();
+
+                isVaultUnlocked = false;
                 ClearSecretAccessWindow();
+
+                vaultCode = "";
+                vaultEntries.Clear();
+                currentDataKey = null;
+                currentEncryptedVaultFile = null;
+
                 UnregisterHotKey(Handle, QuickFillHotkeyId);
 
                 trayIcon.Visible = false;
                 trayIcon.Dispose();
-
-                GoogleAuthService.Logout();
             }
             catch
             {
-                // Ignore logout errors while closing.
+                // Ignore cleanup errors while closing.
             }
 
             base.OnFormClosed(e);
