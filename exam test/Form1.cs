@@ -166,7 +166,7 @@ namespace exam_test
         {
             InitializeComponent();
             ClientSize = new Size(800, 720);
-            Text = "QuickForge Sync";
+            Text = "QuickForge Sync Beta Preview";
             MinimumSize = new Size(800, 720);
             DoubleBuffered = true;
             BackColor = backgroundColor;
@@ -235,7 +235,7 @@ namespace exam_test
                 Close();
             });
 
-            trayIcon.Text = "QuickForge Sync";
+            trayIcon.Text = "QuickForge Sync Beta Preview";
             trayIcon.Icon = SystemIcons.Shield;
             trayIcon.Visible = true;
             trayIcon.ContextMenuStrip = trayMenu;
@@ -264,7 +264,7 @@ namespace exam_test
             topBarPanel.Height = 82;
             topBarPanel.BackColor = panelColor;
 
-            appTitleLabel.Text = "QuickForge Sync";
+            appTitleLabel.Text = "QuickForge Sync Beta Preview";
             appTitleLabel.ForeColor = Color.White;
             appTitleLabel.BackColor = Color.Transparent;
             appTitleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
@@ -272,7 +272,7 @@ namespace exam_test
             appTitleLabel.Left = 18;
             appTitleLabel.Top = 13;
 
-            appSubtitleLabel.Text = "Alpha prototype — use test data only. Encrypted Google Drive sync.";
+            appSubtitleLabel.Text = "Beta Preview — use test data only. Do not store real passwords yet." ;
             appSubtitleLabel.ForeColor = softTextColor;
             appSubtitleLabel.BackColor = Color.Transparent;
             appSubtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
@@ -4394,4 +4394,5 @@ namespace exam_test
         }
     }
 }
+
 
