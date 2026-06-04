@@ -132,7 +132,9 @@ namespace exam_test
         private readonly Button copySecretButton = new Button();
         private readonly Button copyUsernameButton = new Button();
         private readonly Button deleteEntryButton = new Button();
+        private readonly Button favoriteButton = new Button();
         private readonly Button lockVaultButton = new Button();
+
         private readonly Button changeVaultCodeButton = new Button();
         private readonly Button securityCenterButton = new Button();
         private readonly Label securitySettingsLabel = new Label();
@@ -738,8 +740,19 @@ namespace exam_test
             changeVaultCodeButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
             changeVaultCodeButton.Click += ChangeVaultCodeButton_Click;
 
+          
+            favoriteButton.Text = "☆ Favorite";
+            favoriteButton.Left = 555;
+            favoriteButton.Top = 408;
+            favoriteButton.Width = 100;
+            favoriteButton.Height = 30;
+            StyleActionButton(favoriteButton);
+            favoriteButton.Click += FavoriteButton_Click;
+
             vaultPanel.Controls.Add(lockVaultButton);
             vaultPanel.Controls.Add(changeVaultCodeButton);
+            vaultPanel.Controls.Add(favoriteButton);
+
             securitySettingsLabel.Text = "Recovery key settings";
             securitySettingsLabel.Left = 315;
             securitySettingsLabel.Top = 450;
@@ -1496,6 +1509,7 @@ namespace exam_test
 
             editEntryButton.Enabled = !isEditing;
             deleteEntryButton.Enabled = !isEditing;
+            favoriteButton.Enabled = !isEditing;
             openSiteButton.Enabled = !isEditing;
             openAndFillButton.Enabled = !isEditing;
         }
@@ -1524,13 +1538,18 @@ namespace exam_test
             if (entry == null)
             {
                 selectedPreviewLabel.Text = "Select an entry to preview it.";
+                UpdateFavoriteButtonText();
                 return;
             }
 
             SetPreviewText(
-            "Selected: " + entry.GetDisplayName(),
-            "User: " + MaskEmpty(entry.Username),
-            "Password/code: " + MaskSecret(entry.Secret));
+                "Selected: " + entry.GetDisplayName(),
+                "User: " + MaskEmpty(entry.Username),
+                "Password/code: " + MaskSecret(entry.Secret),
+                "Favorite: " + (entry.IsFavorite ? "Yes" : "No")
+            );
+
+            UpdateFavoriteButtonText();
         }
         private void OpenSiteButton_Click(object? sender, EventArgs e)
         {
@@ -1794,6 +1813,69 @@ namespace exam_test
             }
 
             return confirmed;
+        }
+        private async void FavoriteButton_Click(object? sender, EventArgs e)
+        {
+            VaultEntry? entry = GetSelectedEntry();
+
+            if (entry == null)
+            {
+                MessageBox.Show("Select an entry first.");
+                return;
+            }
+
+            entry.IsFavorite = !entry.IsFavorite;
+
+            int selectedIndex = vaultListBox.SelectedIndex;
+
+            RefreshVaultList();
+
+            if (selectedIndex >= 0 && selectedIndex < vaultListBox.Items.Count)
+            {
+                vaultListBox.SelectedIndex = selectedIndex;
+            }
+
+            UpdateFavoriteButtonText();
+
+            selectedPreviewLabel.Text = entry.IsFavorite
+                ? "Added to favorites: " + entry.GetDisplayName()
+                : "Removed from favorites: " + entry.GetDisplayName();
+
+            try
+            {
+                await SaveCurrentVaultToCloudAsync();
+
+                selectedPreviewLabel.Text = entry.IsFavorite
+                    ? "Added to favorites and synced: " + entry.GetDisplayName()
+                    : "Removed from favorites and synced: " + entry.GetDisplayName();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Favorite changed locally, but sync failed: " + ex.Message);
+            }
+        }
+
+        private void UpdateFavoriteButtonText()
+        {
+            VaultEntry? entry = GetSelectedEntry();
+
+            if (entry == null)
+            {
+                favoriteButton.Text = "☆ Favorite";
+                favoriteButton.BackColor = Color.FromArgb(35, 40, 60);
+                return;
+            }
+
+            if (entry.IsFavorite)
+            {
+                favoriteButton.Text = "★ Favorited";
+                favoriteButton.BackColor = Color.FromArgb(120, 85, 35);
+            }
+            else
+            {
+                favoriteButton.Text = "☆ Favorite";
+                favoriteButton.BackColor = Color.FromArgb(35, 40, 60);
+            }
         }
         private async void DeleteEntryButton_Click(object? sender, EventArgs e)
         {
@@ -2341,6 +2423,7 @@ namespace exam_test
         private void ShowSecurityCenterDialog()
         {
             int totalEntries = vaultEntries.Count;
+            int favoriteEntries = vaultEntries.Count(entry => entry.IsFavorite);
             int weakPasswords = CountWeakPasswords();
             int reusedPasswordEntries = CountReusedPasswordEntries();
             int missingWebsiteLinks = vaultEntries.Count(entry =>
@@ -2424,6 +2507,7 @@ namespace exam_test
                     "Clipboard cleanup: Active" + Environment.NewLine +
                     Environment.NewLine +
                     "Saved entries: " + totalEntries + Environment.NewLine +
+                    "Favorites: " + favoriteEntries + Environment.NewLine +
                     "Weak passwords: " + weakPasswords + Environment.NewLine +
                     "Reused passwords: " + reusedPasswordEntries + Environment.NewLine +
                     "Missing website links: " + missingWebsiteLinks + Environment.NewLine +
@@ -2444,6 +2528,10 @@ namespace exam_test
                 else if (weakPasswords > 0)
                 {
                     adviceLabel.Text = "Best next step: generate stronger passwords for weak entries.";
+                }
+                else if (totalEntries > 0 && favoriteEntries == 0)
+                {
+                    adviceLabel.Text = "Tip: add favorites to make QuickFill faster.";
                 }
                 else if (missingWebsiteLinks > 0)
                 {
@@ -2609,8 +2697,11 @@ namespace exam_test
 
             foreach (VaultEntry entry in vaultEntries)
             {
-                vaultListBox.Items.Add(entry.GetDisplayName());
+                string prefix = entry.IsFavorite ? "⭐ " : "";
+                vaultListBox.Items.Add(prefix + entry.GetDisplayName());
             }
+
+            UpdateFavoriteButtonText();
         }
 
         private string MaskEmpty(string value)
@@ -3616,11 +3707,15 @@ namespace exam_test
 
             string cleanFilter = filter.Trim().ToLowerInvariant();
 
-            foreach (VaultEntry entry in vaultEntries)
+            IEnumerable<VaultEntry> orderedEntries = vaultEntries
+                .OrderByDescending(entry => entry.IsFavorite)
+                .ThenBy(entry => entry.GetDisplayName());
+
+            foreach (VaultEntry entry in orderedEntries)
             {
                 string searchable =
-                (entry.Platform + " " + entry.Username + " " + entry.Website + " " + entry.Note)
-                .ToLowerInvariant();
+                    (entry.Platform + " " + entry.Username + " " + entry.Website + " " + entry.Note)
+                    .ToLowerInvariant();
 
                 if (string.IsNullOrWhiteSpace(cleanFilter) || searchable.Contains(cleanFilter))
                 {
@@ -3631,6 +3726,11 @@ namespace exam_test
             if (quickFillListBox.Items.Count > 0)
             {
                 quickFillListBox.SelectedIndex = 0;
+                SetQuickFillStatus("Choose a login, then copy or fill.");
+            }
+            else
+            {
+                SetQuickFillStatus("No matching logins found.");
             }
         }
 
@@ -3778,13 +3878,15 @@ namespace exam_test
 
             public override string ToString()
             {
+                string prefix = Entry.IsFavorite ? "⭐ " : "";
+
                 if (!string.IsNullOrWhiteSpace(Entry.Platform) &&
                     !string.IsNullOrWhiteSpace(Entry.Username))
                 {
-                    return Entry.Platform + "  •  " + Entry.Username;
+                    return prefix + Entry.Platform + "  •  " + Entry.Username;
                 }
 
-                return Entry.GetDisplayName();
+                return prefix + Entry.GetDisplayName();
             }
         }
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -4011,6 +4113,7 @@ namespace exam_test
         public string Website { get; set; } = "";
         public string Note { get; set; } = "";
         public DateTime CreatedAt { get; set; }
+        public bool IsFavorite { get; set; } = false;
 
         public string GetDisplayName()
         {
