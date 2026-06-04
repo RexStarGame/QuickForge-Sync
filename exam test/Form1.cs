@@ -1691,7 +1691,97 @@ namespace exam_test
             Clipboard.SetText(entry.Username);
             selectedPreviewLabel.Text = "Copied username for: " + entry.GetDisplayName();
         }
+        private bool ShowDeleteEntryConfirmationDialog(VaultEntry entry)
+        {
+            bool confirmed = false;
 
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 430;
+                dialog.Height = 230;
+                dialog.Text = "Delete entry";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Delete this entry?";
+                titleLabel.Left = 20;
+                titleLabel.Top = 18;
+                titleLabel.Width = 360;
+                titleLabel.Height = 28;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+
+                Label entryLabel = new Label();
+                entryLabel.Text = entry.GetDisplayName();
+                entryLabel.Left = 20;
+                entryLabel.Top = 55;
+                entryLabel.Width = 360;
+                entryLabel.Height = 24;
+                entryLabel.ForeColor = Color.White;
+                entryLabel.BackColor = Color.Transparent;
+                entryLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label warningLabel = new Label();
+                warningLabel.Text = "This action cannot be undone after sync.";
+                warningLabel.Left = 20;
+                warningLabel.Top = 90;
+                warningLabel.Width = 360;
+                warningLabel.Height = 30;
+                warningLabel.ForeColor = dangerColor;
+                warningLabel.BackColor = Color.Transparent;
+
+                Button deleteButton = new Button();
+                deleteButton.Text = "Delete";
+                deleteButton.Left = 190;
+                deleteButton.Top = 145;
+                deleteButton.Width = 95;
+                deleteButton.Height = 34;
+                deleteButton.FlatStyle = FlatStyle.Flat;
+                deleteButton.UseVisualStyleBackColor = false;
+                deleteButton.ForeColor = Color.White;
+                deleteButton.BackColor = Color.FromArgb(120, 35, 45);
+                deleteButton.FlatAppearance.BorderColor = Color.FromArgb(190, 80, 90);
+                deleteButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(150, 45, 55);
+                deleteButton.FlatAppearance.MouseDownBackColor = Color.FromArgb(90, 25, 35);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 295;
+                cancelButton.Top = 145;
+                cancelButton.Width = 95;
+                cancelButton.Height = 34;
+                StyleActionButton(cancelButton);
+
+                deleteButton.Click += (s, e) =>
+                {
+                    confirmed = true;
+                    dialog.Close();
+                };
+
+                cancelButton.Click += (s, e) =>
+                {
+                    confirmed = false;
+                    dialog.Close();
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(entryLabel);
+                dialog.Controls.Add(warningLabel);
+                dialog.Controls.Add(deleteButton);
+                dialog.Controls.Add(cancelButton);
+
+                dialog.CancelButton = cancelButton;
+
+                dialog.ShowDialog(this);
+            }
+
+            return confirmed;
+        }
         private async void DeleteEntryButton_Click(object? sender, EventArgs e)
         {
             VaultEntry? entry = GetSelectedEntry();
@@ -1699,6 +1789,12 @@ namespace exam_test
             if (entry == null)
             {
                 MessageBox.Show("Select an entry first.");
+                return;
+            }
+
+            if (!ShowDeleteEntryConfirmationDialog(entry))
+            {
+                selectedPreviewLabel.Text = "Delete cancelled.";
                 return;
             }
 
