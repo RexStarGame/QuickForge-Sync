@@ -243,6 +243,9 @@ namespace exam_test
             Show();
             WindowState = FormWindowState.Normal;
             Activate();
+
+            MarkVaultActivity();
+            UpdateAnimationState();
         }
 
         private void CreateTopBarUi()
@@ -1658,7 +1661,10 @@ namespace exam_test
             }
 
             Clipboard.SetText(entry.Secret);
-            selectedPreviewLabel.Text = "Copied password/code for: " + entry.GetDisplayName();
+            selectedPreviewLabel.Text = "Copied password/code for: " + entry.GetDisplayName() +
+                ". Clipboard clears in 20 seconds.";
+
+            _ = ClearClipboardLaterAsync(entry.Secret, 20000);
         }
         private void CopyUsernameButton_Click(object? sender, EventArgs e)
         {
@@ -3001,7 +3007,7 @@ namespace exam_test
             quickFillForm.BackColor = Color.FromArgb(16, 20, 34);
 
             Label createTitleLabel = new Label();
-            createTitleLabel.Text = "Create";
+            createTitleLabel.Text = "Generate";
             createTitleLabel.Left = 22;
             createTitleLabel.Top = 18;
             createTitleLabel.Width = 180;
@@ -3011,7 +3017,7 @@ namespace exam_test
             createTitleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
 
             Label createHintLabel = new Label();
-            createHintLabel.Text = "Make a new password for signup pages.";
+            createHintLabel.Text = "Generate a new password for signup pages.";
             createHintLabel.Left = 22;
             createHintLabel.Top = 50;
             createHintLabel.Width = 280;
@@ -3020,7 +3026,7 @@ namespace exam_test
             createHintLabel.BackColor = Color.Transparent;
 
             Button createPasswordQuickFillButton = new Button();
-            createPasswordQuickFillButton.Text = "Create password";
+            createPasswordQuickFillButton.Text = "Generate password";
             createPasswordQuickFillButton.Left = 22;
             createPasswordQuickFillButton.Top = 105;
             createPasswordQuickFillButton.Width = 160;
@@ -3372,6 +3378,8 @@ namespace exam_test
             {
                 Hide();
             }
+
+            UpdateAnimationState();
         }
         private void AnimationTimer_Tick(object? sender, EventArgs e)
         {
