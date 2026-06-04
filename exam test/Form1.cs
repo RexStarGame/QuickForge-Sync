@@ -1024,6 +1024,14 @@ namespace exam_test
 
                 string recoveryKey = VaultCryptoService.GenerateRecoveryKey();
 
+                bool recoveryKeyConfirmed = ShowFirstRecoveryKeyDialog(recoveryKey);
+
+                if (!recoveryKeyConfirmed)
+                {
+                    MessageBox.Show("Vault setup cancelled. Save your recovery key before creating the vault.");
+                    return;
+                }
+
                 vaultCode = code;
                 vaultEntries.Clear();
 
@@ -1063,11 +1071,12 @@ namespace exam_test
                     vaultCodeTextBox.Clear();
                     confirmVaultCodeTextBox.Clear();
 
-                    MessageBox.Show("Your recovery key is:\n\n" +recoveryKey +"\n\nSave this key somewhere safe. It can unlock your vault if you forget your vault code.");
+                    
 
                     GrantSecretAccessWindow();
 
                     ShowVaultUi();
+                    selectedPreviewLabel.Text = "Vault created. Recovery key saved.";
                 }
                 catch (Exception ex)
                 {
@@ -1853,7 +1862,166 @@ namespace exam_test
                 MessageBox.Show("Could not rotate recovery key: " + ex.Message);
             }
         }
+        private bool ShowFirstRecoveryKeyDialog(string recoveryKey)
+        {
+            bool copied = false;
+            bool downloaded = false;
+            bool confirmed = false;
 
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 520;
+                dialog.Height = 340;
+                dialog.Text = "Save Recovery Key";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Your recovery key";
+                titleLabel.Left = 20;
+                titleLabel.Top = 18;
+                titleLabel.Width = 460;
+                titleLabel.Height = 24;
+                titleLabel.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+
+                Label infoLabel = new Label();
+                infoLabel.Text = "Save this key. It can unlock your vault if you forget your vault code.";
+                infoLabel.Left = 20;
+                infoLabel.Top = 42;
+                infoLabel.Width = 460;
+                infoLabel.Height = 22;
+
+                TextBox keyTextBox = new TextBox();
+                keyTextBox.Left = 20;
+                keyTextBox.Top = 72;
+                keyTextBox.Width = 460;
+                keyTextBox.Height = 26;
+                keyTextBox.ReadOnly = true;
+                keyTextBox.Text = recoveryKey;
+
+                Label warningLabel = new Label();
+                warningLabel.Left = 20;
+                warningLabel.Top = 110;
+                warningLabel.Width = 460;
+                warningLabel.Height = 55;
+                warningLabel.Text =
+                    "This file contains your recovery key in plain text.\n" +
+                    "Store it somewhere safe, then delete it from Downloads if needed.";
+                warningLabel.ForeColor = Color.DarkRed;
+
+                Button copyButton = new Button();
+                copyButton.Text = "Copy recovery key";
+                copyButton.Left = 20;
+                copyButton.Top = 175;
+                copyButton.Width = 150;
+                copyButton.Height = 32;
+
+                Button downloadButton = new Button();
+                downloadButton.Text = "Download as .txt";
+                downloadButton.Left = 185;
+                downloadButton.Top = 175;
+                downloadButton.Width = 140;
+                downloadButton.Height = 32;
+
+                CheckBox savedCheckBox = new CheckBox();
+                savedCheckBox.Text = "I have saved this recovery key safely";
+                savedCheckBox.Left = 20;
+                savedCheckBox.Top = 225;
+                savedCheckBox.Width = 330;
+                savedCheckBox.Height = 28;
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel setup";
+                cancelButton.Left = 230;
+                cancelButton.Top = 265;
+                cancelButton.Width = 110;
+                cancelButton.Height = 32;
+                cancelButton.DialogResult = DialogResult.Cancel;
+
+                Button continueButton = new Button();
+                continueButton.Text = "Continue";
+                continueButton.Left = 355;
+                continueButton.Top = 265;
+                continueButton.Width = 125;
+                continueButton.Height = 32;
+                continueButton.Enabled = false;
+
+                void UpdateContinueState()
+                {
+                    continueButton.Enabled = (copied || downloaded) && savedCheckBox.Checked;
+                }
+
+                copyButton.Click += (s, e) =>
+                {
+                    Clipboard.SetText(recoveryKey);
+                    copied = true;
+                    copyButton.Text = "Copied";
+                    UpdateContinueState();
+                };
+
+                downloadButton.Click += (s, e) =>
+                {
+                    string downloadsFolder = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                        "Downloads"
+                    );
+
+                    using (SaveFileDialog saveDialog = new SaveFileDialog())
+                    {
+                        saveDialog.Title = "Save recovery key";
+                        saveDialog.InitialDirectory = downloadsFolder;
+                        saveDialog.FileName = "QuickForge-Recovery-Key.txt";
+                        saveDialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
+
+                        if (saveDialog.ShowDialog(dialog) == DialogResult.OK)
+                        {
+                            string fileContent =
+                                "QuickForge Sync Recovery Key\n\n" +
+                                recoveryKey +
+                                "\n\nWARNING:\n" +
+                                "This file contains your recovery key in plain text.\n" +
+                                "Store it somewhere safe, then delete it from Downloads if needed.\n";
+
+                            File.WriteAllText(saveDialog.FileName, fileContent);
+                            downloaded = true;
+                            downloadButton.Text = "Downloaded";
+                            UpdateContinueState();
+                        }
+                    }
+                };
+
+                savedCheckBox.CheckedChanged += (s, e) =>
+                {
+                    UpdateContinueState();
+                };
+
+                continueButton.Click += (s, e) =>
+                {
+                    confirmed = true;
+                    dialog.DialogResult = DialogResult.OK;
+                    dialog.Close();
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(infoLabel);
+                dialog.Controls.Add(keyTextBox);
+                dialog.Controls.Add(warningLabel);
+                dialog.Controls.Add(copyButton);
+                dialog.Controls.Add(downloadButton);
+                dialog.Controls.Add(savedCheckBox);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(continueButton);
+
+                dialog.AcceptButton = continueButton;
+                dialog.CancelButton = cancelButton;
+
+                dialog.ShowDialog(this);
+            }
+
+            return confirmed;
+        }
         private bool ShowRecoveryKeyRotationDialog(string newRecoveryKey)
         {
             bool copied = false;
