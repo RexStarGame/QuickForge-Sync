@@ -134,6 +134,7 @@ namespace exam_test
         private readonly Button deleteEntryButton = new Button();
         private readonly Button lockVaultButton = new Button();
         private readonly Button changeVaultCodeButton = new Button();
+        private readonly Button securityCenterButton = new Button();
         private readonly Label securitySettingsLabel = new Label();
         private readonly Label recoveryReminderLabel = new Label();
         private readonly ComboBox recoveryReminderComboBox = new ComboBox();
@@ -779,10 +780,22 @@ namespace exam_test
             rotateRecoveryKeyButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
             rotateRecoveryKeyButton.Click += RotateRecoveryKeyButton_Click;
 
+            securityCenterButton.Text = "Security check";
+            securityCenterButton.Left = 315;
+            securityCenterButton.Top = 515;
+            securityCenterButton.Width = 140;
+            securityCenterButton.Height = 30;
+            securityCenterButton.FlatStyle = FlatStyle.Flat;
+            securityCenterButton.ForeColor = Color.White;
+            securityCenterButton.BackColor = Color.FromArgb(45, 90, 160);
+            securityCenterButton.FlatAppearance.BorderColor = borderColor;
+            securityCenterButton.Click += (s, e) => ShowSecurityCenterDialog();
+
             vaultPanel.Controls.Add(securitySettingsLabel);
             vaultPanel.Controls.Add(recoveryReminderLabel);
             vaultPanel.Controls.Add(recoveryReminderComboBox);
             vaultPanel.Controls.Add(rotateRecoveryKeyButton);
+            vaultPanel.Controls.Add(securityCenterButton);
 
             performanceSettingsLabel.Text = "Performance & safety";
             performanceSettingsLabel.Left = 20;
@@ -2324,6 +2337,197 @@ namespace exam_test
                     RotateRecoveryKeyButton_Click(this, EventArgs.Empty);
                 }
             }
+        }
+        private void ShowSecurityCenterDialog()
+        {
+            int totalEntries = vaultEntries.Count;
+            int weakPasswords = CountWeakPasswords();
+            int reusedPasswordEntries = CountReusedPasswordEntries();
+            int missingWebsiteLinks = vaultEntries.Count(entry =>
+                string.IsNullOrWhiteSpace(entry.Website)
+            );
+
+            string autoLockText = currentVaultSettings.AutoLockMinutes <= 0
+                ? "Off"
+                : currentVaultSettings.AutoLockMinutes + " minutes";
+
+            string recoveryReminderText = currentVaultSettings.RecoveryKeyReminderDays <= 0
+                ? "Never"
+                : currentVaultSettings.RecoveryKeyReminderDays + " days";
+
+            string summary;
+
+            if (totalEntries == 0)
+            {
+                summary = "Your vault is ready. Add your first login.";
+            }
+            else if (weakPasswords == 0 && reusedPasswordEntries == 0)
+            {
+                summary = "Your vault looks good.";
+            }
+            else
+            {
+                summary = "Some passwords need attention.";
+            }
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 520;
+                dialog.Height = 430;
+                dialog.Text = "Security Center";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Security Center";
+                titleLabel.Left = 20;
+                titleLabel.Top = 18;
+                titleLabel.Width = 440;
+                titleLabel.Height = 30;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+
+                Label summaryLabel = new Label();
+                summaryLabel.Text = summary;
+                summaryLabel.Left = 20;
+                summaryLabel.Top = 52;
+                summaryLabel.Width = 440;
+                summaryLabel.Height = 28;
+                summaryLabel.ForeColor =
+                    weakPasswords == 0 && reusedPasswordEntries == 0
+                        ? successColor
+                        : Color.FromArgb(255, 190, 90);
+                summaryLabel.BackColor = Color.Transparent;
+                summaryLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                TextBox statusBox = new TextBox();
+                statusBox.Left = 20;
+                statusBox.Top = 90;
+                statusBox.Width = 460;
+                statusBox.Height = 220;
+                statusBox.Multiline = true;
+                statusBox.ReadOnly = true;
+                statusBox.WordWrap = true;
+                statusBox.ScrollBars = ScrollBars.Vertical;
+                statusBox.BackColor = Color.FromArgb(24, 28, 44);
+                statusBox.ForeColor = Color.White;
+                statusBox.BorderStyle = BorderStyle.FixedSingle;
+
+                statusBox.Text =
+                    "Vault: " + (isVaultUnlocked ? "Unlocked" : "Locked") + Environment.NewLine +
+                    "Google sync: " + (currentDriveService != null ? "Connected" : "Not connected") + Environment.NewLine +
+                    "Auto-lock: " + autoLockText + Environment.NewLine +
+                    "Clipboard cleanup: Active" + Environment.NewLine +
+                    Environment.NewLine +
+                    "Saved entries: " + totalEntries + Environment.NewLine +
+                    "Weak passwords: " + weakPasswords + Environment.NewLine +
+                    "Reused passwords: " + reusedPasswordEntries + Environment.NewLine +
+                    "Missing website links: " + missingWebsiteLinks + Environment.NewLine +
+                    "Recovery key reminder: " + recoveryReminderText;
+
+                Label adviceLabel = new Label();
+                adviceLabel.Left = 20;
+                adviceLabel.Top = 320;
+                adviceLabel.Width = 460;
+                adviceLabel.Height = 40;
+                adviceLabel.ForeColor = softTextColor;
+                adviceLabel.BackColor = Color.Transparent;
+
+                if (reusedPasswordEntries > 0)
+                {
+                    adviceLabel.Text = "Best next step: replace reused passwords first.";
+                }
+                else if (weakPasswords > 0)
+                {
+                    adviceLabel.Text = "Best next step: generate stronger passwords for weak entries.";
+                }
+                else if (missingWebsiteLinks > 0)
+                {
+                    adviceLabel.Text = "Optional: add website links to make QuickFill smoother.";
+                }
+                else
+                {
+                    adviceLabel.Text = "No urgent action needed.";
+                }
+
+                Button closeButton = new Button();
+                closeButton.Text = "Close";
+                closeButton.Left = 380;
+                closeButton.Top = 365;
+                closeButton.Width = 100;
+                closeButton.Height = 32;
+                StyleActionButton(closeButton, true);
+                closeButton.Click += (s, e) => dialog.Close();
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(summaryLabel);
+                dialog.Controls.Add(statusBox);
+                dialog.Controls.Add(adviceLabel);
+                dialog.Controls.Add(closeButton);
+
+                dialog.ShowDialog(this);
+            }
+        }
+
+        private int CountWeakPasswords()
+        {
+            int count = 0;
+
+            foreach (VaultEntry entry in vaultEntries)
+            {
+                if (string.IsNullOrWhiteSpace(entry.Secret))
+                {
+                    continue;
+                }
+
+                if (IsWeakPasswordForSecurityCenter(entry.Secret, entry.Platform))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private bool IsWeakPasswordForSecurityCenter(string password, string platform)
+        {
+            if (password.Length < 8)
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(platform) &&
+                password.Contains(platform, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            bool hasLower = password.Any(char.IsLower);
+            bool hasUpper = password.Any(char.IsUpper);
+            bool hasDigit = password.Any(char.IsDigit);
+            bool hasSymbol = password.Any(ch => !char.IsLetterOrDigit(ch));
+
+            int varietyScore = 0;
+
+            if (hasLower) varietyScore++;
+            if (hasUpper) varietyScore++;
+            if (hasDigit) varietyScore++;
+            if (hasSymbol) varietyScore++;
+
+            return password.Length < 12 || varietyScore < 3;
+        }
+
+        private int CountReusedPasswordEntries()
+        {
+            return vaultEntries
+                .Where(entry => !string.IsNullOrWhiteSpace(entry.Secret))
+                .GroupBy(entry => entry.Secret)
+                .Where(group => group.Count() > 1)
+                .Sum(group => group.Count());
         }
         private bool HasActiveSecretAccess()
         {
