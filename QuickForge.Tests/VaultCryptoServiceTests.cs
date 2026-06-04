@@ -251,5 +251,108 @@ namespace QuickForge.Tests
                 );
             });
         }
+
+        [Fact]
+        public void EncryptedBackupFile_CanBeImportedWithVaultCode()
+        {
+            string vaultCode = "correct-vault-code";
+            string recoveryKey = VaultCryptoService.GenerateRecoveryKey();
+
+            string backupPath = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(),
+                "QuickForge-Backup-" + Guid.NewGuid().ToString("N") + ".qfvault"
+            );
+
+            try
+            {
+                VaultData originalVault = CreateSampleVault();
+
+                string encryptedJson = VaultCryptoService.CreateEncryptedVault(
+                    originalVault,
+                    vaultCode,
+                    recoveryKey,
+                    out byte[] dataKey,
+                    out EncryptedVaultFile encryptedVaultFile
+                );
+
+                System.IO.File.WriteAllText(backupPath, encryptedJson);
+
+                Assert.True(System.IO.File.Exists(backupPath));
+
+                string importedBackupJson = System.IO.File.ReadAllText(backupPath);
+
+                Assert.DoesNotContain("SteamTest123", importedBackupJson);
+                Assert.DoesNotContain("fake@example.com", importedBackupJson);
+                Assert.DoesNotContain("MyFakePassword123!", importedBackupJson);
+                Assert.DoesNotContain("only test", importedBackupJson);
+
+                VaultData importedVault = VaultCryptoService.DecryptVault(
+                    importedBackupJson,
+                    vaultCode,
+                    out byte[] importedDataKey,
+                    out EncryptedVaultFile importedEncryptedVaultFile
+                );
+
+                Assert.Single(importedVault.Entries);
+                Assert.Equal("SteamTest123", importedVault.Entries[0].Platform);
+                Assert.Equal("fake@example.com", importedVault.Entries[0].Username);
+                Assert.Equal("MyFakePassword123!", importedVault.Entries[0].Secret);
+            }
+            finally
+            {
+                if (System.IO.File.Exists(backupPath))
+                {
+                    System.IO.File.Delete(backupPath);
+                }
+            }
+        }
+
+        [Fact]
+        public void EncryptedBackupFile_CanBeImportedWithRecoveryKey()
+        {
+            string vaultCode = "correct-vault-code";
+            string recoveryKey = VaultCryptoService.GenerateRecoveryKey();
+
+            string backupPath = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(),
+                "QuickForge-Backup-" + Guid.NewGuid().ToString("N") + ".qfvault"
+            );
+
+            try
+            {
+                VaultData originalVault = CreateSampleVault();
+
+                string encryptedJson = VaultCryptoService.CreateEncryptedVault(
+                    originalVault,
+                    vaultCode,
+                    recoveryKey,
+                    out byte[] dataKey,
+                    out EncryptedVaultFile encryptedVaultFile
+                );
+
+                System.IO.File.WriteAllText(backupPath, encryptedJson);
+
+                string importedBackupJson = System.IO.File.ReadAllText(backupPath);
+
+                VaultData importedVault = VaultCryptoService.DecryptVault(
+                    importedBackupJson,
+                    recoveryKey,
+                    out byte[] importedDataKey,
+                    out EncryptedVaultFile importedEncryptedVaultFile
+                );
+
+                Assert.Single(importedVault.Entries);
+                Assert.Equal("SteamTest123", importedVault.Entries[0].Platform);
+                Assert.Equal("MyFakePassword123!", importedVault.Entries[0].Secret);
+            }
+            finally
+            {
+                if (System.IO.File.Exists(backupPath))
+                {
+                    System.IO.File.Delete(backupPath);
+                }
+            }
+        }
     }
 }
+
