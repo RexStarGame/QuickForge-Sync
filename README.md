@@ -1,4 +1,4 @@
-﻿# QuickForge Sync
+﻿# QuickForge Sync Beta Preview
 
 [![QuickForge Tests](https://github.com/RexStarGame/-verkun/actions/workflows/dotnet-tests.yml/badge.svg?branch=main)](https://github.com/RexStarGame/-verkun/actions/workflows/dotnet-tests.yml)
 
@@ -6,7 +6,7 @@ QuickForge Sync is a Windows password and private-code vault with encrypted Goog
 
 The goal is simple: keep passwords, game codes, license keys, recovery notes, and private snippets safe while still making them fast to use.
 
-> **Alpha notice:** QuickForge Sync is currently a prototype. Use test data only. Do not store real passwords until the app has been reviewed and tested properly.
+> **Beta Preview notice:** QuickForge Sync is now in beta preview. Use test data only. Do not store real passwords yet. The app has automated crypto and backup tests, but it still needs more real-world testing before stable release.
 
 ## Main Features
 
@@ -96,6 +96,7 @@ Current focus:
 ## Disclaimer
 
 QuickForge Sync is a learning and prototype project. Do not rely on it as your only password manager until the code has been reviewed and tested properly.
+
 
 
 
