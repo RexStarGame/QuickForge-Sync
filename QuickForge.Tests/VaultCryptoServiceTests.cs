@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Xunit;
 using exam_test;
 
@@ -141,6 +142,60 @@ namespace QuickForge.Tests
             Assert.DoesNotContain("fake@example.com", encryptedJson);
             Assert.DoesNotContain("MyFakePassword123!", encryptedJson);
             Assert.DoesNotContain("only test", encryptedJson);
+        }
+
+        [Fact]
+        public void RotateRecoveryKey_NewRecoveryKeyWorks_OldRecoveryKeyFails()
+        {
+            string vaultCode = "correct-vault-code";
+            string oldRecoveryKey = VaultCryptoService.GenerateRecoveryKey();
+            string newRecoveryKey = VaultCryptoService.GenerateRecoveryKey();
+
+            VaultData originalVault = CreateSampleVault();
+
+            string encryptedJson = VaultCryptoService.CreateEncryptedVault(
+                originalVault,
+                vaultCode,
+                oldRecoveryKey,
+                out byte[] dataKey,
+                out EncryptedVaultFile encryptedVaultFile
+            );
+
+            VaultData decryptedWithOldKeyBeforeRotation = VaultCryptoService.DecryptVault(
+                encryptedJson,
+                oldRecoveryKey,
+                out byte[] oldKeyDataKey,
+                out EncryptedVaultFile oldKeyEncryptedVaultFile
+            );
+
+            Assert.Equal("MyFakePassword123!", decryptedWithOldKeyBeforeRotation.Entries[0].Secret);
+
+            VaultCryptoService.RotateRecoveryKey(
+                encryptedVaultFile,
+                dataKey,
+                newRecoveryKey
+            );
+
+            string rotatedEncryptedJson = JsonSerializer.Serialize(encryptedVaultFile);
+
+            VaultData decryptedWithNewKey = VaultCryptoService.DecryptVault(
+                rotatedEncryptedJson,
+                newRecoveryKey,
+                out byte[] newKeyDataKey,
+                out EncryptedVaultFile newKeyEncryptedVaultFile
+            );
+
+            Assert.Equal("MyFakePassword123!", decryptedWithNewKey.Entries[0].Secret);
+
+            Assert.ThrowsAny<Exception>(() =>
+            {
+                VaultCryptoService.DecryptVault(
+                    rotatedEncryptedJson,
+                    oldRecoveryKey,
+                    out byte[] failedOldKeyDataKey,
+                    out EncryptedVaultFile failedOldKeyEncryptedVaultFile
+                );
+            });
         }
     }
 }
