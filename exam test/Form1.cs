@@ -8,6 +8,7 @@ using Google.Apis.Drive.v3;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Linq;
+using System.Security.Cryptography;
 
 namespace exam_test
 {
@@ -51,6 +52,14 @@ namespace exam_test
         private const uint ModAlt = 0x0001;
         private const uint ModControl = 0x0002;
         private const uint VkQ = 0x51;
+
+        private IntPtr quickFillTargetWindow = IntPtr.Zero;
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
 
         [DllImport("user32.dll")]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
@@ -100,6 +109,14 @@ namespace exam_test
 
         private readonly Button saveEntryButton = new Button();
         private readonly Button clearButton = new Button();
+        private readonly Button createPasswordButton = new Button();
+
+        private readonly Button editEntryButton = new Button();
+        private readonly Button saveChangesButton = new Button();
+        private readonly Button cancelEditButton = new Button();
+
+        private VaultEntry? editingEntry = null;
+        private int editingEntryIndex = -1;
 
         private readonly Button openSiteButton = new Button();
         private readonly Button openAndFillButton = new Button();
@@ -461,10 +478,23 @@ namespace exam_test
 
             secretTextBox.Left = 20;
             secretTextBox.Top = 212;
-            secretTextBox.Width = 250;
+            secretTextBox.Width = 165;
             secretTextBox.Height = 26;
             secretTextBox.PlaceholderText = "Optional password or code";
             secretTextBox.UseSystemPasswordChar = true;
+
+            createPasswordButton.Text = "Generate";
+            createPasswordButton.Left = 195;
+            createPasswordButton.Top = 212;
+            createPasswordButton.Width = 75;
+            createPasswordButton.Height = 26;
+            createPasswordButton.FlatStyle = FlatStyle.Flat;
+            createPasswordButton.UseVisualStyleBackColor = false;
+            createPasswordButton.ForeColor = Color.White;
+            createPasswordButton.BackColor = Color.FromArgb(45, 90, 160);
+            createPasswordButton.FlatAppearance.BorderColor = borderColor;
+            createPasswordButton.Click += (s, e) => ShowCreatePasswordDialog(PasswordGeneratorTarget.VaultField);
+
             websiteLabel.Text = "Website / App link";
             websiteLabel.ForeColor = Color.White;
             websiteLabel.BackColor = Color.Transparent;
@@ -513,6 +543,32 @@ namespace exam_test
             clearButton.BackColor = Color.FromArgb(35, 40, 60);
             clearButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
             clearButton.Click += ClearButton_Click;
+
+            saveChangesButton.Text = "Save changes";
+            saveChangesButton.Left = 20;
+            saveChangesButton.Top = saveEntryButton.Top;
+            saveChangesButton.Width = 110;
+            saveChangesButton.Height = 28;
+            saveChangesButton.FlatStyle = FlatStyle.Flat;
+            saveChangesButton.UseVisualStyleBackColor = false;
+            saveChangesButton.ForeColor = Color.White;
+            saveChangesButton.BackColor = Color.FromArgb(45, 90, 160);
+            saveChangesButton.FlatAppearance.BorderColor = borderColor;
+            saveChangesButton.Visible = false;
+            saveChangesButton.Click += SaveChangesButton_Click;
+
+            cancelEditButton.Text = "Cancel edit";
+            cancelEditButton.Left = 140;
+            cancelEditButton.Top = saveEntryButton.Top;
+            cancelEditButton.Width = 100;
+            cancelEditButton.Height = 28;
+            cancelEditButton.FlatStyle = FlatStyle.Flat;
+            cancelEditButton.UseVisualStyleBackColor = false;
+            cancelEditButton.ForeColor = Color.White;
+            cancelEditButton.BackColor = Color.FromArgb(35, 40, 60);
+            cancelEditButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
+            cancelEditButton.Visible = false;
+            cancelEditButton.Click += CancelEditButton_Click;
 
             vaultListBox.Left = 315;
             vaultListBox.Top = 82;
@@ -590,6 +646,8 @@ namespace exam_test
 
             vaultPanel.Controls.Add(secretLabel);
             vaultPanel.Controls.Add(secretTextBox);
+            vaultPanel.Controls.Add(createPasswordButton);
+
             vaultPanel.Controls.Add(websiteLabel);
             vaultPanel.Controls.Add(websiteTextBox);
             vaultPanel.Controls.Add(noteLabel);
@@ -597,6 +655,8 @@ namespace exam_test
 
             vaultPanel.Controls.Add(saveEntryButton);
             vaultPanel.Controls.Add(clearButton);
+            vaultPanel.Controls.Add(saveChangesButton);
+            vaultPanel.Controls.Add(cancelEditButton);
             vaultPanel.Controls.Add(vaultListBox);
             vaultPanel.Controls.Add(selectedPreviewLabel);
             vaultPanel.Controls.Add(revealButton);
@@ -605,6 +665,7 @@ namespace exam_test
             vaultPanel.Controls.Add(deleteEntryButton);
             vaultPanel.Controls.Add(openSiteButton);
             vaultPanel.Controls.Add(openAndFillButton);
+            vaultPanel.Controls.Add(editEntryButton);
 
             Controls.Add(vaultPanel);
             vaultPanel.BringToFront();
@@ -698,6 +759,18 @@ namespace exam_test
             openAndFillButton.BackColor = Color.FromArgb(45, 90, 160);
             openAndFillButton.FlatAppearance.BorderColor = borderColor;
             openAndFillButton.Click += async (s, e) => await OpenAndFillButton_Click();
+
+            editEntryButton.Text = "Edit";
+            editEntryButton.Left = 525;
+            editEntryButton.Top = openSiteButton.Top;
+            editEntryButton.Width = 70;
+            editEntryButton.Height = 30;
+            editEntryButton.FlatStyle = FlatStyle.Flat;
+            editEntryButton.UseVisualStyleBackColor = false;
+            editEntryButton.ForeColor = Color.White;
+            editEntryButton.BackColor = Color.FromArgb(35, 40, 60);
+            editEntryButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
+            editEntryButton.Click += EditEntryButton_Click;
         }
 
         private void Card_Paint(object? sender, PaintEventArgs e)
@@ -975,6 +1048,7 @@ namespace exam_test
             vaultEntries.Clear();
             RefreshVaultList();
             ClearEntryInputs();
+            SetEntryEditMode(false);
 
             selectedPreviewLabel.Text = "Vault locked.";
 
@@ -1109,6 +1183,11 @@ namespace exam_test
         }
         private async void SaveEntryButton_Click(object? sender, EventArgs e)
         {
+            if (editingEntry != null)
+            {
+                MessageBox.Show("Finish editing or cancel edit first.");
+                return;
+            }
             string platform = platformTextBox.Text.Trim();
             string username = usernameTextBox.Text.Trim();
             string secret = secretTextBox.Text.Trim();
@@ -1152,7 +1231,120 @@ namespace exam_test
                 MessageBox.Show("Entry was saved locally, but sync failed: " + ex.Message);
             }
         }
+        private void EditEntryButton_Click(object? sender, EventArgs e)
+        {
+            VaultEntry? entry = GetSelectedEntry();
 
+            if (entry == null)
+            {
+                MessageBox.Show("Select an entry first.");
+                return;
+            }
+
+            editingEntry = entry;
+            editingEntryIndex = vaultListBox.SelectedIndex;
+
+            platformTextBox.Text = entry.Platform;
+            usernameTextBox.Text = entry.Username;
+            secretTextBox.Text = entry.Secret;
+            websiteTextBox.Text = entry.Website;
+            noteTextBox.Text = entry.Note;
+
+            SetEntryEditMode(true);
+
+            SetPreviewText(
+                "Editing: " + entry.GetDisplayName(),
+                "Make your changes on the left.",
+                "Click Save changes when done."
+            );
+        }
+
+        private async void SaveChangesButton_Click(object? sender, EventArgs e)
+        {
+            if (editingEntry == null || editingEntryIndex < 0 || editingEntryIndex >= vaultEntries.Count)
+            {
+                MessageBox.Show("No entry is being edited.");
+                SetEntryEditMode(false);
+                return;
+            }
+
+            string platform = platformTextBox.Text.Trim();
+            string username = usernameTextBox.Text.Trim();
+            string secret = secretTextBox.Text.Trim();
+            string website = websiteTextBox.Text.Trim();
+            string note = noteTextBox.Text.Trim();
+
+            if (
+                string.IsNullOrWhiteSpace(platform) &&
+                string.IsNullOrWhiteSpace(username) &&
+                string.IsNullOrWhiteSpace(secret) &&
+                string.IsNullOrWhiteSpace(website) &&
+                string.IsNullOrWhiteSpace(note)
+            )
+            {
+                MessageBox.Show("Fill in at least one field before saving changes.");
+                return;
+            }
+
+            editingEntry.Platform = platform;
+            editingEntry.Username = username;
+            editingEntry.Secret = secret;
+            editingEntry.Website = website;
+            editingEntry.Note = note;
+
+            try
+            {
+                await SaveCurrentVaultToCloudAsync();
+
+                RefreshVaultList();
+
+                if (editingEntryIndex >= 0 && editingEntryIndex < vaultListBox.Items.Count)
+                {
+                    vaultListBox.SelectedIndex = editingEntryIndex;
+                }
+
+                SetPreviewText(
+                    "Saved changes: " + editingEntry.GetDisplayName(),
+                    "User: " + MaskEmpty(editingEntry.Username),
+                    "Password/code: " + MaskSecret(editingEntry.Secret)
+                );
+
+                ClearEntryInputs();
+                SetEntryEditMode(false);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not save changes: " + ex.Message);
+            }
+        }
+
+        private void CancelEditButton_Click(object? sender, EventArgs e)
+        {
+            ClearEntryInputs();
+            SetEntryEditMode(false);
+
+            selectedPreviewLabel.Text = "Edit cancelled.";
+        }
+
+        private void SetEntryEditMode(bool isEditing)
+        {
+            if (!isEditing)
+            {
+                editingEntry = null;
+                editingEntryIndex = -1;
+            }
+
+            saveEntryButton.Visible = !isEditing;
+            clearButton.Visible = !isEditing;
+
+            saveChangesButton.Visible = isEditing;
+            cancelEditButton.Visible = isEditing;
+
+            editEntryButton.Enabled = !isEditing;
+            deleteEntryButton.Enabled = !isEditing;
+            openSiteButton.Enabled = !isEditing;
+            openAndFillButton.Enabled = !isEditing;
+        }
         private void ClearButton_Click(object? sender, EventArgs e)
         {
             ClearEntryInputs();
@@ -1367,6 +1559,13 @@ namespace exam_test
             }
 
             vaultEntries.Remove(entry);
+
+            if (editingEntry == entry)
+            {
+                ClearEntryInputs();
+                SetEntryEditMode(false);
+            }
+
             RefreshVaultList();
             selectedPreviewLabel.Text = "Deleted entry.";
 
@@ -1830,8 +2029,350 @@ namespace exam_test
 
             return "********";
         }
+        private enum PasswordGeneratorTarget
+        {
+            VaultField,
+            QuickFill
+        }
+        private async Task FillGeneratedPasswordAsync(string password)
+        {
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                return;
+            }
+
+            if (quickFillTargetWindow == IntPtr.Zero)
+            {
+                Clipboard.SetText(password);
+                MessageBox.Show("Password copied. Click the password field and paste it.");
+                return;
+            }
+
+            quickFillForm?.Hide();
+
+            Clipboard.SetText(password);
+
+            await Task.Delay(250);
+
+            SetForegroundWindow(quickFillTargetWindow);
+
+            await Task.Delay(350);
+
+            SendKeys.SendWait("^v");
+
+            _ = ClearClipboardLaterAsync(password, 20000);
+        }
+
+        private void ShowCreatePasswordDialog(PasswordGeneratorTarget target)
+        {
+            string currentPassword = "";
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 460;
+                dialog.Height = 330;
+                dialog.Text = "Generate password";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Generate password";
+                titleLabel.Left = 20;
+                titleLabel.Top = 18;
+                titleLabel.Width = 250;
+                titleLabel.Height = 28;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "New password — not saved yet.";
+                subtitleLabel.Left = 20;
+                subtitleLabel.Top = 50;
+                subtitleLabel.Width = 360;
+                subtitleLabel.Height = 22;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+
+                Label typeLabel = new Label();
+                typeLabel.Text = "Type";
+                typeLabel.Left = 20;
+                typeLabel.Top = 82;
+                typeLabel.Width = 100;
+                typeLabel.Height = 22;
+                typeLabel.ForeColor = Color.White;
+                typeLabel.BackColor = Color.Transparent;
+                typeLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                ComboBox typeComboBox = new ComboBox();
+                typeComboBox.Left = 20;
+                typeComboBox.Top = 105;
+                typeComboBox.Width = 180;
+                typeComboBox.Height = 28;
+                typeComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+                typeComboBox.Items.Add("Easy to remember");
+                typeComboBox.Items.Add("Strong");
+                typeComboBox.Items.Add("Code style");
+                typeComboBox.SelectedIndex = 1;
+
+                TextBox passwordBox = new TextBox();
+                passwordBox.Left = 20;
+                passwordBox.Top = 150;
+                passwordBox.Width = 400;
+                passwordBox.Height = 55;
+                passwordBox.Multiline = true;
+                passwordBox.ReadOnly = true;
+                passwordBox.ScrollBars = ScrollBars.Vertical;
+                passwordBox.WordWrap = true;
+                passwordBox.BackColor = Color.FromArgb(24, 28, 44);
+                passwordBox.ForeColor = Color.White;
+                passwordBox.BorderStyle = BorderStyle.FixedSingle;
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "Ready.";
+                statusLabel.Left = 20;
+                statusLabel.Top = 210;
+                statusLabel.Width = 400;
+                statusLabel.Height = 22;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+
+                Button generateAgainButton = new Button();
+                generateAgainButton.Text = "Generate again";
+                generateAgainButton.Left = 220;
+                generateAgainButton.Top = 103;
+                generateAgainButton.Width = 130;
+                generateAgainButton.Height = 32;
+                StyleActionButton(generateAgainButton);
+
+                Button copyButton = new Button();
+                copyButton.Text = "Copy password";
+                copyButton.Left = 20;
+                copyButton.Top = 245;
+                copyButton.Width = 125;
+                copyButton.Height = 32;
+                StyleActionButton(copyButton);
+
+                Button fillButton = new Button();
+                fillButton.Text = "Fill password";
+                fillButton.Left = 155;
+                fillButton.Top = 245;
+                fillButton.Width = 120;
+                fillButton.Height = 32;
+                StyleActionButton(fillButton, true);
+                fillButton.Visible = target == PasswordGeneratorTarget.QuickFill;
+
+                Button useInVaultButton = new Button();
+                useInVaultButton.Text = "Use in vault";
+                useInVaultButton.Left = 155;
+                useInVaultButton.Top = 245;
+                useInVaultButton.Width = 120;
+                useInVaultButton.Height = 32;
+                StyleActionButton(useInVaultButton, true);
+                useInVaultButton.Visible = target == PasswordGeneratorTarget.VaultField;
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 290;
+                cancelButton.Top = 245;
+                cancelButton.Width = 90;
+                cancelButton.Height = 32;
+                StyleActionButton(cancelButton);
+                cancelButton.Click += (s, e) => dialog.Close();
+
+                void GenerateNewPassword()
+                {
+                    string type = typeComboBox.SelectedItem?.ToString() ?? "Strong";
+                    currentPassword = GenerateUniquePassword(type);
+                    passwordBox.Text = currentPassword;
+                    statusLabel.Text = "New password — not saved yet.";
+                }
+
+                generateAgainButton.Click += (s, e) =>
+                {
+                    GenerateNewPassword();
+                };
+
+                typeComboBox.SelectedIndexChanged += (s, e) =>
+                {
+                    GenerateNewPassword();
+                };
+
+                copyButton.Click += (s, e) =>
+                {
+                    if (string.IsNullOrWhiteSpace(currentPassword))
+                    {
+                        return;
+                    }
+
+                    Clipboard.SetText(currentPassword);
+                    statusLabel.Text = "Password copied. Clipboard clears in 20 seconds.";
+                    _ = ClearClipboardLaterAsync(currentPassword, 20000);
+                };
+
+                fillButton.Click += async (s, e) =>
+                {
+                    if (string.IsNullOrWhiteSpace(currentPassword))
+                    {
+                        return;
+                    }
+
+                    statusLabel.Text = "Filling password...";
+                    dialog.Hide();
+
+                    await FillGeneratedPasswordAsync(currentPassword);
+
+                    dialog.Close();
+                };
+
+                useInVaultButton.Click += (s, e) =>
+                {
+                    if (string.IsNullOrWhiteSpace(currentPassword))
+                    {
+                        return;
+                    }
+
+                    secretTextBox.Text = currentPassword;
+                    dialog.Close();
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(typeLabel);
+                dialog.Controls.Add(typeComboBox);
+                dialog.Controls.Add(generateAgainButton);
+                dialog.Controls.Add(passwordBox);
+                dialog.Controls.Add(statusLabel);
+                dialog.Controls.Add(copyButton);
+                dialog.Controls.Add(fillButton);
+                dialog.Controls.Add(useInVaultButton);
+                dialog.Controls.Add(cancelButton);
+
+                GenerateNewPassword();
+
+                dialog.ShowDialog(this);
+            }
+        }
+
+        private string GenerateUniquePassword(string type)
+        {
+            for (int i = 0; i < 100; i++)
+            {
+                string password = GeneratePasswordByType(type);
+
+                if (!vaultEntries.Any(entry => entry.Secret == password))
+                {
+                    return password;
+                }
+            }
+
+            return GeneratePasswordByType(type);
+        }
+
+        private string GeneratePasswordByType(string type)
+        {
+            if (type == "Easy to remember")
+            {
+                return GenerateReadablePassword();
+            }
+
+            if (type == "Code style")
+            {
+                return GenerateCodeStylePassword();
+            }
+
+            return GenerateStrongPassword();
+        }
+
+        private string GenerateStrongPassword()
+        {
+            const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%*-_+=?";
+            char[] result = new char[22];
+
+            for (int i = 0; i < result.Length; i++)
+            {
+                result[i] = chars[RandomNumberGenerator.GetInt32(chars.Length)];
+            }
+
+            return new string(result);
+        }
+
+        private string GenerateReadablePassword()
+        {
+            string[] firstWords =
+            {
+        "River", "Wolf", "Nova", "Dragon", "Pixel", "Storm",
+        "Forest", "Rocket", "Shadow", "Crystal", "Falcon", "Ocean"
+    };
+
+            string[] secondWords =
+            {
+        "Gate", "Blade", "Stone", "Light", "Forge", "Cloud",
+        "Mage", "Runner", "Shield", "Flame", "Tower", "Star"
+    };
+
+            string first = firstWords[RandomNumberGenerator.GetInt32(firstWords.Length)];
+            string second = secondWords[RandomNumberGenerator.GetInt32(secondWords.Length)];
+            int number = RandomNumberGenerator.GetInt32(10, 99);
+
+            string[] symbols = { "!", "#", "%", "?" };
+            string symbol = symbols[RandomNumberGenerator.GetInt32(symbols.Length)];
+
+            return first + "-" + second + "-" + number + symbol;
+        }
+
+        private string GenerateCodeStylePassword()
+        {
+            const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+            string MakeGroup()
+            {
+                char[] group = new char[4];
+
+                for (int i = 0; i < group.Length; i++)
+                {
+                    group[i] = chars[RandomNumberGenerator.GetInt32(chars.Length)];
+                }
+
+                return new string(group);
+            }
+
+            return MakeGroup() + "-" + MakeGroup() + "-" + MakeGroup() + "-" + MakeGroup();
+        }
+
+        private void StyleActionButton(Button button, bool primary = false)
+        {
+            button.FlatStyle = FlatStyle.Flat;
+            button.UseVisualStyleBackColor = false;
+            button.ForeColor = Color.White;
+            button.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+            if (primary)
+            {
+                button.BackColor = Color.FromArgb(45, 90, 160);
+                button.FlatAppearance.BorderColor = borderColor;
+                button.FlatAppearance.MouseOverBackColor = Color.FromArgb(55, 105, 180);
+                button.FlatAppearance.MouseDownBackColor = Color.FromArgb(35, 75, 140);
+            }
+            else
+            {
+                button.BackColor = Color.FromArgb(35, 40, 60);
+                button.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
+                button.FlatAppearance.MouseOverBackColor = Color.FromArgb(45, 52, 75);
+                button.FlatAppearance.MouseDownBackColor = Color.FromArgb(25, 30, 48);
+            }
+        }
         private void ShowQuickFill()
         {
+            IntPtr activeWindow = GetForegroundWindow();
+
+            if (activeWindow != Handle)
+            {
+                quickFillTargetWindow = activeWindow;
+            }
             if (currentDriveService == null)
             {
                 ShowMainWindow();
@@ -1893,43 +2434,89 @@ namespace exam_test
         {
             quickFillForm = new Form();
             quickFillForm.Text = "QuickFill";
-            quickFillForm.Width = 420;
-            quickFillForm.Height = 420;
+            quickFillForm.Width = 760;
+            quickFillForm.Height = 430;
             quickFillForm.StartPosition = FormStartPosition.CenterScreen;
             quickFillForm.FormBorderStyle = FormBorderStyle.FixedSingle;
             quickFillForm.MaximizeBox = false;
             quickFillForm.MinimizeBox = false;
             quickFillForm.BackColor = Color.FromArgb(16, 20, 34);
 
-            Label titleLabel = new Label();
-            titleLabel.Text = "Find login";
-            titleLabel.Left = 22;
-            titleLabel.Top = 18;
-            titleLabel.Width = 180;
-            titleLabel.Height = 28;
-            titleLabel.ForeColor = Color.White;
-            titleLabel.BackColor = Color.Transparent;
-            titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+            Label createTitleLabel = new Label();
+            createTitleLabel.Text = "Create";
+            createTitleLabel.Left = 22;
+            createTitleLabel.Top = 18;
+            createTitleLabel.Width = 180;
+            createTitleLabel.Height = 28;
+            createTitleLabel.ForeColor = Color.White;
+            createTitleLabel.BackColor = Color.Transparent;
+            createTitleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
 
-            Label hintLabel = new Label();
-            hintLabel.Text = "Search and use a saved login quickly.";
-            hintLabel.Left = 22;
-            hintLabel.Top = 48;
-            hintLabel.Width = 340;
-            hintLabel.Height = 22;
-            hintLabel.ForeColor = softTextColor;
-            hintLabel.BackColor = Color.Transparent;
-            hintLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+            Label createHintLabel = new Label();
+            createHintLabel.Text = "Make a new password for signup pages.";
+            createHintLabel.Left = 22;
+            createHintLabel.Top = 50;
+            createHintLabel.Width = 280;
+            createHintLabel.Height = 45;
+            createHintLabel.ForeColor = softTextColor;
+            createHintLabel.BackColor = Color.Transparent;
+
+            Button createPasswordQuickFillButton = new Button();
+            createPasswordQuickFillButton.Text = "Create password";
+            createPasswordQuickFillButton.Left = 22;
+            createPasswordQuickFillButton.Top = 105;
+            createPasswordQuickFillButton.Width = 160;
+            createPasswordQuickFillButton.Height = 34;
+            StyleActionButton(createPasswordQuickFillButton, true);
+            createPasswordQuickFillButton.Click += (s, e) =>
+            {
+                ShowCreatePasswordDialog(PasswordGeneratorTarget.QuickFill);
+            };
+
+            Label createStatusLabel = new Label();
+            createStatusLabel.Text = "Generated passwords are not saved automatically.";
+            createStatusLabel.Left = 22;
+            createStatusLabel.Top = 155;
+            createStatusLabel.Width = 270;
+            createStatusLabel.Height = 60;
+            createStatusLabel.ForeColor = softTextColor;
+            createStatusLabel.BackColor = Color.Transparent;
+
+            Panel divider = new Panel();
+            divider.Left = 320;
+            divider.Top = 20;
+            divider.Width = 1;
+            divider.Height = 340;
+            divider.BackColor = Color.FromArgb(60, 70, 100);
+
+            Label savedTitleLabel = new Label();
+            savedTitleLabel.Text = "Saved logins";
+            savedTitleLabel.Left = 350;
+            savedTitleLabel.Top = 18;
+            savedTitleLabel.Width = 220;
+            savedTitleLabel.Height = 28;
+            savedTitleLabel.ForeColor = Color.White;
+            savedTitleLabel.BackColor = Color.Transparent;
+            savedTitleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+
+            Label savedHintLabel = new Label();
+            savedHintLabel.Text = "Search and use a saved login quickly.";
+            savedHintLabel.Left = 350;
+            savedHintLabel.Top = 50;
+            savedHintLabel.Width = 340;
+            savedHintLabel.Height = 22;
+            savedHintLabel.ForeColor = softTextColor;
+            savedHintLabel.BackColor = Color.Transparent;
 
             quickFillSearchBox = new TextBox();
-            quickFillSearchBox.Left = 22;
+            quickFillSearchBox.Left = 350;
             quickFillSearchBox.Top = 82;
             quickFillSearchBox.Width = 360;
             quickFillSearchBox.Height = 28;
             quickFillSearchBox.PlaceholderText = "Search YouTube, Steam, Discord...";
 
             quickFillListBox = new ListBox();
-            quickFillListBox.Left = 22;
+            quickFillListBox.Left = 350;
             quickFillListBox.Top = 122;
             quickFillListBox.Width = 360;
             quickFillListBox.Height = 150;
@@ -1938,43 +2525,43 @@ namespace exam_test
 
             Button copyUserButton = new Button();
             copyUserButton.Text = "Copy username";
-            copyUserButton.Left = 22;
+            copyUserButton.Left = 350;
             copyUserButton.Top = 290;
             copyUserButton.Width = 115;
             copyUserButton.Height = 32;
+            StyleActionButton(copyUserButton);
             copyUserButton.Click += (s, e) => QuickFillCopyUsername();
-            StyleQuickFillButton(copyUserButton);
 
             Button copyPasswordButton = new Button();
             copyPasswordButton.Text = "Copy password";
-            copyPasswordButton.Left = 147;
+            copyPasswordButton.Left = 475;
             copyPasswordButton.Top = 290;
             copyPasswordButton.Width = 115;
             copyPasswordButton.Height = 32;
+            StyleActionButton(copyPasswordButton);
             copyPasswordButton.Click += (s, e) => QuickFillCopyPassword();
-            StyleQuickFillButton(copyPasswordButton);
 
             Button fillLoginButton = new Button();
             fillLoginButton.Text = "Fill login";
-            fillLoginButton.Left = 272;
+            fillLoginButton.Left = 600;
             fillLoginButton.Top = 290;
             fillLoginButton.Width = 110;
             fillLoginButton.Height = 32;
+            StyleActionButton(fillLoginButton, true);
             fillLoginButton.Click += async (s, e) => await QuickFillAutoFillAsync();
-            StyleQuickFillButton(fillLoginButton, true);
 
             Button hideButton = new Button();
             hideButton.Text = "Hide";
-            hideButton.Left = 272;
+            hideButton.Left = 600;
             hideButton.Top = 330;
             hideButton.Width = 110;
             hideButton.Height = 32;
+            StyleActionButton(hideButton);
             hideButton.Click += (s, e) => quickFillForm.Hide();
-            StyleQuickFillButton(hideButton);
 
             quickFillStatusLabel = new Label();
             quickFillStatusLabel.Text = "Tip: Ctrl + Alt + Q opens this window.";
-            quickFillStatusLabel.Left = 22;
+            quickFillStatusLabel.Left = 350;
             quickFillStatusLabel.Top = 335;
             quickFillStatusLabel.Width = 235;
             quickFillStatusLabel.Height = 32;
@@ -1991,8 +2578,14 @@ namespace exam_test
                 await QuickFillAutoFillAsync();
             };
 
-            quickFillForm.Controls.Add(titleLabel);
-            quickFillForm.Controls.Add(hintLabel);
+            quickFillForm.Controls.Add(createTitleLabel);
+            quickFillForm.Controls.Add(createHintLabel);
+            quickFillForm.Controls.Add(createPasswordQuickFillButton);
+            quickFillForm.Controls.Add(createStatusLabel);
+            quickFillForm.Controls.Add(divider);
+
+            quickFillForm.Controls.Add(savedTitleLabel);
+            quickFillForm.Controls.Add(savedHintLabel);
             quickFillForm.Controls.Add(quickFillSearchBox);
             quickFillForm.Controls.Add(quickFillListBox);
             quickFillForm.Controls.Add(copyUserButton);
