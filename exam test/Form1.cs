@@ -6,11 +6,15 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Google.Apis.Drive.v3;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Linq;
 
 namespace exam_test
 {
     public partial class Form1 : Form
     {
+
+
         private readonly System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer();
         private readonly System.Windows.Forms.Timer hideRevealTimer = new System.Windows.Forms.Timer();
 
@@ -32,6 +36,27 @@ namespace exam_test
         private DateTime secretAccessValidUntilUtc = DateTime.MinValue;
         private VaultSettings currentVaultSettings = new VaultSettings();
         private bool hasShownRecoveryReminderThisSession = false;
+
+        private readonly NotifyIcon trayIcon = new NotifyIcon();
+        private readonly ContextMenuStrip trayMenu = new ContextMenuStrip();
+
+        private Form? quickFillForm;
+        private TextBox? quickFillSearchBox;
+        private ListBox? quickFillListBox;
+        private Label? quickFillStatusLabel;
+
+        private const int QuickFillHotkeyId = 9001;
+        private const int WmHotkey = 0x0312;
+
+        private const uint ModAlt = 0x0001;
+        private const uint ModControl = 0x0002;
+        private const uint VkQ = 0x51;
+
+        [DllImport("user32.dll")]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+        [DllImport("user32.dll")]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
         // Top bar
         private readonly Panel topBarPanel = new Panel();
         private readonly Label appTitleLabel = new Label();
@@ -68,15 +93,19 @@ namespace exam_test
 
         private readonly Label secretLabel = new Label();
         private readonly TextBox secretTextBox = new TextBox();
-
+        private readonly Label websiteLabel = new Label();
+        private readonly TextBox websiteTextBox = new TextBox();
         private readonly Label noteLabel = new Label();
         private readonly TextBox noteTextBox = new TextBox();
 
         private readonly Button saveEntryButton = new Button();
         private readonly Button clearButton = new Button();
 
+        private readonly Button openSiteButton = new Button();
+        private readonly Button openAndFillButton = new Button();
+
         private readonly ListBox vaultListBox = new ListBox();
-        private readonly Label selectedPreviewLabel = new Label();
+        private readonly TextBox selectedPreviewLabel = new TextBox();
 
         private readonly Button revealButton = new Button();
         private readonly Button copySecretButton = new Button();
@@ -101,8 +130,8 @@ namespace exam_test
         public Form1()
         {
             InitializeComponent();
-            ClientSize = new Size(800, 620);
-            MinimumSize = new Size(800, 620);
+            ClientSize = new Size(800, 720);
+            MinimumSize = new Size(800, 720);
             DoubleBuffered = true;
             BackColor = backgroundColor;
 
@@ -117,8 +146,16 @@ namespace exam_test
             CreateLoginUi();
             CreateVaultAccessUi();
             CreateVaultUi();
+            CreateTrayIcon();
 
             ShowLoggedOutUi();
+
+            RegisterHotKey(
+                Handle,
+                QuickFillHotkeyId,
+                ModControl | ModAlt,
+                VkQ
+            );
 
             animationTimer.Interval = 16;
             animationTimer.Tick += AnimationTimer_Tick;
@@ -131,6 +168,49 @@ namespace exam_test
         private void Form1_Load(object? sender, EventArgs e)
         {
             // Empty method, safe for Windows Forms Designer.
+        }
+
+        private void CreateTrayIcon()
+        {
+            trayMenu.Items.Add("Open QuickForge", null, (s, e) =>
+            {
+                ShowMainWindow();
+            });
+
+            trayMenu.Items.Add("QuickFill", null, (s, e) =>
+            {
+                ShowQuickFill();
+            });
+
+            trayMenu.Items.Add("Lock vault", null, (s, e) =>
+            {
+                if (isVaultUnlocked)
+                {
+                    LockVaultButton_Click(this, EventArgs.Empty);
+                }
+            });
+
+            trayMenu.Items.Add("Exit", null, (s, e) =>
+            {
+                Close();
+            });
+
+            trayIcon.Text = "QuickForge Sync";
+            trayIcon.Icon = SystemIcons.Shield;
+            trayIcon.Visible = true;
+            trayIcon.ContextMenuStrip = trayMenu;
+
+            trayIcon.DoubleClick += (s, e) =>
+            {
+                ShowMainWindow();
+            };
+        }
+
+        private void ShowMainWindow()
+        {
+            Show();
+            WindowState = FormWindowState.Normal;
+            Activate();
         }
 
         private void CreateTopBarUi()
@@ -324,7 +404,7 @@ namespace exam_test
             vaultPanel.Left = 70;
             vaultPanel.Top = 120;
             vaultPanel.Width = 660;
-            vaultPanel.Height = 450;
+            vaultPanel.Height = 560;
             vaultPanel.BackColor = Color.FromArgb(16, 20, 34);
 
             vaultTitleLabel.Text = "Encrypted Vault";
@@ -385,24 +465,36 @@ namespace exam_test
             secretTextBox.Height = 26;
             secretTextBox.PlaceholderText = "Optional password or code";
             secretTextBox.UseSystemPasswordChar = true;
+            websiteLabel.Text = "Website / App link";
+            websiteLabel.ForeColor = Color.White;
+            websiteLabel.BackColor = Color.Transparent;
+            websiteLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            websiteLabel.AutoSize = true;
+            websiteLabel.Left = 20;
+            websiteLabel.Top = 244;
 
+            websiteTextBox.Left = 20;
+            websiteTextBox.Top = 266;
+            websiteTextBox.Width = 250;
+            websiteTextBox.Height = 26;
+            websiteTextBox.PlaceholderText = "Example: https://accounts.google.com";
             noteLabel.Text = "Note / Description";
             noteLabel.ForeColor = Color.White;
             noteLabel.BackColor = Color.Transparent;
             noteLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             noteLabel.AutoSize = true;
             noteLabel.Left = 20;
-            noteLabel.Top = 244;
+            noteLabel.Top = 298;
 
             noteTextBox.Left = 20;
-            noteTextBox.Top = 266;
+            noteTextBox.Top = 320;
             noteTextBox.Width = 250;
             noteTextBox.Height = 26;
             noteTextBox.PlaceholderText = "Optional note";
 
             saveEntryButton.Text = "Save entry";
             saveEntryButton.Left = 20;
-            saveEntryButton.Top = 302;
+            saveEntryButton.Top = 356;
             saveEntryButton.Width = 95;
             saveEntryButton.Height = 28;
             saveEntryButton.FlatStyle = FlatStyle.Flat;
@@ -413,7 +505,7 @@ namespace exam_test
 
             clearButton.Text = "Clear";
             clearButton.Left = 125;
-            clearButton.Top = 302;
+            clearButton.Top = 356;
             clearButton.Width = 80;
             clearButton.Height = 28;
             clearButton.FlatStyle = FlatStyle.Flat;
@@ -433,17 +525,21 @@ namespace exam_test
 
             selectedPreviewLabel.Text = "Select an entry to preview it.";
             selectedPreviewLabel.ForeColor = softTextColor;
-            selectedPreviewLabel.BackColor = Color.Transparent;
+            selectedPreviewLabel.BackColor = Color.FromArgb(24, 28, 44);
             selectedPreviewLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
-            selectedPreviewLabel.AutoSize = false;
             selectedPreviewLabel.Left = 315;
             selectedPreviewLabel.Top = 228;
             selectedPreviewLabel.Width = 310;
-            selectedPreviewLabel.Height = 42;
+            selectedPreviewLabel.Height = 92;
+            selectedPreviewLabel.Multiline = true;
+            selectedPreviewLabel.ReadOnly = true;
+            selectedPreviewLabel.ScrollBars = ScrollBars.Vertical;
+            selectedPreviewLabel.WordWrap = true;
+            selectedPreviewLabel.BorderStyle = BorderStyle.FixedSingle;
 
             revealButton.Text = "Reveal";
             revealButton.Left = 315;
-            revealButton.Top = 282;
+            revealButton.Top = 336;
             revealButton.Width = 72;
             revealButton.Height = 30;
             revealButton.FlatStyle = FlatStyle.Flat;
@@ -454,7 +550,7 @@ namespace exam_test
 
             copySecretButton.Text = "Copy Password";
             copySecretButton.Left = 395;
-            copySecretButton.Top = 282;
+            copySecretButton.Top = 336;
             copySecretButton.Width = 100;
             copySecretButton.Height = 30;
             copySecretButton.FlatStyle = FlatStyle.Flat;
@@ -465,7 +561,7 @@ namespace exam_test
 
             copyUsernameButton.Text = "Copy user";
             copyUsernameButton.Left = 493;
-            copyUsernameButton.Top = 282;
+            copyUsernameButton.Top = 336;
             copyUsernameButton.Width = 80;
             copyUsernameButton.Height = 30;
             copyUsernameButton.FlatStyle = FlatStyle.Flat;
@@ -476,7 +572,7 @@ namespace exam_test
 
             deleteEntryButton.Text = "Delete";
             deleteEntryButton.Left = 581;
-            deleteEntryButton.Top = 282;
+            deleteEntryButton.Top = 336;
             deleteEntryButton.Width = 70;
             deleteEntryButton.Height = 30;
             deleteEntryButton.FlatStyle = FlatStyle.Flat;
@@ -491,10 +587,14 @@ namespace exam_test
             vaultPanel.Controls.Add(platformTextBox);
             vaultPanel.Controls.Add(usernameLabel);
             vaultPanel.Controls.Add(usernameTextBox);
+
             vaultPanel.Controls.Add(secretLabel);
             vaultPanel.Controls.Add(secretTextBox);
+            vaultPanel.Controls.Add(websiteLabel);
+            vaultPanel.Controls.Add(websiteTextBox);
             vaultPanel.Controls.Add(noteLabel);
             vaultPanel.Controls.Add(noteTextBox);
+
             vaultPanel.Controls.Add(saveEntryButton);
             vaultPanel.Controls.Add(clearButton);
             vaultPanel.Controls.Add(vaultListBox);
@@ -503,12 +603,14 @@ namespace exam_test
             vaultPanel.Controls.Add(copySecretButton);
             vaultPanel.Controls.Add(copyUsernameButton);
             vaultPanel.Controls.Add(deleteEntryButton);
+            vaultPanel.Controls.Add(openSiteButton);
+            vaultPanel.Controls.Add(openAndFillButton);
 
             Controls.Add(vaultPanel);
             vaultPanel.BringToFront();
             lockVaultButton.Text = "Lock vault";
             lockVaultButton.Left = 315;
-            lockVaultButton.Top = 316;
+            lockVaultButton.Top = 408;
             lockVaultButton.Width = 90;
             lockVaultButton.Height = 30;
             lockVaultButton.FlatStyle = FlatStyle.Flat;
@@ -519,7 +621,7 @@ namespace exam_test
 
             changeVaultCodeButton.Text = "Change vault code";
             changeVaultCodeButton.Left = 415;
-            changeVaultCodeButton.Top = 316;
+            changeVaultCodeButton.Top = 408;
             changeVaultCodeButton.Width = 130;
             changeVaultCodeButton.Height = 30;
             changeVaultCodeButton.FlatStyle = FlatStyle.Flat;
@@ -532,7 +634,7 @@ namespace exam_test
             vaultPanel.Controls.Add(changeVaultCodeButton);
             securitySettingsLabel.Text = "Recovery key settings";
             securitySettingsLabel.Left = 315;
-            securitySettingsLabel.Top = 355;
+            securitySettingsLabel.Top = 450;
             securitySettingsLabel.Width = 180;
             securitySettingsLabel.Height = 22;
             securitySettingsLabel.ForeColor = Color.White;
@@ -541,7 +643,7 @@ namespace exam_test
 
             recoveryReminderLabel.Text = "Remind me:";
             recoveryReminderLabel.Left = 315;
-            recoveryReminderLabel.Top = 385;
+            recoveryReminderLabel.Top = 480;
             recoveryReminderLabel.Width = 75;
             recoveryReminderLabel.Height = 24;
             recoveryReminderLabel.ForeColor = softTextColor;
@@ -549,7 +651,7 @@ namespace exam_test
             recoveryReminderLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
 
             recoveryReminderComboBox.Left = 390;
-            recoveryReminderComboBox.Top = 382;
+            recoveryReminderComboBox.Top = 477;
             recoveryReminderComboBox.Width = 130;
             recoveryReminderComboBox.Height = 28;
             recoveryReminderComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -561,7 +663,7 @@ namespace exam_test
 
             rotateRecoveryKeyButton.Text = "New recovery key";
             rotateRecoveryKeyButton.Left = 525;
-            rotateRecoveryKeyButton.Top = 380;
+            rotateRecoveryKeyButton.Top = 475;
             rotateRecoveryKeyButton.Width = 125;
             rotateRecoveryKeyButton.Height = 30;
             rotateRecoveryKeyButton.FlatStyle = FlatStyle.Flat;
@@ -574,6 +676,28 @@ namespace exam_test
             vaultPanel.Controls.Add(recoveryReminderLabel);
             vaultPanel.Controls.Add(recoveryReminderComboBox);
             vaultPanel.Controls.Add(rotateRecoveryKeyButton);
+
+            openSiteButton.Text = "Open site";
+            openSiteButton.Left = 315;
+            openSiteButton.Top = 372;
+            openSiteButton.Width = 90;
+            openSiteButton.Height = 30;
+            openSiteButton.FlatStyle = FlatStyle.Flat;
+            openSiteButton.ForeColor = Color.White;
+            openSiteButton.BackColor = Color.FromArgb(35, 40, 60);
+            openSiteButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
+            openSiteButton.Click += OpenSiteButton_Click;
+
+            openAndFillButton.Text = "Open + Fill";
+            openAndFillButton.Left = 415;
+            openAndFillButton.Top = 372;
+            openAndFillButton.Width = 100;
+            openAndFillButton.Height = 30;
+            openAndFillButton.FlatStyle = FlatStyle.Flat;
+            openAndFillButton.ForeColor = Color.White;
+            openAndFillButton.BackColor = Color.FromArgb(45, 90, 160);
+            openAndFillButton.FlatAppearance.BorderColor = borderColor;
+            openAndFillButton.Click += async (s, e) => await OpenAndFillButton_Click();
         }
 
         private void Card_Paint(object? sender, PaintEventArgs e)
@@ -988,12 +1112,14 @@ namespace exam_test
             string platform = platformTextBox.Text.Trim();
             string username = usernameTextBox.Text.Trim();
             string secret = secretTextBox.Text.Trim();
+            string website = websiteTextBox.Text.Trim();
             string note = noteTextBox.Text.Trim();
 
             if (
                 string.IsNullOrWhiteSpace(platform) &&
                 string.IsNullOrWhiteSpace(username) &&
                 string.IsNullOrWhiteSpace(secret) &&
+                string.IsNullOrWhiteSpace(website) &&
                 string.IsNullOrWhiteSpace(note)
             )
             {
@@ -1006,6 +1132,7 @@ namespace exam_test
                 Platform = platform,
                 Username = username,
                 Secret = secret,
+                Website = website,
                 Note = note,
                 CreatedAt = DateTime.Now
             };
@@ -1036,10 +1163,14 @@ namespace exam_test
             platformTextBox.Clear();
             usernameTextBox.Clear();
             secretTextBox.Clear();
+            websiteTextBox.Clear();
             noteTextBox.Clear();
         }
 
-
+        private void SetPreviewText(params string[] lines)
+        {
+            selectedPreviewLabel.Text = string.Join(Environment.NewLine, lines);
+        }
         private void VaultListBox_SelectedIndexChanged(object? sender, EventArgs e)
         {
             VaultEntry? entry = GetSelectedEntry();
@@ -1050,12 +1181,99 @@ namespace exam_test
                 return;
             }
 
-            selectedPreviewLabel.Text =
-                "Selected: " + entry.GetDisplayName() +
-                "\nUser: " + MaskEmpty(entry.Username) +
-                " | Password/code: " + MaskSecret(entry.Secret);
+            SetPreviewText(
+            "Selected: " + entry.GetDisplayName(),
+            "User: " + MaskEmpty(entry.Username),
+            "Password/code: " + MaskSecret(entry.Secret));
+        }
+        private void OpenSiteButton_Click(object? sender, EventArgs e)
+        {
+            VaultEntry? entry = GetSelectedEntry();
+
+            if (entry == null)
+            {
+                MessageBox.Show("Select an entry first.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.Website))
+            {
+                MessageBox.Show("This entry has no website link.");
+                return;
+            }
+
+            OpenWebsite(entry.Website);
         }
 
+        private async Task OpenAndFillButton_Click()
+        {
+            VaultEntry? entry = GetSelectedEntry();
+
+            if (entry == null)
+            {
+                MessageBox.Show("Select an entry first.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.Website))
+            {
+                MessageBox.Show("This entry has no website link.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.Username) || string.IsNullOrWhiteSpace(entry.Secret))
+            {
+                MessageBox.Show("This entry needs both username and password for Open + Fill.");
+                return;
+            }
+
+            if (!EnsureSecretAccessForSecretAction())
+            {
+                return;
+            }
+
+            OpenWebsite(entry.Website);
+
+            await Task.Delay(1800);
+
+            Clipboard.SetText(entry.Username);
+            SendKeys.SendWait("^v");
+
+            await Task.Delay(200);
+
+            SendKeys.SendWait("{TAB}");
+
+            await Task.Delay(200);
+
+            Clipboard.SetText(entry.Secret);
+            SendKeys.SendWait("^v");
+
+            _ = ClearClipboardLaterAsync(entry.Secret, 20000);
+        }
+
+        private void OpenWebsite(string website)
+        {
+            try
+            {
+                string cleanWebsite = website.Trim();
+
+                if (!cleanWebsite.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                    !cleanWebsite.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    cleanWebsite = "https://" + cleanWebsite;
+                }
+
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = cleanWebsite,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not open site: " + ex.Message);
+            }
+        }
         private void RevealButton_Click(object? sender, EventArgs e)
         {
             VaultEntry? entry = GetSelectedEntry();
@@ -1077,11 +1295,12 @@ namespace exam_test
                 return;
             }
 
-            selectedPreviewLabel.Text =
-                "Platform: " + MaskEmpty(entry.Platform) +
-                "\nUser: " + MaskEmpty(entry.Username) +
-                "\nPassword/code: " + MaskEmpty(entry.Secret) +
-                "\nNote: " + MaskEmpty(entry.Note);
+            SetPreviewText(
+            "Platform: " + MaskEmpty(entry.Platform),
+            "User: " + MaskEmpty(entry.Username),
+            "Password/code: " + MaskEmpty(entry.Secret),
+            "Website: " + MaskEmpty(entry.Website),
+            "Note: " + MaskEmpty(entry.Note));
 
             hideRevealTimer.Stop();
             hideRevealTimer.Start();
@@ -1563,10 +1782,10 @@ namespace exam_test
 
             if (entry != null)
             {
-                selectedPreviewLabel.Text =
-                    "Selected: " + entry.GetDisplayName() +
-                    "\nUser: " + MaskEmpty(entry.Username) +
-                    " | Password/code: " + MaskSecret(entry.Secret);
+                SetPreviewText(
+                "Selected: " + entry.GetDisplayName(),
+                "User: " + MaskEmpty(entry.Username),
+                "Password/code: " + MaskSecret(entry.Secret));
             }
         }
 
@@ -1611,12 +1830,369 @@ namespace exam_test
 
             return "********";
         }
+        private void ShowQuickFill()
+        {
+            if (currentDriveService == null)
+            {
+                ShowMainWindow();
+                MessageBox.Show("Sign in with Google first.");
+                return;
+            }
 
+            if (!isVaultUnlocked)
+            {
+                ShowMainWindow();
+                MessageBox.Show("Unlock your vault first.");
+                return;
+            }
+
+            if (vaultEntries.Count == 0)
+            {
+                ShowMainWindow();
+                MessageBox.Show("You do not have any saved logins yet.");
+                return;
+            }
+
+            if (quickFillForm == null || quickFillForm.IsDisposed)
+            {
+                BuildQuickFillForm();
+            }
+
+            RefreshQuickFillList("");
+
+            quickFillForm!.Show();
+            quickFillForm.TopMost = true;
+            quickFillForm.Activate();
+
+            quickFillSearchBox!.Focus();
+            quickFillSearchBox.SelectAll();
+        }
+        private void StyleQuickFillButton(Button button, bool primary = false)
+        {
+            button.FlatStyle = FlatStyle.Flat;
+            button.UseVisualStyleBackColor = false;
+            button.ForeColor = Color.White;
+            button.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+            if (primary)
+            {
+                button.BackColor = Color.FromArgb(45, 90, 160);
+                button.FlatAppearance.BorderColor = borderColor;
+                button.FlatAppearance.MouseOverBackColor = Color.FromArgb(55, 105, 180);
+                button.FlatAppearance.MouseDownBackColor = Color.FromArgb(35, 75, 140);
+            }
+            else
+            {
+                button.BackColor = Color.FromArgb(35, 40, 60);
+                button.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
+                button.FlatAppearance.MouseOverBackColor = Color.FromArgb(45, 52, 75);
+                button.FlatAppearance.MouseDownBackColor = Color.FromArgb(25, 30, 48);
+            }
+        }
+        private void BuildQuickFillForm()
+        {
+            quickFillForm = new Form();
+            quickFillForm.Text = "QuickFill";
+            quickFillForm.Width = 420;
+            quickFillForm.Height = 420;
+            quickFillForm.StartPosition = FormStartPosition.CenterScreen;
+            quickFillForm.FormBorderStyle = FormBorderStyle.FixedSingle;
+            quickFillForm.MaximizeBox = false;
+            quickFillForm.MinimizeBox = false;
+            quickFillForm.BackColor = Color.FromArgb(16, 20, 34);
+
+            Label titleLabel = new Label();
+            titleLabel.Text = "Find login";
+            titleLabel.Left = 22;
+            titleLabel.Top = 18;
+            titleLabel.Width = 180;
+            titleLabel.Height = 28;
+            titleLabel.ForeColor = Color.White;
+            titleLabel.BackColor = Color.Transparent;
+            titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+
+            Label hintLabel = new Label();
+            hintLabel.Text = "Search and use a saved login quickly.";
+            hintLabel.Left = 22;
+            hintLabel.Top = 48;
+            hintLabel.Width = 340;
+            hintLabel.Height = 22;
+            hintLabel.ForeColor = softTextColor;
+            hintLabel.BackColor = Color.Transparent;
+            hintLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+            quickFillSearchBox = new TextBox();
+            quickFillSearchBox.Left = 22;
+            quickFillSearchBox.Top = 82;
+            quickFillSearchBox.Width = 360;
+            quickFillSearchBox.Height = 28;
+            quickFillSearchBox.PlaceholderText = "Search YouTube, Steam, Discord...";
+
+            quickFillListBox = new ListBox();
+            quickFillListBox.Left = 22;
+            quickFillListBox.Top = 122;
+            quickFillListBox.Width = 360;
+            quickFillListBox.Height = 150;
+            quickFillListBox.BackColor = Color.FromArgb(24, 28, 44);
+            quickFillListBox.ForeColor = Color.White;
+
+            Button copyUserButton = new Button();
+            copyUserButton.Text = "Copy username";
+            copyUserButton.Left = 22;
+            copyUserButton.Top = 290;
+            copyUserButton.Width = 115;
+            copyUserButton.Height = 32;
+            copyUserButton.Click += (s, e) => QuickFillCopyUsername();
+            StyleQuickFillButton(copyUserButton);
+
+            Button copyPasswordButton = new Button();
+            copyPasswordButton.Text = "Copy password";
+            copyPasswordButton.Left = 147;
+            copyPasswordButton.Top = 290;
+            copyPasswordButton.Width = 115;
+            copyPasswordButton.Height = 32;
+            copyPasswordButton.Click += (s, e) => QuickFillCopyPassword();
+            StyleQuickFillButton(copyPasswordButton);
+
+            Button fillLoginButton = new Button();
+            fillLoginButton.Text = "Fill login";
+            fillLoginButton.Left = 272;
+            fillLoginButton.Top = 290;
+            fillLoginButton.Width = 110;
+            fillLoginButton.Height = 32;
+            fillLoginButton.Click += async (s, e) => await QuickFillAutoFillAsync();
+            StyleQuickFillButton(fillLoginButton, true);
+
+            Button hideButton = new Button();
+            hideButton.Text = "Hide";
+            hideButton.Left = 272;
+            hideButton.Top = 330;
+            hideButton.Width = 110;
+            hideButton.Height = 32;
+            hideButton.Click += (s, e) => quickFillForm.Hide();
+            StyleQuickFillButton(hideButton);
+
+            quickFillStatusLabel = new Label();
+            quickFillStatusLabel.Text = "Tip: Ctrl + Alt + Q opens this window.";
+            quickFillStatusLabel.Left = 22;
+            quickFillStatusLabel.Top = 335;
+            quickFillStatusLabel.Width = 235;
+            quickFillStatusLabel.Height = 32;
+            quickFillStatusLabel.ForeColor = softTextColor;
+            quickFillStatusLabel.BackColor = Color.Transparent;
+
+            quickFillSearchBox.TextChanged += (s, e) =>
+            {
+                RefreshQuickFillList(quickFillSearchBox.Text);
+            };
+
+            quickFillListBox.DoubleClick += async (s, e) =>
+            {
+                await QuickFillAutoFillAsync();
+            };
+
+            quickFillForm.Controls.Add(titleLabel);
+            quickFillForm.Controls.Add(hintLabel);
+            quickFillForm.Controls.Add(quickFillSearchBox);
+            quickFillForm.Controls.Add(quickFillListBox);
+            quickFillForm.Controls.Add(copyUserButton);
+            quickFillForm.Controls.Add(copyPasswordButton);
+            quickFillForm.Controls.Add(fillLoginButton);
+            quickFillForm.Controls.Add(hideButton);
+            quickFillForm.Controls.Add(quickFillStatusLabel);
+        }
+        private void RefreshQuickFillList(string filter)
+        {
+            if (quickFillListBox == null)
+            {
+                return;
+            }
+
+            quickFillListBox.Items.Clear();
+
+            string cleanFilter = filter.Trim().ToLowerInvariant();
+
+            foreach (VaultEntry entry in vaultEntries)
+            {
+                string searchable =
+                (entry.Platform + " " + entry.Username + " " + entry.Website + " " + entry.Note)
+                .ToLowerInvariant();
+
+                if (string.IsNullOrWhiteSpace(cleanFilter) || searchable.Contains(cleanFilter))
+                {
+                    quickFillListBox.Items.Add(new QuickFillItem(entry));
+                }
+            }
+
+            if (quickFillListBox.Items.Count > 0)
+            {
+                quickFillListBox.SelectedIndex = 0;
+            }
+        }
+
+        private VaultEntry? GetSelectedQuickFillEntry()
+        {
+            if (quickFillListBox == null)
+            {
+                return null;
+            }
+
+            if (quickFillListBox.SelectedItem is QuickFillItem item)
+            {
+                return item.Entry;
+            }
+
+            return null;
+        }
+
+        private void QuickFillCopyUsername()
+        {
+            VaultEntry? entry = GetSelectedQuickFillEntry();
+
+            if (entry == null)
+            {
+                SetQuickFillStatus("Choose a saved login first.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.Username))
+            {
+                SetQuickFillStatus("This login has no username.");
+                return;
+            }
+
+            Clipboard.SetText(entry.Username);
+            SetQuickFillStatus("Username copied.");
+        }
+
+        private void QuickFillCopyPassword()
+        {
+            VaultEntry? entry = GetSelectedQuickFillEntry();
+
+            if (entry == null)
+            {
+                SetQuickFillStatus("Choose a saved login first.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.Secret))
+            {
+                SetQuickFillStatus("This login has no password.");
+                return;
+            }
+
+            if (!EnsureSecretAccessForSecretAction())
+            {
+                return;
+            }
+
+            Clipboard.SetText(entry.Secret);
+            SetQuickFillStatus("Password copied.");
+
+            _ = ClearClipboardLaterAsync(entry.Secret, 20000);
+        }
+
+        private async Task QuickFillAutoFillAsync()
+        {
+            VaultEntry? entry = GetSelectedQuickFillEntry();
+
+            if (entry == null)
+            {
+                SetQuickFillStatus("Choose a saved login first.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.Username))
+            {
+                SetQuickFillStatus("This login has no username.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.Secret))
+            {
+                SetQuickFillStatus("This login has no password.");
+                return;
+            }
+
+            if (!EnsureSecretAccessForSecretAction())
+            {
+                return;
+            }
+
+            quickFillForm?.Hide();
+
+            await Task.Delay(250);
+
+            Clipboard.SetText(entry.Username);
+            SendKeys.SendWait("^v");
+
+            await Task.Delay(150);
+
+            SendKeys.SendWait("{TAB}");
+
+            await Task.Delay(150);
+
+            Clipboard.SetText(entry.Secret);
+            SendKeys.SendWait("^v");
+
+            _ = ClearClipboardLaterAsync(entry.Secret, 20000);
+        }
+
+        private async Task ClearClipboardLaterAsync(string valueToClear, int delayMs)
+        {
+            await Task.Delay(delayMs);
+
+            try
+            {
+                if (Clipboard.ContainsText() && Clipboard.GetText() == valueToClear)
+                {
+                    Clipboard.Clear();
+                }
+            }
+            catch
+            {
+                // Ignore clipboard issues.
+            }
+        }
+
+        private void SetQuickFillStatus(string text)
+        {
+            if (quickFillStatusLabel != null)
+            {
+                quickFillStatusLabel.Text = text;
+            }
+        }
+
+        private class QuickFillItem
+        {
+            public VaultEntry Entry { get; }
+
+            public QuickFillItem(VaultEntry entry)
+            {
+                Entry = entry;
+            }
+
+            public override string ToString()
+            {
+                if (!string.IsNullOrWhiteSpace(Entry.Platform) &&
+                    !string.IsNullOrWhiteSpace(Entry.Username))
+                {
+                    return Entry.Platform + "  •  " + Entry.Username;
+                }
+
+                return Entry.GetDisplayName();
+            }
+        }
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             try
             {
                 ClearSecretAccessWindow();
+                UnregisterHotKey(Handle, QuickFillHotkeyId);
+
+                trayIcon.Visible = false;
+                trayIcon.Dispose();
+
                 GoogleAuthService.Logout();
             }
             catch
@@ -1626,7 +2202,26 @@ namespace exam_test
 
             base.OnFormClosed(e);
         }
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WmHotkey && m.WParam.ToInt32() == QuickFillHotkeyId)
+            {
+                ShowQuickFill();
+                return;
+            }
 
+            base.WndProc(ref m);
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+
+            if (WindowState == FormWindowState.Minimized)
+            {
+                Hide();
+            }
+        }
         private void AnimationTimer_Tick(object? sender, EventArgs e)
         {
             time += 0.016f;
@@ -1800,6 +2395,7 @@ namespace exam_test
         public string Platform { get; set; } = "";
         public string Username { get; set; } = "";
         public string Secret { get; set; } = "";
+        public string Website { get; set; } = "";
         public string Note { get; set; } = "";
         public DateTime CreatedAt { get; set; }
 
