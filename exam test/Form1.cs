@@ -125,8 +125,11 @@ namespace exam_test
         private readonly Button openSiteButton = new Button();
         private readonly Button openAndFillButton = new Button();
 
+        private readonly TextBox vaultSearchTextBox = new TextBox();
         private readonly ListBox vaultListBox = new ListBox();
         private readonly TextBox selectedPreviewLabel = new TextBox();
+
+        private readonly List<VaultEntry> visibleVaultEntries = new List<VaultEntry>();
 
         private readonly Button revealButton = new Button();
         private readonly Button copySecretButton = new Button();
@@ -618,10 +621,20 @@ namespace exam_test
             cancelEditButton.Visible = false;
             cancelEditButton.Click += CancelEditButton_Click;
 
+            vaultSearchTextBox.Left = 315;
+            vaultSearchTextBox.Top = 82;
+            vaultSearchTextBox.Width = 310;
+            vaultSearchTextBox.Height = 26;
+            vaultSearchTextBox.PlaceholderText = "Search saved entries...";
+            vaultSearchTextBox.BackColor = Color.FromArgb(24, 28, 44);
+            vaultSearchTextBox.ForeColor = Color.White;
+            vaultSearchTextBox.BorderStyle = BorderStyle.FixedSingle;
+            vaultSearchTextBox.TextChanged += (s, e) => RefreshVaultList();
+
             vaultListBox.Left = 315;
-            vaultListBox.Top = 82;
+            vaultListBox.Top = 114;
             vaultListBox.Width = 310;
-            vaultListBox.Height = 138;
+            vaultListBox.Height = 106;
             vaultListBox.BackColor = Color.FromArgb(24, 28, 44);
             vaultListBox.ForeColor = Color.White;
             vaultListBox.BorderStyle = BorderStyle.FixedSingle;
@@ -707,6 +720,7 @@ namespace exam_test
             vaultPanel.Controls.Add(clearButton);
             vaultPanel.Controls.Add(saveChangesButton);
             vaultPanel.Controls.Add(cancelEditButton);
+            vaultPanel.Controls.Add(vaultSearchTextBox);
             vaultPanel.Controls.Add(vaultListBox);
             vaultPanel.Controls.Add(selectedPreviewLabel);
             vaultPanel.Controls.Add(revealButton);
@@ -1405,7 +1419,7 @@ namespace exam_test
             }
 
             editingEntry = entry;
-            editingEntryIndex = vaultListBox.SelectedIndex;
+            editingEntryIndex = vaultEntries.IndexOf(entry);
 
             platformTextBox.Text = entry.Platform;
             usernameTextBox.Text = entry.Username;
@@ -1464,9 +1478,11 @@ namespace exam_test
 
                 RefreshVaultList();
 
-                if (editingEntryIndex >= 0 && editingEntryIndex < vaultListBox.Items.Count)
+                int visibleIndex = visibleVaultEntries.IndexOf(editingEntry);
+
+                if (visibleIndex >= 0 && visibleIndex < vaultListBox.Items.Count)
                 {
-                    vaultListBox.SelectedIndex = editingEntryIndex;
+                    vaultListBox.SelectedIndex = visibleIndex;
                 }
 
                 SetPreviewText(
@@ -2918,20 +2934,44 @@ namespace exam_test
         {
             int index = vaultListBox.SelectedIndex;
 
-            if (index < 0 || index >= vaultEntries.Count)
+            if (index < 0 || index >= visibleVaultEntries.Count)
             {
                 return null;
             }
 
-            return vaultEntries[index];
+            return visibleVaultEntries[index];
         }
 
         private void RefreshVaultList()
         {
-            vaultListBox.Items.Clear();
+            VaultEntry? selectedBeforeRefresh = GetSelectedEntry();
 
-            foreach (VaultEntry entry in vaultEntries)
+            vaultListBox.Items.Clear();
+            visibleVaultEntries.Clear();
+
+            string cleanFilter = vaultSearchTextBox.Text.Trim().ToLowerInvariant();
+
+            IEnumerable<VaultEntry> filteredEntries = vaultEntries;
+
+            if (!string.IsNullOrWhiteSpace(cleanFilter))
             {
+                filteredEntries = filteredEntries.Where(entry =>
+                {
+                    string searchable =
+                        (entry.Platform + " " +
+                         entry.Username + " " +
+                         entry.Website + " " +
+                         entry.Note)
+                        .ToLowerInvariant();
+
+                    return searchable.Contains(cleanFilter);
+                });
+            }
+
+            foreach (VaultEntry entry in filteredEntries)
+            {
+                visibleVaultEntries.Add(entry);
+
                 string prefix = entry.IsFavorite ? "⭐ " : "";
                 vaultListBox.Items.Add(prefix + entry.GetDisplayName());
             }
@@ -2941,6 +2981,21 @@ namespace exam_test
                 selectedPreviewLabel.Text =
                     "No saved logins yet." + Environment.NewLine +
                     "Add your first login on the left.";
+            }
+            else if (visibleVaultEntries.Count == 0)
+            {
+                selectedPreviewLabel.Text =
+                    "No matching entries found." + Environment.NewLine +
+                    "Try another search.";
+            }
+            else if (selectedBeforeRefresh != null)
+            {
+                int newIndex = visibleVaultEntries.IndexOf(selectedBeforeRefresh);
+
+                if (newIndex >= 0 && newIndex < vaultListBox.Items.Count)
+                {
+                    vaultListBox.SelectedIndex = newIndex;
+                }
             }
 
             UpdateFavoriteButtonText();
