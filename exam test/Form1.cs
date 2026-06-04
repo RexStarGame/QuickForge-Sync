@@ -136,6 +136,7 @@ namespace exam_test
         private readonly Button lockVaultButton = new Button();
 
         private readonly Button changeVaultCodeButton = new Button();
+        private readonly Button backupButton = new Button();
         private readonly Button securityCenterButton = new Button();
         private readonly Label securitySettingsLabel = new Label();
         private readonly Label recoveryReminderLabel = new Label();
@@ -804,11 +805,23 @@ namespace exam_test
             securityCenterButton.FlatAppearance.BorderColor = borderColor;
             securityCenterButton.Click += (s, e) => ShowSecurityCenterDialog();
 
+            backupButton.Text = "Backup";
+            backupButton.Left = 465;
+            backupButton.Top = 515;
+            backupButton.Width = 120;
+            backupButton.Height = 30;
+            backupButton.FlatStyle = FlatStyle.Flat;
+            backupButton.ForeColor = Color.White;
+            backupButton.BackColor = Color.FromArgb(35, 40, 60);
+            backupButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
+            backupButton.Click += (s, e) => ShowBackupDialog();
+
             vaultPanel.Controls.Add(securitySettingsLabel);
             vaultPanel.Controls.Add(recoveryReminderLabel);
             vaultPanel.Controls.Add(recoveryReminderComboBox);
             vaultPanel.Controls.Add(rotateRecoveryKeyButton);
             vaultPanel.Controls.Add(securityCenterButton);
+            vaultPanel.Controls.Add(backupButton);
 
             performanceSettingsLabel.Text = "Performance & safety";
             performanceSettingsLabel.Left = 20;
@@ -1149,21 +1162,7 @@ namespace exam_test
                 throw new InvalidOperationException("Vault is locked.");
             }
 
-            VaultData vaultData = new VaultData
-            {
-                Entries = new List<VaultEntry>(vaultEntries),
-                Settings = currentVaultSettings,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            string encryptedJson = VaultCryptoService.EncryptVaultDataWithExistingKeys(
-                vaultData,
-                currentDataKey,
-                currentEncryptedVaultFile
-            );
-
-            currentEncryptedVaultFile = System.Text.Json.JsonSerializer
-                .Deserialize<EncryptedVaultFile>(encryptedJson);
+            string encryptedJson = CreateCurrentEncryptedVaultJson();
 
             await GoogleDriveVaultService.UploadEncryptedVaultAsync(
                 currentDriveService,
@@ -2420,6 +2419,242 @@ namespace exam_test
                 }
             }
         }
+        private void ShowBackupDialog()
+        {
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 500;
+                dialog.Height = 280;
+                dialog.Text = "Encrypted Backup";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Encrypted backup";
+                titleLabel.Left = 20;
+                titleLabel.Top = 18;
+                titleLabel.Width = 420;
+                titleLabel.Height = 30;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+
+                Label infoLabel = new Label();
+                infoLabel.Text =
+                    "Export a safe encrypted backup, or import one if Google sync has a problem.";
+                infoLabel.Left = 20;
+                infoLabel.Top = 52;
+                infoLabel.Width = 430;
+                infoLabel.Height = 40;
+                infoLabel.ForeColor = softTextColor;
+                infoLabel.BackColor = Color.Transparent;
+
+                Label warningLabel = new Label();
+                warningLabel.Text =
+                    "Backup files are encrypted. You still need your vault code or recovery key to open them.";
+                warningLabel.Left = 20;
+                warningLabel.Top = 95;
+                warningLabel.Width = 430;
+                warningLabel.Height = 45;
+                warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                warningLabel.BackColor = Color.Transparent;
+
+                Button exportButton = new Button();
+                exportButton.Text = "Export encrypted backup";
+                exportButton.Left = 20;
+                exportButton.Top = 155;
+                exportButton.Width = 190;
+                exportButton.Height = 36;
+                StyleActionButton(exportButton, true);
+                exportButton.Click += (s, e) =>
+                {
+                    dialog.Close();
+                    ExportEncryptedBackup();
+                };
+
+                Button importButton = new Button();
+                importButton.Text = "Import encrypted backup";
+                importButton.Left = 225;
+                importButton.Top = 155;
+                importButton.Width = 190;
+                importButton.Height = 36;
+                StyleActionButton(importButton);
+                importButton.Click += async (s, e) =>
+                {
+                    dialog.Close();
+                    await ImportEncryptedBackupAsync();
+                };
+
+                Button closeButton = new Button();
+                closeButton.Text = "Close";
+                closeButton.Left = 360;
+                closeButton.Top = 210;
+                closeButton.Width = 95;
+                closeButton.Height = 32;
+                StyleActionButton(closeButton);
+                closeButton.Click += (s, e) => dialog.Close();
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(infoLabel);
+                dialog.Controls.Add(warningLabel);
+                dialog.Controls.Add(exportButton);
+                dialog.Controls.Add(importButton);
+                dialog.Controls.Add(closeButton);
+
+                dialog.ShowDialog(this);
+            }
+        }
+
+        private string CreateCurrentEncryptedVaultJson()
+        {
+            if (currentDataKey == null || currentEncryptedVaultFile == null)
+            {
+                throw new InvalidOperationException("Unlock the vault first.");
+            }
+
+            VaultData vaultData = new VaultData
+            {
+                Entries = new List<VaultEntry>(vaultEntries),
+                Settings = currentVaultSettings,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            string encryptedJson = VaultCryptoService.EncryptVaultDataWithExistingKeys(
+                vaultData,
+                currentDataKey,
+                currentEncryptedVaultFile
+            );
+
+            currentEncryptedVaultFile = System.Text.Json.JsonSerializer
+                .Deserialize<EncryptedVaultFile>(encryptedJson);
+
+            return encryptedJson;
+        }
+
+        private void ExportEncryptedBackup()
+        {
+            if (!isVaultUnlocked)
+            {
+                MessageBox.Show("Unlock the vault before exporting a backup.");
+                return;
+            }
+
+            try
+            {
+                string encryptedJson = CreateCurrentEncryptedVaultJson();
+
+                using (SaveFileDialog saveDialog = new SaveFileDialog())
+                {
+                    saveDialog.Title = "Export encrypted backup";
+                    saveDialog.FileName = "QuickForge-Backup.qfvault";
+                    saveDialog.Filter = "QuickForge encrypted backup (*.qfvault)|*.qfvault|JSON files (*.json)|*.json|All files (*.*)|*.*";
+
+                    if (saveDialog.ShowDialog(this) != DialogResult.OK)
+                    {
+                        return;
+                    }
+
+                    File.WriteAllText(saveDialog.FileName, encryptedJson);
+
+                    selectedPreviewLabel.Text = "Encrypted backup exported.";
+                    MessageBox.Show("Encrypted backup exported successfully.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not export backup: " + ex.Message);
+            }
+        }
+
+        private async Task ImportEncryptedBackupAsync()
+        {
+            if (currentDriveService == null)
+            {
+                MessageBox.Show("Connect Google first, then import the backup.");
+                return;
+            }
+
+            using (OpenFileDialog openDialog = new OpenFileDialog())
+            {
+                openDialog.Title = "Import encrypted backup";
+                openDialog.Filter = "QuickForge encrypted backup (*.qfvault)|*.qfvault|JSON files (*.json)|*.json|All files (*.*)|*.*";
+
+                if (openDialog.ShowDialog(this) != DialogResult.OK)
+                {
+                    return;
+                }
+
+                try
+                {
+                    string encryptedJson = File.ReadAllText(openDialog.FileName);
+
+                    string? unlockCode = ShowPasswordPrompt(
+                        "Import Backup",
+                        "Enter the vault code or recovery key for this backup:"
+                    );
+
+                    if (string.IsNullOrWhiteSpace(unlockCode))
+                    {
+                        selectedPreviewLabel.Text = "Import cancelled.";
+                        return;
+                    }
+
+                    VaultData importedVaultData = VaultCryptoService.DecryptVault(
+                        encryptedJson,
+                        unlockCode,
+                        out byte[] importedDataKey,
+                        out EncryptedVaultFile importedEncryptedVaultFile
+                    );
+
+                    DialogResult confirm = MessageBox.Show(
+                        "Import this encrypted backup?\n\n" +
+                        "This will replace the current cloud vault after upload.",
+                        "Import encrypted backup",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning
+                    );
+
+                    if (confirm != DialogResult.Yes)
+                    {
+                        selectedPreviewLabel.Text = "Import cancelled.";
+                        return;
+                    }
+
+                    await GoogleDriveVaultService.UploadEncryptedVaultAsync(
+                        currentDriveService,
+                        encryptedJson
+                    );
+
+                    vaultCode = unlockCode;
+                    currentDataKey = importedDataKey;
+                    currentEncryptedVaultFile = importedEncryptedVaultFile;
+                    currentVaultSettings = importedVaultData.Settings ?? new VaultSettings();
+
+                    vaultEntries.Clear();
+
+                    foreach (VaultEntry entry in importedVaultData.Entries)
+                    {
+                        vaultEntries.Add(entry);
+                    }
+
+                    cloudVaultExists = true;
+
+                    RefreshVaultList();
+                    GrantSecretAccessWindow();
+                    ShowVaultUi();
+
+                    selectedPreviewLabel.Text = "Encrypted backup imported and synced.";
+                    MessageBox.Show("Encrypted backup imported successfully.");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Could not import backup: " + ex.Message);
+                }
+            }
+        }
         private void ShowSecurityCenterDialog()
         {
             int totalEntries = vaultEntries.Count;
@@ -2699,6 +2934,13 @@ namespace exam_test
             {
                 string prefix = entry.IsFavorite ? "⭐ " : "";
                 vaultListBox.Items.Add(prefix + entry.GetDisplayName());
+            }
+
+            if (vaultEntries.Count == 0)
+            {
+                selectedPreviewLabel.Text =
+                    "No saved logins yet." + Environment.NewLine +
+                    "Add your first login on the left.";
             }
 
             UpdateFavoriteButtonText();
@@ -3492,7 +3734,10 @@ namespace exam_test
             if (vaultEntries.Count == 0)
             {
                 ShowMainWindow();
-                MessageBox.Show("You do not have any saved logins yet.");
+                MessageBox.Show(
+                    "No saved logins yet.\n\n" +
+                    "Open QuickForge and save your first login."
+                );
                 return;
             }
 
