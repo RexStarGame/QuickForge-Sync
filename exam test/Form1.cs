@@ -1634,6 +1634,7 @@ namespace exam_test
             vaultAccessPanel.Visible = false;
             vaultPanel.Visible = false;
             logoutButton.Enabled = false;
+            resetTestVaultButton.Visible = false;
 
             accountStatusLabel.Text = "Not connected";
             accountStatusLabel.ForeColor = softTextColor;
@@ -1644,6 +1645,8 @@ namespace exam_test
             loginCard.Visible = false;
             vaultAccessPanel.Visible = true;
             vaultPanel.Visible = false;
+
+            UpdateDeveloperTestControls();
 
             vaultAccessPanel.BringToFront();
             topBarPanel.BringToFront();
@@ -4823,6 +4826,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
