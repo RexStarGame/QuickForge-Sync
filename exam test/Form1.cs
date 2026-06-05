@@ -103,7 +103,8 @@ namespace exam_test
         private readonly Label vaultTitleLabel = new Label();
         private readonly Label vaultSubtitleLabel = new Label();
         private readonly Label syncStatusLabel = new Label();
-        private DateTime? lastSyncUtc = null;
+        private DateTime? lastCloudSaveUtc = null;
+        private DateTime? lastCloudLoadUtc = null;
 
         private readonly Label platformLabel = new Label();
         private readonly TextBox platformTextBox = new TextBox();
@@ -594,6 +595,18 @@ namespace exam_test
             vaultSubtitleLabel.AutoSize = true;
             vaultSubtitleLabel.Left = 20;
             vaultSubtitleLabel.Top = 48;
+
+            syncStatusLabel.Text =
+                "Sync: Not connected" + Environment.NewLine +
+                "Last save: Not yet" + Environment.NewLine +
+                "Last load: Not yet";
+            syncStatusLabel.ForeColor = softTextColor;
+            syncStatusLabel.BackColor = Color.Transparent;
+            syncStatusLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+            syncStatusLabel.Left = 315;
+            syncStatusLabel.Top = 42;
+            syncStatusLabel.Width = 330;
+            syncStatusLabel.Height = 56;
 
             platformLabel.Text = "Service / Platform";
             platformLabel.ForeColor = Color.White;
@@ -1140,8 +1153,9 @@ namespace exam_test
 
                 cloudVaultExists = await GoogleDriveVaultService.VaultExistsAsync(currentDriveService);
 
-                lastSyncUtc = null;
-                SetSyncStatus(cloudVaultExists ? "Cloud vault found" : "No cloud vault yet");
+                lastCloudSaveUtc = null;
+                lastCloudLoadUtc = null;
+                SetSyncStatus(currentDriveService != null ? "Active" : "Not connected");
 
                 if (cloudVaultExists)
                 {
@@ -1442,13 +1456,18 @@ namespace exam_test
         }
         private void SetSyncStatus(string status, bool success = false, bool error = false)
         {
-            string lastSyncText = lastSyncUtc.HasValue
-                ? lastSyncUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+            string lastSaveText = lastCloudSaveUtc.HasValue
+                ? lastCloudSaveUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                : "Not yet";
+
+            string lastLoadText = lastCloudLoadUtc.HasValue
+                ? lastCloudLoadUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
                 : "Not yet";
 
             syncStatusLabel.Text =
                 "Sync: " + status + Environment.NewLine +
-                "Last sync: " + lastSyncText;
+                "Last save: " + lastSaveText + Environment.NewLine +
+                "Last load: " + lastLoadText;
 
             if (error)
             {
@@ -1475,6 +1494,8 @@ namespace exam_test
                 throw new InvalidOperationException("Vault is locked.");
             }
 
+            SetSyncStatus("Saving...");
+
             string encryptedJson = CreateCurrentEncryptedVaultJson();
 
             await GoogleDriveVaultService.UploadEncryptedVaultAsync(
@@ -1483,8 +1504,8 @@ namespace exam_test
             );
 
             cloudVaultExists = true;
-            lastSyncUtc = DateTime.UtcNow;
-            SetSyncStatus("Saved to Google Drive", success: true);
+            lastCloudSaveUtc = DateTime.UtcNow;
+            SetSyncStatus("Active", success: true);
         }
 
         private async Task LoadVaultFromCloudAsync()
@@ -1493,6 +1514,8 @@ namespace exam_test
             {
                 throw new InvalidOperationException("Google Drive is not connected.");
             }
+
+            SetSyncStatus("Loading from Google Drive...");
 
             string? encryptedJson =
                 await GoogleDriveVaultService.DownloadEncryptedVaultAsync(currentDriveService);
@@ -1522,8 +1545,8 @@ namespace exam_test
             }
 
             RefreshVaultList();
-            lastSyncUtc = DateTime.UtcNow;
-            SetSyncStatus("Loaded from Google Drive", success: true);
+            lastCloudLoadUtc = DateTime.UtcNow;
+            SetSyncStatus("Active", success: true);
         }
         private void LockVaultButton_Click(object? sender, EventArgs e)
         {
@@ -1609,6 +1632,9 @@ namespace exam_test
                 currentDriveService = null;
                 cloudVaultExists = false;
                 connectedGoogleEmail = "";
+                lastCloudSaveUtc = null;
+                lastCloudLoadUtc = null;
+                SetSyncStatus("Not connected");
                 accountStatusLabel.Text = "Not connected";
                 accountStatusLabel.ForeColor = softTextColor;
                 logoutButton.Enabled = false;
@@ -4942,6 +4968,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
