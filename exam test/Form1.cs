@@ -1035,6 +1035,15 @@ namespace exam_test
                         await LoginWithGoogleAsync();
                         return;
                     }
+
+                    accountStatusLabel.Text = "Google setup missing";
+                    MessageBox.Show(
+                        "Google setup was cancelled. Google Drive sync needs a credentials.json file before login can continue.",
+                        "Google setup missing",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
+                    return;
                 }
 
                 MessageBox.Show("Google login error: " + ex.Message);
@@ -4560,6 +4569,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
