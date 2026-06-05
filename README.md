@@ -1,6 +1,6 @@
 ﻿# QuickForge Sync Beta Preview
 
-[![QuickForge Tests](https://github.com/RexStarGame/-verkun/actions/workflows/dotnet-tests.yml/badge.svg?branch=main)](https://github.com/RexStarGame/-verkun/actions/workflows/dotnet-tests.yml)
+[![QuickForge Tests](https://github.com/RexStarGame/QuickForge-Sync/actions/workflows/dotnet-tests.yml/badge.svg?branch=main)](https://github.com/RexStarGame/QuickForge-Sync/actions/workflows/dotnet-tests.yml)
 
 QuickForge Sync is a Windows password and private-code vault with encrypted Google Drive sync, QuickFill, password generation, recovery key support, and manual encrypted backups.
 
@@ -112,6 +112,7 @@ Current focus:
 ## Disclaimer
 
 QuickForge Sync is a learning and prototype project. Do not rely on it as your only password manager until the code has been reviewed and tested properly.
+
 
 
 

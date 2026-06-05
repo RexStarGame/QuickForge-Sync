@@ -14,6 +14,10 @@ namespace exam_test
 {
     public partial class Form1 : Form
     {
+        private const string AppName = "QuickForge Sync";
+        private const string AppStatus = "Beta Preview";
+        private const string AppVersion = "v0.1.1-beta-preview";
+        private const string AppDisplayName = AppName + " " + AppStatus;
 
 
         private readonly System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer();
@@ -4661,6 +4665,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
