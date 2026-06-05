@@ -291,9 +291,9 @@ namespace exam_test
             accountStatusLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             accountStatusLabel.AutoSize = false;
             accountStatusLabel.TextAlign = ContentAlignment.MiddleRight;
-            accountStatusLabel.Left = 335;
+            accountStatusLabel.Left = 300;
             accountStatusLabel.Top = 22;
-            accountStatusLabel.Width = 305;
+            accountStatusLabel.Width = 250;
             accountStatusLabel.Height = 30;
 
             aboutButton.Text = "About";
@@ -322,7 +322,8 @@ namespace exam_test
             topBarPanel.Controls.Add(appTitleLabel);
             topBarPanel.Controls.Add(appSubtitleLabel);
             topBarPanel.Controls.Add(accountStatusLabel);
-            topBarPanel.Controls.Add(logoutButton);
+                        topBarPanel.Controls.Add(aboutButton);
+topBarPanel.Controls.Add(logoutButton);
 
             Controls.Add(topBarPanel);
             topBarPanel.BringToFront();
@@ -4665,6 +4666,8 @@ namespace exam_test
         }
     }
 }
+
+
 
 
 
