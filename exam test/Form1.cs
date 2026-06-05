@@ -1267,12 +1267,16 @@ namespace exam_test
         }
         private void UpdateDeveloperTestControls()
         {
+#if DEBUG
             resetTestVaultButton.Visible =
                 string.Equals(
                     connectedGoogleEmail,
                     "patrickolsen4@gmail.com",
                     StringComparison.OrdinalIgnoreCase
                 );
+#else
+            resetTestVaultButton.Visible = false;
+#endif
         }
         private void ShowVaultCodeStrengthMessage(string reason)
         {
@@ -4905,6 +4909,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
