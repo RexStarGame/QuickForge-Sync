@@ -2808,6 +2808,30 @@ namespace exam_test
             }
         }
 
+        private void ShowEmergencyBackupGuidance()
+        {
+            SetPreviewText(
+                "Vault created successfully.",
+                "Before storing important data, export an encrypted backup.",
+                "Keep your recovery key and backup file in safe, separate places.",
+                "During beta, continue using test data only."
+            );
+
+            backupButton.BackColor = Color.FromArgb(45, 90, 160);
+            backupButton.FlatAppearance.BorderColor = borderColor;
+
+            MessageBox.Show(
+                "Your vault was created successfully." + Environment.NewLine + Environment.NewLine +
+                "Before storing important data:" + Environment.NewLine +
+                "1. Export an encrypted backup." + Environment.NewLine +
+                "2. Save your recovery key somewhere safe." + Environment.NewLine +
+                "3. Keep the backup and recovery key in separate places." + Environment.NewLine + Environment.NewLine +
+                "The backup is encrypted, but you still need your vault code or recovery key to open it.",
+                "Emergency backup recommended",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
+        }
         private string CreateCurrentEncryptedVaultJson()
         {
             if (currentDataKey == null || currentEncryptedVaultFile == null)
@@ -4826,6 +4850,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
