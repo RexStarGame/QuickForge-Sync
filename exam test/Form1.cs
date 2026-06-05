@@ -102,6 +102,8 @@ namespace exam_test
         private readonly Panel vaultPanel = new Panel();
         private readonly Label vaultTitleLabel = new Label();
         private readonly Label vaultSubtitleLabel = new Label();
+        private readonly Label syncStatusLabel = new Label();
+        private DateTime? lastSyncUtc = null;
 
         private readonly Label platformLabel = new Label();
         private readonly TextBox platformTextBox = new TextBox();
@@ -828,6 +830,7 @@ namespace exam_test
 
             vaultPanel.Controls.Add(vaultTitleLabel);
             vaultPanel.Controls.Add(vaultSubtitleLabel);
+            vaultPanel.Controls.Add(syncStatusLabel);
             vaultPanel.Controls.Add(platformLabel);
             vaultPanel.Controls.Add(platformTextBox);
             vaultPanel.Controls.Add(usernameLabel);
@@ -1137,6 +1140,9 @@ namespace exam_test
 
                 cloudVaultExists = await GoogleDriveVaultService.VaultExistsAsync(currentDriveService);
 
+                lastSyncUtc = null;
+                SetSyncStatus(cloudVaultExists ? "Cloud vault found" : "No cloud vault yet");
+
                 if (cloudVaultExists)
                 {
                     ConfigureVaultAccessForUnlock();
@@ -1434,6 +1440,29 @@ namespace exam_test
                 await ImportEncryptedBackupAsync();
             }
         }
+        private void SetSyncStatus(string status, bool success = false, bool error = false)
+        {
+            string lastSyncText = lastSyncUtc.HasValue
+                ? lastSyncUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                : "Not yet";
+
+            syncStatusLabel.Text =
+                "Sync: " + status + Environment.NewLine +
+                "Last sync: " + lastSyncText;
+
+            if (error)
+            {
+                syncStatusLabel.ForeColor = dangerColor;
+            }
+            else if (success)
+            {
+                syncStatusLabel.ForeColor = successColor;
+            }
+            else
+            {
+                syncStatusLabel.ForeColor = softTextColor;
+            }
+        }
         private async Task SaveCurrentVaultToCloudAsync()
         {
             if (currentDriveService == null)
@@ -1454,6 +1483,8 @@ namespace exam_test
             );
 
             cloudVaultExists = true;
+            lastSyncUtc = DateTime.UtcNow;
+            SetSyncStatus("Saved to Google Drive", success: true);
         }
 
         private async Task LoadVaultFromCloudAsync()
@@ -1491,6 +1522,8 @@ namespace exam_test
             }
 
             RefreshVaultList();
+            lastSyncUtc = DateTime.UtcNow;
+            SetSyncStatus("Loaded from Google Drive", success: true);
         }
         private void LockVaultButton_Click(object? sender, EventArgs e)
         {
@@ -4909,6 +4942,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
