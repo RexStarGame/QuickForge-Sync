@@ -322,8 +322,8 @@ namespace exam_test
             topBarPanel.Controls.Add(appTitleLabel);
             topBarPanel.Controls.Add(appSubtitleLabel);
             topBarPanel.Controls.Add(accountStatusLabel);
-                        topBarPanel.Controls.Add(aboutButton);
-topBarPanel.Controls.Add(logoutButton);
+            topBarPanel.Controls.Add(aboutButton);
+            topBarPanel.Controls.Add(logoutButton);
 
             Controls.Add(topBarPanel);
             topBarPanel.BringToFront();
@@ -4666,6 +4666,7 @@ topBarPanel.Controls.Add(logoutButton);
         }
     }
 }
+
 
 
 
