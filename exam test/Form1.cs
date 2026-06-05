@@ -1269,6 +1269,12 @@ namespace exam_test
 
             if (!cloudVaultExists)
             {
+                if (!VaultCodePolicy.IsStrongEnough(code, out string vaultCodeWarning))
+                {
+                    ShowVaultCodeStrengthMessage(vaultCodeWarning);
+                    return;
+                }
+
                 if (code != confirmCode)
                 {
                     MessageBox.Show("Vault codes do not match.");
@@ -1456,6 +1462,12 @@ namespace exam_test
             if (string.IsNullOrWhiteSpace(newCode))
             {
                 MessageBox.Show("New vault code cannot be empty.");
+                return;
+            }
+
+            if (!VaultCodePolicy.IsStrongEnough(newCode, out string vaultCodeWarning))
+            {
+                ShowVaultCodeStrengthMessage(vaultCodeWarning);
                 return;
             }
 
@@ -4713,6 +4725,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
