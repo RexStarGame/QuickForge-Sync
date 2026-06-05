@@ -1358,7 +1358,7 @@ namespace exam_test
                     GrantSecretAccessWindow();
 
                     ShowVaultUi();
-                    selectedPreviewLabel.Text = "Vault created. Recovery key saved.";
+                    ShowEmergencyBackupGuidance();
                 }
                 catch (Exception ex)
                 {
@@ -2883,8 +2883,23 @@ namespace exam_test
 
                     File.WriteAllText(saveDialog.FileName, encryptedJson);
 
-                    selectedPreviewLabel.Text = "Encrypted backup exported.";
-                    MessageBox.Show("Encrypted backup exported successfully.");
+                    SetPreviewText(
+                        "Encrypted backup exported.",
+                        "Store this backup somewhere safe outside this app.",
+                        "You still need your vault code or recovery key to open it."
+                    );
+
+                    backupButton.BackColor = Color.FromArgb(35, 40, 60);
+                    backupButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
+
+                    MessageBox.Show(
+                        "Encrypted backup exported successfully." + Environment.NewLine + Environment.NewLine +
+                        "Store it somewhere safe, such as an external drive or secure cloud folder." + Environment.NewLine +
+                        "Do not store your recovery key and backup file in the exact same place.",
+                        "Backup exported",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
                 }
             }
             catch (Exception ex)
@@ -4850,6 +4865,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
