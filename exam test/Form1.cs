@@ -588,7 +588,7 @@ namespace exam_test
             vaultTitleLabel.Left = 20;
             vaultTitleLabel.Top = 16;
 
-            vaultSubtitleLabel.Text = "Save accounts, game codes, recovery notes, license keys and private snippets.";
+            vaultSubtitleLabel.Text = "Save accounts, codes, notes and private snippets.";
             vaultSubtitleLabel.ForeColor = softTextColor;
             vaultSubtitleLabel.BackColor = Color.Transparent;
             vaultSubtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
@@ -603,10 +603,11 @@ namespace exam_test
             syncStatusLabel.ForeColor = softTextColor;
             syncStatusLabel.BackColor = Color.Transparent;
             syncStatusLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
-            syncStatusLabel.Left = 315;
-            syncStatusLabel.Top = 42;
-            syncStatusLabel.Width = 330;
-            syncStatusLabel.Height = 56;
+            syncStatusLabel.Left = 430;
+            syncStatusLabel.Top = 16;
+            syncStatusLabel.Width = 220;
+            syncStatusLabel.Height = 60;
+            syncStatusLabel.TextAlign = ContentAlignment.TopRight;
 
             platformLabel.Text = "Service / Platform";
             platformLabel.ForeColor = Color.White;
@@ -4968,6 +4969,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
