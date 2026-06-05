@@ -966,9 +966,9 @@ namespace exam_test
             securityCenterButton.Click += (s, e) => ShowSecurityCenterDialog();
 
             backupButton.Text = "Backup";
-            backupButton.Left = 465;
+            backupButton.Left = 455;
             backupButton.Top = 515;
-            backupButton.Width = 120;
+            backupButton.Width = 90;
             backupButton.Height = 30;
             backupButton.FlatStyle = FlatStyle.Flat;
             backupButton.ForeColor = Color.White;
@@ -993,6 +993,7 @@ namespace exam_test
             vaultPanel.Controls.Add(rotateRecoveryKeyButton);
             vaultPanel.Controls.Add(securityCenterButton);
             vaultPanel.Controls.Add(backupButton);
+            vaultPanel.Controls.Add(manualSyncButton);
 
             performanceSettingsLabel.Text = "Performance & safety";
             performanceSettingsLabel.Left = 20;
@@ -5034,6 +5035,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
