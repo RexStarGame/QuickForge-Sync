@@ -151,6 +151,7 @@ namespace exam_test
 
         private readonly Button changeVaultCodeButton = new Button();
         private readonly Button backupButton = new Button();
+        private readonly Button manualSyncButton = new Button();
         private readonly Button securityCenterButton = new Button();
         private readonly Label securitySettingsLabel = new Label();
         private readonly Label recoveryReminderLabel = new Label();
@@ -956,7 +957,7 @@ namespace exam_test
             securityCenterButton.Text = "Security check";
             securityCenterButton.Left = 315;
             securityCenterButton.Top = 515;
-            securityCenterButton.Width = 140;
+            securityCenterButton.Width = 130;
             securityCenterButton.Height = 30;
             securityCenterButton.FlatStyle = FlatStyle.Flat;
             securityCenterButton.ForeColor = Color.White;
@@ -974,6 +975,17 @@ namespace exam_test
             backupButton.BackColor = Color.FromArgb(35, 40, 60);
             backupButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
             backupButton.Click += (s, e) => ShowBackupDialog();
+
+            manualSyncButton.Text = "Sync now";
+            manualSyncButton.Left = 555;
+            manualSyncButton.Top = 515;
+            manualSyncButton.Width = 95;
+            manualSyncButton.Height = 30;
+            manualSyncButton.FlatStyle = FlatStyle.Flat;
+            manualSyncButton.ForeColor = Color.White;
+            manualSyncButton.BackColor = Color.FromArgb(45, 90, 160);
+            manualSyncButton.FlatAppearance.BorderColor = borderColor;
+            manualSyncButton.Click += ManualSyncButton_Click;
 
             vaultPanel.Controls.Add(securitySettingsLabel);
             vaultPanel.Controls.Add(recoveryReminderLabel);
@@ -1549,6 +1561,59 @@ namespace exam_test
             lastCloudLoadUtc = DateTime.UtcNow;
             SetSyncStatus("Active", success: true);
         }
+        private async void ManualSyncButton_Click(object? sender, EventArgs e)
+        {
+            if (currentDriveService == null)
+            {
+                SetSyncStatus("Not connected", error: true);
+                MessageBox.Show(
+                    "Google Drive is not connected. Log in with Google before syncing.",
+                    "Sync unavailable",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+                return;
+            }
+
+            if (!isVaultUnlocked || currentDataKey == null || currentEncryptedVaultFile == null)
+            {
+                SetSyncStatus("Vault locked", error: true);
+                MessageBox.Show(
+                    "Unlock your vault before using Sync now.",
+                    "Vault locked",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+                return;
+            }
+
+            try
+            {
+                manualSyncButton.Enabled = false;
+                selectedPreviewLabel.Text = "Manual sync started. Saving encrypted vault to Google Drive...";
+
+                await SaveCurrentVaultToCloudAsync();
+
+                selectedPreviewLabel.Text =
+                    "Manual sync completed." + Environment.NewLine +
+                    "Your encrypted vault was saved to Google Drive.";
+            }
+            catch (Exception ex)
+            {
+                SetSyncStatus("Sync failed", error: true);
+                MessageBox.Show(
+                    "Manual sync failed: " + ex.Message,
+                    "Sync failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+            }
+            finally
+            {
+                manualSyncButton.Enabled = true;
+            }
+        }
+
         private void LockVaultButton_Click(object? sender, EventArgs e)
         {
             LockVaultForSafety("Vault locked.");
@@ -4969,6 +5034,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
