@@ -96,6 +96,7 @@ namespace exam_test
         private readonly TextBox confirmVaultCodeTextBox = new TextBox();
         private readonly Button createVaultButton = new Button();
         private readonly Button resetTestVaultButton = new Button();
+        private readonly Button importBackupAccessButton = new Button();
 
         // Vault workspace
         private readonly Panel vaultPanel = new Panel();
@@ -543,6 +544,17 @@ namespace exam_test
             resetTestVaultButton.Visible = false;
             resetTestVaultButton.Click += ResetTestVaultButton_Click;
 
+            importBackupAccessButton.Text = "Import Backup";
+            importBackupAccessButton.Left = 315;
+            importBackupAccessButton.Top = 210;
+            importBackupAccessButton.Width = 110;
+            importBackupAccessButton.Height = 32;
+            importBackupAccessButton.FlatStyle = FlatStyle.Flat;
+            importBackupAccessButton.ForeColor = Color.White;
+            importBackupAccessButton.BackColor = Color.FromArgb(35, 40, 60);
+            importBackupAccessButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
+            importBackupAccessButton.Click += async (s, e) => await ImportEncryptedBackupAsync();
+
             vaultAccessPanel.Controls.Add(vaultAccessTitleLabel);
             vaultAccessPanel.Controls.Add(vaultAccessSubtitleLabel);
             vaultAccessPanel.Controls.Add(vaultCodeLabel);
@@ -551,6 +563,7 @@ namespace exam_test
             vaultAccessPanel.Controls.Add(confirmVaultCodeTextBox);
             vaultAccessPanel.Controls.Add(createVaultButton);
             vaultAccessPanel.Controls.Add(resetTestVaultButton);
+            vaultAccessPanel.Controls.Add(importBackupAccessButton);
 
             Controls.Add(vaultAccessPanel);
             vaultAccessPanel.BringToFront();
@@ -1388,10 +1401,35 @@ namespace exam_test
                 vaultCodeTextBox.Clear();
                 confirmVaultCodeTextBox.Clear();
 
-                MessageBox.Show("Wrong vault code/recovery key or corrupted vault file.");
+                await ShowVaultOpenRecoveryMessageAsync();
             }
         }
 
+        private async Task ShowVaultOpenRecoveryMessageAsync()
+        {
+            SetPreviewText(
+                "Could not unlock vault.",
+                "Check your vault code/recovery key, or import an encrypted backup.",
+                "If the cloud vault is corrupted, a valid backup can replace it."
+            );
+
+            DialogResult result = MessageBox.Show(
+                "QuickForge could not unlock this vault." + Environment.NewLine + Environment.NewLine +
+                "Possible reasons:" + Environment.NewLine +
+                "- Wrong vault code or recovery key" + Environment.NewLine +
+                "- The cloud vault file is damaged or corrupted" + Environment.NewLine + Environment.NewLine +
+                "If you have an encrypted backup, you can import it and replace the damaged cloud vault." + Environment.NewLine + Environment.NewLine +
+                "Do you want to import an encrypted backup now?",
+                "Could not unlock vault",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning
+            );
+
+            if (result == DialogResult.Yes)
+            {
+                await ImportEncryptedBackupAsync();
+            }
+        }
         private async Task SaveCurrentVaultToCloudAsync()
         {
             if (currentDriveService == null)
@@ -1635,6 +1673,7 @@ namespace exam_test
             vaultPanel.Visible = false;
             logoutButton.Enabled = false;
             resetTestVaultButton.Visible = false;
+            importBackupAccessButton.Visible = false;
 
             accountStatusLabel.Text = "Not connected";
             accountStatusLabel.ForeColor = softTextColor;
@@ -1647,6 +1686,7 @@ namespace exam_test
             vaultPanel.Visible = false;
 
             UpdateDeveloperTestControls();
+            importBackupAccessButton.Visible = currentDriveService != null;
 
             vaultAccessPanel.BringToFront();
             topBarPanel.BringToFront();
@@ -4865,6 +4905,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
