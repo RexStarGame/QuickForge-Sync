@@ -282,9 +282,11 @@ namespace exam_test
             appSubtitleLabel.ForeColor = softTextColor;
             appSubtitleLabel.BackColor = Color.Transparent;
             appSubtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
-            appSubtitleLabel.AutoSize = true;
+            appSubtitleLabel.AutoSize = false;
             appSubtitleLabel.Left = 18;
             appSubtitleLabel.Top = 42;
+            appSubtitleLabel.Width = 410;
+            appSubtitleLabel.Height = 22;
 
             accountStatusLabel.Text = "Not connected";
             accountStatusLabel.ForeColor = softTextColor;
@@ -4678,6 +4680,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
