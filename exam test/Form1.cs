@@ -72,6 +72,7 @@ namespace exam_test
         private readonly Label appTitleLabel = new Label();
         private readonly Label appSubtitleLabel = new Label();
         private readonly Label accountStatusLabel = new Label();
+        private readonly Button aboutButton = new Button();
         private readonly Button logoutButton = new Button();
 
         // Google login card
@@ -166,7 +167,7 @@ namespace exam_test
         {
             InitializeComponent();
             ClientSize = new Size(800, 720);
-            Text = "QuickForge Sync Beta Preview";
+            Text = AppDisplayName + " " + AppVersion;
             MinimumSize = new Size(800, 720);
             DoubleBuffered = true;
             BackColor = backgroundColor;
@@ -235,7 +236,7 @@ namespace exam_test
                 Close();
             });
 
-            trayIcon.Text = "QuickForge Sync Beta Preview";
+            trayIcon.Text = AppDisplayName + " " + AppVersion;
             trayIcon.Icon = SystemIcons.Shield;
             trayIcon.Visible = true;
             trayIcon.ContextMenuStrip = trayMenu;
@@ -264,7 +265,7 @@ namespace exam_test
             topBarPanel.Height = 82;
             topBarPanel.BackColor = panelColor;
 
-            appTitleLabel.Text = "QuickForge Sync Beta Preview";
+            appTitleLabel.Text = AppDisplayName + " " + AppVersion;
             appTitleLabel.ForeColor = Color.White;
             appTitleLabel.BackColor = Color.Transparent;
             appTitleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
@@ -272,7 +273,7 @@ namespace exam_test
             appTitleLabel.Left = 18;
             appTitleLabel.Top = 13;
 
-            appSubtitleLabel.Text = "Beta Preview — use test data only. Do not store real passwords yet." ;
+            appSubtitleLabel.Text = AppVersion + " — use test data only. Do not store real passwords yet.";
             appSubtitleLabel.ForeColor = softTextColor;
             appSubtitleLabel.BackColor = Color.Transparent;
             appSubtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
@@ -290,6 +291,17 @@ namespace exam_test
             accountStatusLabel.Top = 22;
             accountStatusLabel.Width = 305;
             accountStatusLabel.Height = 30;
+
+            aboutButton.Text = "About";
+            aboutButton.Width = 80;
+            aboutButton.Height = 32;
+            aboutButton.Left = 560;
+            aboutButton.Top = 22;
+            aboutButton.FlatStyle = FlatStyle.Flat;
+            aboutButton.ForeColor = Color.White;
+            aboutButton.BackColor = Color.FromArgb(35, 40, 60);
+            aboutButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
+            aboutButton.Click += AboutButton_Click;
 
             logoutButton.Text = "Logout";
             logoutButton.Width = 88;
@@ -312,6 +324,23 @@ namespace exam_test
             topBarPanel.BringToFront();
         }
 
+        private void AboutButton_Click(object? sender, EventArgs e)
+        {
+            MessageBox.Show(
+                AppDisplayName + " " + AppVersion + Environment.NewLine + Environment.NewLine +
+                "Encrypted Windows vault with Google Drive appdata sync." + Environment.NewLine + Environment.NewLine +
+                "Status: Beta Preview" + Environment.NewLine +
+                "Use test data only. Do not store real passwords yet." + Environment.NewLine + Environment.NewLine +
+                "Tested:" + Environment.NewLine +
+                "- Public release ZIP works" + Environment.NewLine +
+                "- Google login works on separate accounts" + Environment.NewLine +
+                "- Vault data is isolated per Google account" + Environment.NewLine +
+                "- 9 automated crypto/backup tests pass",
+                "About QuickForge Sync",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
+        }
         private void CreateLoginUi()
         {
             loginCard.Left = 175;
@@ -4632,6 +4661,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
