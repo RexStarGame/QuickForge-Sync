@@ -393,7 +393,7 @@ namespace exam_test
             Label bulletLabel = new Label();
             bulletLabel.Text =
                 "• Your vault is encrypted before sync" + Environment.NewLine +
-                "• Your data stays in your own Google Drive app data" + Environment.NewLine +
+                "• Each Google account has its own isolated vault" + Environment.NewLine +
                 "• Use test data only during beta" + Environment.NewLine +
                 "• Save your recovery key safely";
             bulletLabel.ForeColor = softTextColor;
@@ -448,7 +448,7 @@ namespace exam_test
             googleTitleLabel.Cursor = Cursors.Hand;
             googleTitleLabel.Click += GoogleLoginCard_Click;
 
-            googleSubtitleLabel.Text = "Sync your encrypted vault to your own Google account";
+            googleSubtitleLabel.Text = "Each Google account has its own encrypted vault";
             googleSubtitleLabel.ForeColor = Color.FromArgb(220, 230, 255);
             googleSubtitleLabel.BackColor = Color.Transparent;
             googleSubtitleLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
@@ -1687,6 +1687,37 @@ namespace exam_test
                 MessageBox.Show("Could not change vault code: " + ex.Message);
             }
         }
+        private bool ConfirmAccountSwitchOrLogout()
+        {
+            if (
+                currentDriveService == null &&
+                string.IsNullOrWhiteSpace(connectedGoogleEmail) &&
+                !isVaultUnlocked
+            )
+            {
+                return true;
+            }
+
+            string currentAccountText = string.IsNullOrWhiteSpace(connectedGoogleEmail)
+                ? "Unknown"
+                : connectedGoogleEmail;
+
+            DialogResult result = MessageBox.Show(
+                "You are about to log out or switch Google accounts." + Environment.NewLine + Environment.NewLine +
+                "Current account: " + currentAccountText + Environment.NewLine + Environment.NewLine +
+                "- Your current vault will be locked." + Environment.NewLine +
+                "- QuickForge vaults are isolated per Google account." + Environment.NewLine +
+                "- A different Google account will show a different vault." + Environment.NewLine +
+                "- Use Sync now before switching if you recently changed anything." + Environment.NewLine + Environment.NewLine +
+                "Continue?",
+                "Before switching accounts",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning
+            );
+
+            return result == DialogResult.Yes;
+        }
+
         private void LogoutButton_Click(object? sender, EventArgs e)
         {
             try
@@ -5035,6 +5066,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
