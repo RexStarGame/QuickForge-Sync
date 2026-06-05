@@ -1026,7 +1026,72 @@ namespace exam_test
                 accountStatusLabel.Text = "Connection failed";
                 accountStatusLabel.ForeColor = dangerColor;
 
+                if (ex is FileNotFoundException && ex.Message.Contains("credentials.json"))
+                {
+                    bool installed = ShowGoogleCredentialsSetupDialog();
+
+                    if (installed)
+                    {
+                        await LoginWithGoogleAsync();
+                        return;
+                    }
+                }
+
                 MessageBox.Show("Google login error: " + ex.Message);
+            }
+        }
+        private bool ShowGoogleCredentialsSetupDialog()
+        {
+            DialogResult setupChoice = MessageBox.Show(
+                GoogleAuthService.GetCredentialsSetupMessage() + Environment.NewLine + Environment.NewLine +
+                "Choose credentials.json now?",
+                "Google setup required",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning
+            );
+
+            if (setupChoice != DialogResult.Yes)
+            {
+                return false;
+            }
+
+            using (OpenFileDialog openDialog = new OpenFileDialog())
+            {
+                openDialog.Title = "Choose Google credentials.json";
+                openDialog.Filter = "Google credentials.json (*.json)|*.json|All files (*.*)|*.*";
+                openDialog.CheckFileExists = true;
+                openDialog.Multiselect = false;
+
+                if (openDialog.ShowDialog(this) != DialogResult.OK)
+                {
+                    return false;
+                }
+
+                try
+                {
+                    GoogleAuthService.InstallCredentialsFile(openDialog.FileName);
+
+                    MessageBox.Show(
+                        "Google setup saved successfully." + Environment.NewLine + Environment.NewLine +
+                        "QuickForge will now try Google login again.",
+                        "Google setup saved",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
+
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        "Could not save Google setup: " + ex.Message,
+                        "Google setup failed",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
+
+                    return false;
+                }
             }
         }
         private void ConfigureVaultAccessForCreate()
@@ -4495,6 +4560,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 

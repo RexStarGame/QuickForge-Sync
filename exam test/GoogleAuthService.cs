@@ -20,16 +20,13 @@ namespace exam_test
 
         public static async Task<DriveService> LoginAsync()
         {
-            string credentialsPath = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory,
-                "credentials.json"
-            );
+            string? credentialsPath = FindCredentialsPath();
 
-            if (!File.Exists(credentialsPath))
+            if (credentialsPath == null)
             {
                 throw new FileNotFoundException(
-                    "credentials.json blev ikke fundet. Sørg for at den ligger i projektet og har Copy if newer.",
-                    credentialsPath
+                    GetCredentialsSetupMessage(),
+                    GetStoredCredentialsPath()
                 );
             }
 
@@ -79,6 +76,99 @@ namespace exam_test
             {
                 Directory.Delete(tokenFolder, true);
             }
+        }
+
+        public static string GetStoredCredentialsPath()
+        {
+            return Path.Combine(
+                GetGoogleSetupFolderPath(),
+                "credentials.json"
+            );
+        }
+
+        public static string GetCredentialsSetupMessage()
+        {
+            return
+                "Google setup is missing." + Environment.NewLine + Environment.NewLine +
+                "To use Google Drive sync, choose a Google OAuth Desktop credentials.json file." + Environment.NewLine + Environment.NewLine +
+                "QuickForge will save it here:" + Environment.NewLine +
+                GetStoredCredentialsPath() + Environment.NewLine + Environment.NewLine +
+                "Do not upload credentials.json to GitHub.";
+        }
+
+        public static void InstallCredentialsFile(string sourceFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(sourceFilePath) || !File.Exists(sourceFilePath))
+            {
+                throw new FileNotFoundException("The selected credentials.json file could not be found.");
+            }
+
+            ValidateGoogleCredentialsFile(sourceFilePath);
+
+            Directory.CreateDirectory(GetGoogleSetupFolderPath());
+
+            File.Copy(
+                sourceFilePath,
+                GetStoredCredentialsPath(),
+                true
+            );
+        }
+
+        private static void ValidateGoogleCredentialsFile(string sourceFilePath)
+        {
+            try
+            {
+                using FileStream stream = new FileStream(
+                    sourceFilePath,
+                    FileMode.Open,
+                    FileAccess.Read
+                );
+
+                ClientSecrets secrets = GoogleClientSecrets.FromStream(stream).Secrets;
+
+                if (secrets == null || string.IsNullOrWhiteSpace(secrets.ClientId))
+                {
+                    throw new InvalidOperationException("Missing Google OAuth client id.");
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    "The selected file does not look like a valid Google OAuth credentials.json file.",
+                    ex
+                );
+            }
+        }
+
+        private static string? FindCredentialsPath()
+        {
+            string storedCredentialsPath = GetStoredCredentialsPath();
+
+            if (File.Exists(storedCredentialsPath))
+            {
+                return storedCredentialsPath;
+            }
+
+            string bundledCredentialsPath = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "credentials.json"
+            );
+
+            if (File.Exists(bundledCredentialsPath))
+            {
+                return bundledCredentialsPath;
+            }
+
+            return null;
+        }
+
+        private static string GetGoogleSetupFolderPath()
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "QuickForge",
+                "Google"
+            );
         }
 
         private static string GetTokenFolderPath()
