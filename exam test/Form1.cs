@@ -35,6 +35,7 @@ namespace exam_test
         private readonly List<VaultEntry> vaultEntries = new List<VaultEntry>();
         private DriveService? currentDriveService;
         private bool cloudVaultExists = false;
+        private string connectedGoogleEmail = "";
         private byte[]? currentDataKey;
         private EncryptedVaultFile? currentEncryptedVaultFile;
         private bool isVaultUnlocked = false;
@@ -1099,6 +1100,7 @@ namespace exam_test
 
                 currentDriveService = await GoogleAuthService.LoginAsync();
                 string email = await GoogleAuthService.GetUserEmailAsync(currentDriveService);
+                connectedGoogleEmail = email;
 
                 accountStatusLabel.Text = "Connected: " + email;
                 accountStatusLabel.ForeColor = successColor;
@@ -1482,6 +1484,7 @@ namespace exam_test
                 RefreshVaultList();
                 currentDriveService = null;
                 cloudVaultExists = false;
+                connectedGoogleEmail = "";
                 accountStatusLabel.Text = "Not connected";
                 accountStatusLabel.ForeColor = softTextColor;
                 logoutButton.Enabled = false;
@@ -4675,6 +4678,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
