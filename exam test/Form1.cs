@@ -1542,7 +1542,25 @@ namespace exam_test
 
             vaultPanel.BringToFront();
             topBarPanel.BringToFront();
+        
+            ShowEmptyVaultOnboardingIfNeeded();
         }
+
+        private void ShowEmptyVaultOnboardingIfNeeded()
+        {
+            if (!isVaultUnlocked)
+            {
+                return;
+            }
+
+            if (vaultEntries.Count == 0)
+            {
+                SetPreviewText(
+                    "Your vault is empty.",
+                    "Add your first login, game code, license key or private note.",
+                    "Use test data only during beta."
+                );
+            }
         private async void SaveEntryButton_Click(object? sender, EventArgs e)
         {
             if (editingEntry != null)
@@ -2106,6 +2124,7 @@ namespace exam_test
 
             RefreshVaultList();
             selectedPreviewLabel.Text = "Deleted entry.";
+            ShowEmptyVaultOnboardingIfNeeded();
 
             try
             {
@@ -4680,6 +4699,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
