@@ -1561,6 +1561,8 @@ namespace exam_test
                     "Use test data only during beta."
                 );
             }
+                }
+
         private async void SaveEntryButton_Click(object? sender, EventArgs e)
         {
             if (editingEntry != null)
@@ -4699,6 +4701,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
