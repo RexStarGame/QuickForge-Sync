@@ -24,6 +24,7 @@ For normal testers:
 6. Use test data only. Do not store real passwords yet.
 
 Do not clone/build the source code unless you are testing as a developer.
+
 ## Main Features
 
 - Encrypted vault stored in Google Drive app data
@@ -112,6 +113,7 @@ Current focus:
 ## Disclaimer
 
 QuickForge Sync is a learning and prototype project. Do not rely on it as your only password manager until the code has been reviewed and tested properly.
+
 
 
 
