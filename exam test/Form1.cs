@@ -1200,10 +1200,19 @@ namespace exam_test
                 }
             }
         }
+        private string GetConnectedGoogleEmailDisplay()
+        {
+            if (string.IsNullOrWhiteSpace(connectedGoogleEmail))
+            {
+                return "this Google account";
+            }
+
+            return connectedGoogleEmail;
+        }
         private void ConfigureVaultAccessForCreate()
         {
             vaultAccessTitleLabel.Text = "Create Vault Code";
-            vaultAccessSubtitleLabel.Text = "First time setup. This code will unlock your encrypted vault.";
+            vaultAccessSubtitleLabel.Text = "First time setup for " + GetConnectedGoogleEmailDisplay() + ". This code unlocks only this Google account vault.";
             vaultCodeLabel.Text = "Create vault code";
             confirmVaultCodeLabel.Visible = true;
             confirmVaultCodeTextBox.Visible = true;
@@ -1216,7 +1225,7 @@ namespace exam_test
         private void ConfigureVaultAccessForUnlock()
         {
             vaultAccessTitleLabel.Text = "Unlock Vault";
-            vaultAccessSubtitleLabel.Text = "A vault already exists. Enter your vault code or recovery key.";
+            vaultAccessSubtitleLabel.Text = "Vault for " + GetConnectedGoogleEmailDisplay() + ". Enter your vault code or recovery key.";
             vaultCodeLabel.Text = "Vault code / recovery key";
             confirmVaultCodeLabel.Visible = false;
             confirmVaultCodeTextBox.Visible = false;
@@ -4666,6 +4675,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
