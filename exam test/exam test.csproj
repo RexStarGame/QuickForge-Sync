@@ -6,6 +6,9 @@
     <RootNamespace>exam_test</RootNamespace>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>QuickForge Sync</AssemblyName>
+    <Product>QuickForge Sync Beta Preview</Product>
+    <Description>Encrypted Windows vault with Google Drive sync.</Description>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 

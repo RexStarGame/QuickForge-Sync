@@ -314,10 +314,10 @@ namespace exam_test
 
         private void CreateLoginUi()
         {
-            loginCard.Left = 250;
-            loginCard.Top = 160;
-            loginCard.Width = 300;
-            loginCard.Height = 72;
+            loginCard.Left = 175;
+            loginCard.Top = 145;
+            loginCard.Width = 450;
+            loginCard.Height = 275;
             loginCard.BackColor = cardColor;
             loginCard.Cursor = Cursors.Hand;
             loginCard.Paint += Card_Paint;
@@ -325,13 +325,71 @@ namespace exam_test
             loginCard.MouseEnter += LoginCard_MouseEnter;
             loginCard.MouseLeave += LoginCard_MouseLeave;
 
+            Label welcomeTitleLabel = new Label();
+            welcomeTitleLabel.Text = "Welcome to QuickForge Sync Beta Preview";
+            welcomeTitleLabel.ForeColor = Color.White;
+            welcomeTitleLabel.BackColor = Color.Transparent;
+            welcomeTitleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
+            welcomeTitleLabel.AutoSize = true;
+            welcomeTitleLabel.Left = 22;
+            welcomeTitleLabel.Top = 20;
+            welcomeTitleLabel.Cursor = Cursors.Hand;
+            welcomeTitleLabel.Click += GoogleLoginCard_Click;
+
+            Label welcomeSubtitleLabel = new Label();
+            welcomeSubtitleLabel.Text = "Encrypted vault sync for passwords, codes, notes and private snippets.";
+            welcomeSubtitleLabel.ForeColor = softTextColor;
+            welcomeSubtitleLabel.BackColor = Color.Transparent;
+            welcomeSubtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+            welcomeSubtitleLabel.AutoSize = true;
+            welcomeSubtitleLabel.Left = 22;
+            welcomeSubtitleLabel.Top = 52;
+            welcomeSubtitleLabel.Cursor = Cursors.Hand;
+            welcomeSubtitleLabel.Click += GoogleLoginCard_Click;
+
+            Label bulletLabel = new Label();
+            bulletLabel.Text =
+                "• Your vault is encrypted before sync" + Environment.NewLine +
+                "• Your data stays in your own Google Drive app data" + Environment.NewLine +
+                "• Use test data only during beta" + Environment.NewLine +
+                "• Save your recovery key safely";
+            bulletLabel.ForeColor = softTextColor;
+            bulletLabel.BackColor = Color.Transparent;
+            bulletLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+            bulletLabel.Left = 22;
+            bulletLabel.Top = 88;
+            bulletLabel.Width = 400;
+            bulletLabel.Height = 92;
+            bulletLabel.Cursor = Cursors.Hand;
+            bulletLabel.Click += GoogleLoginCard_Click;
+
+            Label betaWarningLabel = new Label();
+            betaWarningLabel.Text = "Beta Preview: do not store real passwords yet.";
+            betaWarningLabel.ForeColor = Color.FromArgb(255, 190, 90);
+            betaWarningLabel.BackColor = Color.Transparent;
+            betaWarningLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            betaWarningLabel.AutoSize = true;
+            betaWarningLabel.Left = 22;
+            betaWarningLabel.Top = 178;
+            betaWarningLabel.Cursor = Cursors.Hand;
+            betaWarningLabel.Click += GoogleLoginCard_Click;
+
+            Panel googleButtonPanel = new Panel();
+            googleButtonPanel.Left = 22;
+            googleButtonPanel.Top = 215;
+            googleButtonPanel.Width = 400;
+            googleButtonPanel.Height = 42;
+            googleButtonPanel.BackColor = Color.FromArgb(45, 90, 160);
+            googleButtonPanel.Cursor = Cursors.Hand;
+            googleButtonPanel.Click += GoogleLoginCard_Click;
+
             googleIconLabel.Text = "G";
             googleIconLabel.ForeColor = Color.White;
             googleIconLabel.BackColor = Color.FromArgb(66, 133, 244);
             googleIconLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
             googleIconLabel.TextAlign = ContentAlignment.MiddleCenter;
-            googleIconLabel.Left = 18;
-            googleIconLabel.Top = 20;
+            googleIconLabel.Left = 14;
+            googleIconLabel.Top = 5;
             googleIconLabel.Width = 32;
             googleIconLabel.Height = 32;
             googleIconLabel.Cursor = Cursors.Hand;
@@ -342,29 +400,34 @@ namespace exam_test
             googleTitleLabel.BackColor = Color.Transparent;
             googleTitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
             googleTitleLabel.AutoSize = true;
-            googleTitleLabel.Left = 65;
-            googleTitleLabel.Top = 17;
+            googleTitleLabel.Left = 60;
+            googleTitleLabel.Top = 6;
             googleTitleLabel.Cursor = Cursors.Hand;
             googleTitleLabel.Click += GoogleLoginCard_Click;
 
-            googleSubtitleLabel.Text = "Connect identity and sync access";
-            googleSubtitleLabel.ForeColor = softTextColor;
+            googleSubtitleLabel.Text = "Sync your encrypted vault to your own Google account";
+            googleSubtitleLabel.ForeColor = Color.FromArgb(220, 230, 255);
             googleSubtitleLabel.BackColor = Color.Transparent;
             googleSubtitleLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
             googleSubtitleLabel.AutoSize = true;
-            googleSubtitleLabel.Left = 65;
-            googleSubtitleLabel.Top = 41;
+            googleSubtitleLabel.Left = 60;
+            googleSubtitleLabel.Top = 24;
             googleSubtitleLabel.Cursor = Cursors.Hand;
             googleSubtitleLabel.Click += GoogleLoginCard_Click;
 
-            loginCard.Controls.Add(googleIconLabel);
-            loginCard.Controls.Add(googleTitleLabel);
-            loginCard.Controls.Add(googleSubtitleLabel);
+            googleButtonPanel.Controls.Add(googleIconLabel);
+            googleButtonPanel.Controls.Add(googleTitleLabel);
+            googleButtonPanel.Controls.Add(googleSubtitleLabel);
+
+            loginCard.Controls.Add(welcomeTitleLabel);
+            loginCard.Controls.Add(welcomeSubtitleLabel);
+            loginCard.Controls.Add(bulletLabel);
+            loginCard.Controls.Add(betaWarningLabel);
+            loginCard.Controls.Add(googleButtonPanel);
 
             Controls.Add(loginCard);
             loginCard.BringToFront();
         }
-
         private void CreateVaultAccessUi()
         {
             vaultAccessPanel.Left = 175;
@@ -4569,6 +4632,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
