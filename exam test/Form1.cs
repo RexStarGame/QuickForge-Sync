@@ -95,6 +95,7 @@ namespace exam_test
         private readonly Label confirmVaultCodeLabel = new Label();
         private readonly TextBox confirmVaultCodeTextBox = new TextBox();
         private readonly Button createVaultButton = new Button();
+        private readonly Button resetTestVaultButton = new Button();
 
         // Vault workspace
         private readonly Panel vaultPanel = new Panel();
@@ -470,7 +471,7 @@ namespace exam_test
             vaultAccessPanel.Left = 175;
             vaultAccessPanel.Top = 135;
             vaultAccessPanel.Width = 450;
-            vaultAccessPanel.Height = 250;
+            vaultAccessPanel.Height = 300;
             vaultAccessPanel.BackColor = Color.FromArgb(16, 20, 34);
 
             vaultAccessTitleLabel.Text = "Create Vault Code";
@@ -530,6 +531,18 @@ namespace exam_test
             createVaultButton.FlatAppearance.BorderColor = borderColor;
             createVaultButton.Click += CreateVaultButton_Click;
 
+            resetTestVaultButton.Text = "Reset Test Vault";
+            resetTestVaultButton.Left = 155;
+            resetTestVaultButton.Top = 210;
+            resetTestVaultButton.Width = 150;
+            resetTestVaultButton.Height = 32;
+            resetTestVaultButton.FlatStyle = FlatStyle.Flat;
+            resetTestVaultButton.ForeColor = Color.White;
+            resetTestVaultButton.BackColor = Color.FromArgb(120, 35, 45);
+            resetTestVaultButton.FlatAppearance.BorderColor = Color.FromArgb(190, 80, 90);
+            resetTestVaultButton.Visible = false;
+            resetTestVaultButton.Click += ResetTestVaultButton_Click;
+
             vaultAccessPanel.Controls.Add(vaultAccessTitleLabel);
             vaultAccessPanel.Controls.Add(vaultAccessSubtitleLabel);
             vaultAccessPanel.Controls.Add(vaultCodeLabel);
@@ -537,6 +550,7 @@ namespace exam_test
             vaultAccessPanel.Controls.Add(confirmVaultCodeLabel);
             vaultAccessPanel.Controls.Add(confirmVaultCodeTextBox);
             vaultAccessPanel.Controls.Add(createVaultButton);
+            vaultAccessPanel.Controls.Add(resetTestVaultButton);
 
             Controls.Add(vaultAccessPanel);
             vaultAccessPanel.BringToFront();
@@ -1238,6 +1252,15 @@ namespace exam_test
             vaultCodeTextBox.Clear();
             confirmVaultCodeTextBox.Clear();
         }
+        private void UpdateDeveloperTestControls()
+        {
+            resetTestVaultButton.Visible =
+                string.Equals(
+                    connectedGoogleEmail,
+                    "patrickolsen4@gmail.com",
+                    StringComparison.OrdinalIgnoreCase
+                );
+        }
         private void ShowVaultCodeStrengthMessage(string reason)
         {
             MessageBox.Show(
@@ -1529,6 +1552,81 @@ namespace exam_test
             }
         }
 
+        private async void ResetTestVaultButton_Click(object? sender, EventArgs e)
+        {
+            if (currentDriveService == null)
+            {
+                MessageBox.Show("Google Drive is not connected.");
+                return;
+            }
+
+            if (!string.Equals(connectedGoogleEmail, "patrickolsen4@gmail.com", StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show("This test reset is only enabled for the developer account.");
+                return;
+            }
+
+            DialogResult firstConfirm = MessageBox.Show(
+                "This will delete the QuickForge test vault for:" + Environment.NewLine + Environment.NewLine +
+                connectedGoogleEmail + Environment.NewLine + Environment.NewLine +
+                "This only deletes the encrypted QuickForge vault file in Google Drive app data. It does not delete your Google account." + Environment.NewLine + Environment.NewLine +
+                "Continue?",
+                "Reset test vault",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning
+            );
+
+            if (firstConfirm != DialogResult.Yes)
+            {
+                return;
+            }
+
+            string? typedConfirmation = ShowPasswordPrompt(
+                "Confirm test reset",
+                "Type RESET to delete this test vault:"
+            );
+
+            if (typedConfirmation != "RESET")
+            {
+                MessageBox.Show("Reset cancelled.");
+                return;
+            }
+
+            try
+            {
+                await GoogleDriveVaultService.DeleteVaultAsync(currentDriveService);
+
+                vaultCode = "";
+                vaultEntries.Clear();
+                RefreshVaultList();
+                ClearEntryInputs();
+                ClearSecretAccessWindow();
+
+                currentDataKey = null;
+                currentEncryptedVaultFile = null;
+                currentVaultSettings = new VaultSettings();
+                hasShownRecoveryReminderThisSession = false;
+                isVaultUnlocked = false;
+                cloudVaultExists = false;
+
+                vaultCodeTextBox.Clear();
+                confirmVaultCodeTextBox.Clear();
+
+                ConfigureVaultAccessForCreate();
+                ShowVaultAccessUi();
+
+                MessageBox.Show(
+                    "Test vault reset complete. You can now create a fresh vault for this Google account.",
+                    "Test vault reset",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not reset test vault: " + ex.Message);
+            }
+        }
         private void ShowLoggedOutUi()
         {
             loginCard.Visible = true;
@@ -4725,6 +4823,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
