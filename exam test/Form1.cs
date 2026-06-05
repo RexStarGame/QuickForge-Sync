@@ -270,7 +270,7 @@ namespace exam_test
             topBarPanel.Height = 82;
             topBarPanel.BackColor = panelColor;
 
-            appTitleLabel.Text = AppDisplayName + " " + AppVersion;
+            appTitleLabel.Text = AppName;
             appTitleLabel.ForeColor = Color.White;
             appTitleLabel.BackColor = Color.Transparent;
             appTitleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
@@ -278,7 +278,7 @@ namespace exam_test
             appTitleLabel.Left = 18;
             appTitleLabel.Top = 13;
 
-            appSubtitleLabel.Text = AppVersion + " — use test data only. Do not store real passwords yet.";
+            appSubtitleLabel.Text = AppStatus + " " + AppVersion + " — use test data only. Do not store real passwords yet.";
             appSubtitleLabel.ForeColor = softTextColor;
             appSubtitleLabel.BackColor = Color.Transparent;
             appSubtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
@@ -292,10 +292,10 @@ namespace exam_test
             accountStatusLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             accountStatusLabel.AutoSize = false;
             accountStatusLabel.TextAlign = ContentAlignment.MiddleRight;
-            accountStatusLabel.Left = 300;
-            accountStatusLabel.Top = 22;
-            accountStatusLabel.Width = 250;
-            accountStatusLabel.Height = 30;
+            accountStatusLabel.Left = 440;
+            accountStatusLabel.Top = 52;
+            accountStatusLabel.Width = 305;
+            accountStatusLabel.Height = 22;
 
             aboutButton.Text = "About";
             aboutButton.Width = 80;
@@ -4678,6 +4678,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
