@@ -24,6 +24,48 @@ This version is a security, recovery, and release-readiness update. Use test dat
 
 ### Improved
 
+- Failed unlock now explains wrong vault code, wrong recovery key, or corrupted cloud vault file.
+- Users can start encrypted backup import directly after a failed unlock.
+- Backup guidance reminds users to keep recovery key and backup file in separate safe places.
+- Developer reset is hidden in Release builds.
+- Release-readiness documentation is clearer.
+- Automated test coverage has been expanded.
+
+### Security and Testing
+
+- Current automated test count: 19 tests.
+- Vault code strength tests added.
+- Strong vault code acceptance tests added.
+- Weak vault code rejection tests added.
+- KDF iteration test added.
+- Existing crypto and backup tests still pass.
+- GitHub Actions now runs build/test on push and pull request.
+
+
+## QuickForge Sync Beta Preview v0.1.2
+
+### Status
+
+QuickForge Sync is still in **Beta Preview**.
+
+This version is a security, recovery, and release-readiness update. Use test data only. Do not store real passwords yet.
+
+### Added
+
+- Strong vault code policy for new vaults.
+- Strong vault code policy when changing vault code.
+- PBKDF2-SHA256 iteration count increased to 600000 for new vault wrappers.
+- Emergency backup guidance after creating a new vault.
+- Improved encrypted backup export guidance.
+- Corrupted/wrong cloud vault recovery message.
+- Import encrypted backup option from the unlock/create screen.
+- Manual restore test checklist.
+- Real-data readiness checklist updates.
+- GitHub Actions CI build/test workflow.
+- Developer-only test vault reset button for Debug builds.
+
+### Improved
+
 - The app now explains that a failed unlock may be caused by wrong vault code, wrong recovery key, or corrupted cloud vault file.
 - Users can start encrypted backup import directly after a failed unlock.
 - Backup guidance now reminds users to keep recovery key and backup file in separate safe places.
