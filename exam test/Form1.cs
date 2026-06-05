@@ -1238,6 +1238,18 @@ namespace exam_test
             vaultCodeTextBox.Clear();
             confirmVaultCodeTextBox.Clear();
         }
+        private void ShowVaultCodeStrengthMessage(string reason)
+        {
+            MessageBox.Show(
+                "Your vault code is too weak." + Environment.NewLine + Environment.NewLine +
+                reason + Environment.NewLine + Environment.NewLine +
+                "Use at least 12 characters and mix words, numbers, and symbols." + Environment.NewLine +
+                "Example style: River-Forge-72#Moon",
+                "Weak vault code",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
+        }
         private async void CreateVaultButton_Click(object? sender, EventArgs e)
         {
             if (currentDriveService == null)
@@ -4701,6 +4713,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 

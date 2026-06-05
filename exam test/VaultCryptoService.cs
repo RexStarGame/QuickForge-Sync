@@ -11,7 +11,7 @@ namespace exam_test
         private const int NonceSize = 12;
         private const int TagSize = 16;
         private const int KeySize = 32;
-        private const int Iterations = 200000;
+        private const int Iterations = 600000;
 
         public static string GenerateRecoveryKey()
         {
