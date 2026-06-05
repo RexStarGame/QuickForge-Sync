@@ -8,6 +8,22 @@ The goal is simple: keep passwords, game codes, license keys, recovery notes, an
 
 > **Beta Preview notice:** QuickForge Sync is now in beta preview. Use test data only. Do not store real passwords yet. The app has automated crypto and backup tests, but it still needs more real-world testing before stable release.
 
+## Download Beta Preview
+
+The easiest way to test QuickForge Sync is to download the latest beta ZIP from GitHub Releases:
+
+[Download QuickForge Sync Beta Preview](https://github.com/RexStarGame/QuickForge-Sync/releases)
+
+For normal testers:
+
+1. Download the latest `.zip` file from Releases.
+2. Extract the ZIP first.
+3. Open the extracted folder.
+4. Run `QuickForge Sync.exe`.
+5. Click `Continue with Google`.
+6. Use test data only. Do not store real passwords yet.
+
+Do not clone/build the source code unless you are testing as a developer.
 ## Main Features
 
 - Encrypted vault stored in Google Drive app data
@@ -96,6 +112,7 @@ Current focus:
 ## Disclaimer
 
 QuickForge Sync is a learning and prototype project. Do not rely on it as your only password manager until the code has been reviewed and tested properly.
+
 
 
 
