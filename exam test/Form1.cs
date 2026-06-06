@@ -598,6 +598,8 @@ namespace exam_test
             vaultAccessPanel.Controls.Add(vaultCodeStrengthTrack);
             vaultAccessPanel.Controls.Add(confirmVaultCodeLabel);
             vaultAccessPanel.Controls.Add(confirmVaultCodeTextBox);
+                        AttachPasswordVisibilityToggle(vaultAccessPanel, vaultCodeTextBox);
+            AttachPasswordVisibilityToggle(vaultAccessPanel, confirmVaultCodeTextBox);
             vaultAccessPanel.Controls.Add(createVaultButton);
             vaultAccessPanel.Controls.Add(resetTestVaultButton);
             vaultAccessPanel.Controls.Add(importBackupAccessButton);
@@ -886,6 +888,7 @@ namespace exam_test
 
             vaultPanel.Controls.Add(secretLabel);
             vaultPanel.Controls.Add(secretTextBox);
+                        AttachPasswordVisibilityToggle(vaultPanel, secretTextBox);
             vaultPanel.Controls.Add(createPasswordButton);
             vaultPanel.Controls.Add(passwordStrengthLabel);
             vaultPanel.Controls.Add(passwordStrengthTrack);
@@ -4640,6 +4643,59 @@ namespace exam_test
                 button.FlatAppearance.MouseDownBackColor = Color.FromArgb(25, 30, 48);
             }
         }
+
+        private Button AttachPasswordVisibilityToggle(Control parent, TextBox targetTextBox)
+        {
+            const int buttonWidth = 34;
+            const int gap = 6;
+
+            targetTextBox.UseSystemPasswordChar = true;
+
+            if (targetTextBox.Width > 120)
+            {
+                targetTextBox.Width -= buttonWidth + gap;
+            }
+
+            Button toggleButton = new Button();
+            toggleButton.Text = "👁";
+            toggleButton.Left = targetTextBox.Right + gap;
+            toggleButton.Top = targetTextBox.Top;
+            toggleButton.Width = buttonWidth;
+            toggleButton.Height = targetTextBox.Height;
+            toggleButton.TabStop = false;
+            toggleButton.Cursor = Cursors.Hand;
+            toggleButton.FlatStyle = FlatStyle.Flat;
+            toggleButton.UseVisualStyleBackColor = false;
+            toggleButton.BackColor = Color.FromArgb(35, 40, 60);
+            toggleButton.ForeColor = Color.White;
+            toggleButton.Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular);
+            toggleButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
+            toggleButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(45, 52, 75);
+            toggleButton.FlatAppearance.MouseDownBackColor = Color.FromArgb(25, 30, 48);
+            toggleButton.AccessibleName = "Show or hide sensitive text";
+
+            bool isVisible = false;
+
+            toggleButton.Click += (s, e) =>
+            {
+                isVisible = !isVisible;
+                targetTextBox.UseSystemPasswordChar = !isVisible;
+                toggleButton.Text = isVisible ? "🙈" : "👁";
+
+                targetTextBox.Focus();
+                targetTextBox.SelectionStart = targetTextBox.Text.Length;
+            };
+
+            targetTextBox.VisibleChanged += (s, e) =>
+            {
+                toggleButton.Visible = targetTextBox.Visible;
+            };
+
+            parent.Controls.Add(toggleButton);
+            toggleButton.BringToFront();
+
+            return toggleButton;
+        }
         private void UpdatePasswordStrengthPreview()
         {
             string password = secretTextBox.Text;
@@ -5584,6 +5640,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
