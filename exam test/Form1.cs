@@ -2980,6 +2980,8 @@ namespace exam_test
 
             SetSyncStatus("Saving...");
 
+            MarkVaultChangedByCurrentDevice("Vault synced");
+
             string encryptedJson = CreateCurrentEncryptedVaultJson();
 
             GoogleDriveVaultMetadata? uploadedMetadata =
@@ -7588,6 +7590,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
