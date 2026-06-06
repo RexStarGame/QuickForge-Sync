@@ -3234,12 +3234,24 @@ namespace exam_test
                     GrantSecretAccessWindow();
                     ShowVaultUi();
 
-                    selectedPreviewLabel.Text = "Encrypted backup imported and synced.";
-                    MessageBox.Show("Encrypted backup imported successfully.");
+                    SetPreviewText(
+                        "Encrypted backup imported successfully.",
+                        "The backup was verified, loaded into the app, and uploaded to Google Drive.",
+                        "Cloud vault replaced for: " + GetConnectedGoogleEmailDisplay()
+                    );
+
+                    MessageBox.Show(
+                        "Encrypted backup imported successfully." + Environment.NewLine + Environment.NewLine +
+                        "The backup was verified, loaded into QuickForge, and uploaded to Google Drive as the current encrypted cloud vault." + Environment.NewLine + Environment.NewLine +
+                        "Account: " + GetConnectedGoogleEmailDisplay(),
+                        "Backup restored",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Could not import backup: " + ex.Message);
+                    ShowImportBackupFailureMessage(ex, openDialog.FileName);
                 }
             }
         }
@@ -5121,6 +5133,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
