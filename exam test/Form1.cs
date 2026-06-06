@@ -3778,6 +3778,173 @@ namespace exam_test
             }
         }
 
+        private void ShowVaultSelfCheckDialog()
+        {
+            List<string> passed = new List<string>();
+            List<string> warnings = new List<string>();
+
+            void Pass(string message)
+            {
+                passed.Add("PASS: " + message);
+            }
+
+            void Warn(string message)
+            {
+                warnings.Add("CHECK: " + message);
+            }
+
+            if (isVaultUnlocked)
+            {
+                Pass("Vault is unlocked.");
+            }
+            else
+            {
+                Warn("Vault is locked. Unlock it before trusting the current state.");
+            }
+
+            if (currentDriveService != null)
+            {
+                Pass("Google Drive is connected.");
+            }
+            else
+            {
+                Warn("Google Drive is not connected.");
+            }
+
+            if (currentDataKey != null)
+            {
+                Pass("Vault data key is available in memory for this unlocked session.");
+            }
+            else
+            {
+                Warn("Vault data key is missing.");
+            }
+
+            if (currentEncryptedVaultFile != null)
+            {
+                Pass("Encrypted vault wrapper is loaded.");
+            }
+            else
+            {
+                Warn("Encrypted vault wrapper is missing.");
+            }
+
+            if (currentEncryptedVaultFile?.RecoveryKeyWrapper != null)
+            {
+                Pass("Recovery key wrapper exists.");
+            }
+            else
+            {
+                Warn("Recovery key wrapper is missing.");
+            }
+
+            if (lastCloudSaveUtc.HasValue)
+            {
+                Pass("Last cloud save timestamp exists: " + lastCloudSaveUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"));
+            }
+            else
+            {
+                Warn("No last cloud save timestamp yet. Press Sync after testing.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(lastKnownCloudFingerprint))
+            {
+                Pass("Cloud fingerprint is known for conflict detection.");
+            }
+            else
+            {
+                Warn("Cloud fingerprint is not known yet. Refresh or Sync once after unlock.");
+            }
+
+            if (currentDataKey != null && currentEncryptedVaultFile != null)
+            {
+                try
+                {
+                    string wrapperJson = System.Text.Json.JsonSerializer.Serialize(currentEncryptedVaultFile);
+
+                    EncryptedVaultFile? wrapperClone =
+                        System.Text.Json.JsonSerializer.Deserialize<EncryptedVaultFile>(wrapperJson);
+
+                    if (wrapperClone == null)
+                    {
+                        throw new InvalidOperationException("Could not clone encrypted vault wrapper.");
+                    }
+
+                    VaultData checkData = new VaultData
+                    {
+                        Entries = new List<VaultEntry>(vaultEntries),
+                        Settings = currentVaultSettings,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    string encryptedJson = VaultCryptoService.EncryptVaultDataWithExistingKeys(
+                        checkData,
+                        currentDataKey,
+                        wrapperClone
+                    );
+
+                    if (string.IsNullOrWhiteSpace(encryptedJson))
+                    {
+                        Warn("Encryption self-check returned empty encrypted JSON.");
+                    }
+                    else
+                    {
+                        Pass("Vault can be serialized and encrypted.");
+                    }
+
+                    List<string> leakedPlatforms = vaultEntries
+                        .Where(entry =>
+                            !string.IsNullOrWhiteSpace(entry.Secret) &&
+                            entry.Secret.Length >= 4 &&
+                            encryptedJson.Contains(entry.Secret, StringComparison.Ordinal)
+                        )
+                        .Select(entry => string.IsNullOrWhiteSpace(entry.Platform) ? "Unnamed entry" : entry.Platform)
+                        .Take(5)
+                        .ToList();
+
+                    if (leakedPlatforms.Count == 0)
+                    {
+                        Pass("Encrypted JSON does not contain plaintext secrets.");
+                    }
+                    else
+                    {
+                        Warn("Encrypted JSON appears to contain plaintext secret text for: " + string.Join(", ", leakedPlatforms));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Warn("Serialization/encryption self-check failed: " + ex.Message);
+                }
+            }
+            else
+            {
+                Warn("Encryption self-check skipped because vault crypto state is incomplete.");
+            }
+
+            Warn("Encrypted backup existence cannot be verified automatically. Export a fresh encrypted backup before real data.");
+
+            string title = warnings.Count == 1
+                ? "Vault self-check passed with reminder"
+                : "Vault self-check needs attention";
+
+            string report =
+                title + Environment.NewLine + Environment.NewLine +
+                "Passed checks:" + Environment.NewLine +
+                (passed.Count == 0 ? "- None" : "- " + string.Join(Environment.NewLine + "- ", passed)) +
+                Environment.NewLine + Environment.NewLine +
+                "Warnings / reminders:" + Environment.NewLine +
+                (warnings.Count == 0 ? "- None" : "- " + string.Join(Environment.NewLine + "- ", warnings)) +
+                Environment.NewLine + Environment.NewLine +
+                "This does not mean QuickForge Sync is real-data ready yet." + Environment.NewLine +
+                "Complete REAL_DATA_READINESS.md before using real passwords.";
+
+            MessageBox.Show(
+                report,
+                "Vault self-check",
+                MessageBoxButtons.OK,
+                warnings.Count <= 1 ? MessageBoxIcon.Information : MessageBoxIcon.Warning
+            );
+        }
         private int CountWeakPasswords()
         {
             int count = 0;
@@ -5407,6 +5574,8 @@ namespace exam_test
         }
     }
 }
+
+
 
 
 
