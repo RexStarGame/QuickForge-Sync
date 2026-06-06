@@ -1927,107 +1927,90 @@ namespace exam_test
 
                 await Task.Yield();
 
-                try
+                var recoveryAttempt = await Task.Run(() =>
                 {
-                    var recoveryAttempt = await Task.Run(() =>
-                    {
-                        bool success = VaultCryptoService.TryDecryptVaultWithRecoveryKey(
-                            encryptedJson,
-                            unlockCode,
-                            out VaultData? loadedVault,
-                            out byte[]? loadedDataKey,
-                            out EncryptedVaultFile? loadedEncryptedVaultFile
-                        );
+                    bool success = VaultCryptoService.TryDecryptVaultWithRecoveryKey(
+                        encryptedJson,
+                        unlockCode,
+                        out VaultData? loadedVault,
+                        out byte[]? loadedDataKey,
+                        out EncryptedVaultFile? loadedEncryptedVaultFile
+                    );
 
-                        return (
-                            Success: success,
-                            Vault: loadedVault,
-                            DataKey: loadedDataKey,
-                            EncryptedFile: loadedEncryptedVaultFile
-                        );
-                    });
+                    return (
+                        Success: success,
+                        Vault: loadedVault,
+                        DataKey: loadedDataKey,
+                        EncryptedFile: loadedEncryptedVaultFile
+                    );
+                });
 
-                    if (!recoveryAttempt.Success ||
-                        recoveryAttempt.Vault == null ||
-                        recoveryAttempt.DataKey == null ||
-                        recoveryAttempt.EncryptedFile == null)
-                    {
-                        throw new CryptographicException("Wrong recovery key.");
-                    }
-
-                    vaultData = recoveryAttempt.Vault;
-                    dataKey = recoveryAttempt.DataKey;
-                    decryptedEncryptedVaultFile = recoveryAttempt.EncryptedFile;
-
-                    usedRecoveryKey = true;
-                }
-                catch
+                if (!recoveryAttempt.Success ||
+                    recoveryAttempt.Vault == null ||
+                    recoveryAttempt.DataKey == null ||
+                    recoveryAttempt.EncryptedFile == null)
                 {
-                    UpdateVaultUnlockStatusLabel();
-                    ClearVaultCodeInputForRetry();
                     UpdateVaultUnlockStatusLabel();
                     ClearVaultCodeInputForRetry();
                     ShowVaultCodeLockoutMessage(attemptState);
                     return false;
                 }
+
+                vaultData = recoveryAttempt.Vault;
+                dataKey = recoveryAttempt.DataKey;
+                decryptedEncryptedVaultFile = recoveryAttempt.EncryptedFile;
+                usedRecoveryKey = true;
             }
             else
             {
-                try
+                SetSyncStatus("Checking vault code...");
+                SetPreviewText(
+                    "Checking vault code...",
+                    "This can take a moment because QuickForge uses strong key protection.",
+                    "Please wait."
+                );
+
+                await Task.Yield();
+
+                var vaultCodeAttempt = await Task.Run(() =>
                 {
-                    SetSyncStatus("Checking vault code...");
+                    bool success = VaultCryptoService.TryDecryptVaultWithVaultCode(
+                        encryptedJson,
+                        unlockCode,
+                        out VaultData? loadedVault,
+                        out byte[]? loadedDataKey,
+                        out EncryptedVaultFile? loadedEncryptedVaultFile
+                    );
+
+                    return (
+                        Success: success,
+                        Vault: loadedVault,
+                        DataKey: loadedDataKey,
+                        EncryptedFile: loadedEncryptedVaultFile
+                    );
+                });
+
+                if (vaultCodeAttempt.Success &&
+                    vaultCodeAttempt.Vault != null &&
+                    vaultCodeAttempt.DataKey != null &&
+                    vaultCodeAttempt.EncryptedFile != null)
+                {
+                    vaultData = vaultCodeAttempt.Vault;
+                    dataKey = vaultCodeAttempt.DataKey;
+                    decryptedEncryptedVaultFile = vaultCodeAttempt.EncryptedFile;
+                }
+                else
+                {
+                    SetSyncStatus("Checking recovery key...");
                     SetPreviewText(
-                        "Checking vault code...",
-                        "This can take a moment because QuickForge uses strong key protection.",
+                        "Vault code did not match.",
+                        "Checking whether this is your recovery key...",
                         "Please wait."
                     );
 
                     await Task.Yield();
 
-                    var vaultCodeAttempt = await Task.Run(() =>
-                    {
-                        bool success = VaultCryptoService.TryDecryptVaultWithVaultCode(
-                            encryptedJson,
-                            unlockCode,
-                            out VaultData? loadedVault,
-                            out byte[]? loadedDataKey,
-                            out EncryptedVaultFile? loadedEncryptedVaultFile
-                        );
-
-                        return (
-                            Success: success,
-                            Vault: loadedVault,
-                            DataKey: loadedDataKey,
-                            EncryptedFile: loadedEncryptedVaultFile
-                        );
-                    });
-
-                    if (!vaultCodeAttempt.Success ||
-                        vaultCodeAttempt.Vault == null ||
-                        vaultCodeAttempt.DataKey == null ||
-                        vaultCodeAttempt.EncryptedFile == null)
-                    {
-                        throw new CryptographicException("Wrong vault code.");
-                    }
-
-                    vaultData = vaultCodeAttempt.Vault;
-                    dataKey = vaultCodeAttempt.DataKey;
-                    decryptedEncryptedVaultFile = vaultCodeAttempt.EncryptedFile;
-                }
-                catch
-                {
-                    try
-                    {
-                        SetSyncStatus("Checking recovery key...");
-                        SetPreviewText(
-                            "Vault code did not match.",
-                            "Checking whether this is your recovery key...",
-                            "Please wait."
-                        );
-
-                        await Task.Yield();
-
-                        var recoveryAttempt = await Task.Run(() =>
+                    var fallbackRecoveryAttempt = await Task.Run(() =>
                     {
                         bool success = VaultCryptoService.TryDecryptVaultWithRecoveryKey(
                             encryptedJson,
@@ -2045,28 +2028,21 @@ namespace exam_test
                         );
                     });
 
-                    if (!recoveryAttempt.Success ||
-                        recoveryAttempt.Vault == null ||
-                        recoveryAttempt.DataKey == null ||
-                        recoveryAttempt.EncryptedFile == null)
+                    if (fallbackRecoveryAttempt.Success &&
+                        fallbackRecoveryAttempt.Vault != null &&
+                        fallbackRecoveryAttempt.DataKey != null &&
+                        fallbackRecoveryAttempt.EncryptedFile != null)
                     {
-                        throw new CryptographicException("Wrong recovery key.");
-                    }
-
-                    vaultData = recoveryAttempt.Vault;
-                    dataKey = recoveryAttempt.DataKey;
-                    decryptedEncryptedVaultFile = recoveryAttempt.EncryptedFile;
-
+                        vaultData = fallbackRecoveryAttempt.Vault;
+                        dataKey = fallbackRecoveryAttempt.DataKey;
+                        decryptedEncryptedVaultFile = fallbackRecoveryAttempt.EncryptedFile;
                         usedRecoveryKey = true;
                     }
-                    catch
+                    else
                     {
                         vaultCode = "";
                         currentDataKey = null;
                         currentEncryptedVaultFile = null;
-
-                        vaultCodeTextBox.Clear();
-                        confirmVaultCodeTextBox.Clear();
 
                         RecordFailedVaultUnlockAttempt();
                         return false;
@@ -6287,6 +6263,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
