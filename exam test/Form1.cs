@@ -2865,6 +2865,26 @@ namespace exam_test
                 good.Add("No unknown device detected this session");
             }
 
+
+            KnownVaultDevice? currentKnownDevice = currentVaultSettings.KnownDevices
+                .FirstOrDefault(device => device.DeviceId == localDeviceId);
+
+            if (currentKnownDevice != null && currentKnownDevice.IsTrusted)
+            {
+                good.Add("This device is trusted");
+            }
+            else
+            {
+                warnings.Add("This device is not trusted yet");
+                score -= 15;
+            }
+
+            if (untrustedDeviceDetectedThisSession)
+            {
+                warnings.Add("Untrusted device warning shown this session: " + untrustedDeviceDetectedName);
+                score -= 10;
+            }
+
             if (lastCloudSaveUtc.HasValue || lastCloudLoadUtc.HasValue)
             {
                 good.Add("Sync activity detected");
