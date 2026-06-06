@@ -5188,6 +5188,362 @@ namespace exam_test
             }
         }
 
+
+        private bool ConfirmVaultCodeForDeviceTrust()
+        {
+            if (string.IsNullOrWhiteSpace(vaultCode))
+            {
+                MessageBox.Show(
+                    "Device trust changes require the vault code." + Environment.NewLine + Environment.NewLine +
+                    "Unlock the vault with your vault code first. Recovery-key-only access is not enough for this action.",
+                    "Vault code required",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return false;
+            }
+
+            string? enteredVaultCode = ShowPasswordPrompt(
+                "Device Trust",
+                "Enter your vault code to manage trusted devices:"
+            );
+
+            if (string.IsNullOrWhiteSpace(enteredVaultCode))
+            {
+                return false;
+            }
+
+            if (enteredVaultCode.StartsWith("QF-", StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show(
+                    "Recovery keys cannot be used to manage trusted devices." + Environment.NewLine + Environment.NewLine +
+                    "Use your normal vault code for this action.",
+                    "Vault code required",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return false;
+            }
+
+            if (!string.Equals(enteredVaultCode, vaultCode, StringComparison.Ordinal))
+            {
+                MessageBox.Show(
+                    "The vault code did not match. Device trust was not changed.",
+                    "Wrong vault code",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return false;
+            }
+
+            return true;
+        }
+
+        private void ShowDeviceTrustDialog()
+        {
+            EnsureLocalDeviceIdentity();
+            EnsureVaultSafetyCollections();
+            RegisterCurrentDeviceForVault(false);
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 720;
+                dialog.Height = 520;
+                dialog.Text = "Device Trust";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Device Trust";
+                titleLabel.Left = 20;
+                titleLabel.Top = 18;
+                titleLabel.Width = 650;
+                titleLabel.Height = 28;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+
+                Label introLabel = new Label();
+                introLabel.Text =
+                    "Review devices that have opened or synced this vault." + Environment.NewLine +
+                    "Untrusted devices are not blocked yet, but QuickForge will warn you about them.";
+                introLabel.Left = 20;
+                introLabel.Top = 52;
+                introLabel.Width = 660;
+                introLabel.Height = 42;
+                introLabel.ForeColor = softTextColor;
+                introLabel.BackColor = Color.Transparent;
+                introLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                ListBox deviceList = new ListBox();
+                deviceList.Left = 20;
+                deviceList.Top = 105;
+                deviceList.Width = 660;
+                deviceList.Height = 190;
+                deviceList.BackColor = Color.FromArgb(24, 28, 44);
+                deviceList.ForeColor = Color.White;
+                deviceList.BorderStyle = BorderStyle.FixedSingle;
+                deviceList.Font = new Font("Consolas", 9, FontStyle.Regular);
+
+                Label detailLabel = new Label();
+                detailLabel.Left = 20;
+                detailLabel.Top = 305;
+                detailLabel.Width = 660;
+                detailLabel.Height = 75;
+                detailLabel.ForeColor = softTextColor;
+                detailLabel.BackColor = Color.Transparent;
+                detailLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                void RefreshDeviceList()
+                {
+                    List<KnownVaultDevice> devices = currentVaultSettings.KnownDevices
+                        .OrderByDescending(device => device.LastSeenAtUtc)
+                        .ToList();
+
+                    deviceList.Items.Clear();
+                    deviceList.Tag = devices;
+
+                    foreach (KnownVaultDevice device in devices)
+                    {
+                        string trustText = device.IsTrusted ? "TRUSTED" : "UNTRUSTED";
+                        string currentText = device.DeviceId == localDeviceId ? " | THIS DEVICE" : "";
+
+                        deviceList.Items.Add(
+                            trustText.PadRight(10) +
+                            " | " + device.DeviceName.PadRight(22) +
+                            " | last seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
+                            currentText
+                        );
+                    }
+
+                    if (devices.Count > 0 && deviceList.SelectedIndex < 0)
+                    {
+                        deviceList.SelectedIndex = 0;
+                    }
+
+                    if (devices.Count == 0)
+                    {
+                        detailLabel.Text = "No known devices recorded yet.";
+                    }
+                }
+
+                KnownVaultDevice? GetSelectedDevice()
+                {
+                    if (deviceList.Tag is not List<KnownVaultDevice> devices)
+                    {
+                        return null;
+                    }
+
+                    if (deviceList.SelectedIndex < 0 || deviceList.SelectedIndex >= devices.Count)
+                    {
+                        return null;
+                    }
+
+                    return devices[deviceList.SelectedIndex];
+                }
+
+                void UpdateDetail()
+                {
+                    KnownVaultDevice? selected = GetSelectedDevice();
+
+                    if (selected == null)
+                    {
+                        detailLabel.Text = "Select a device to view details.";
+                        return;
+                    }
+
+                    string shortId = selected.DeviceId.Length <= 10
+                        ? selected.DeviceId
+                        : selected.DeviceId.Substring(0, 10);
+
+                    detailLabel.Text =
+                        "Device: " + selected.DeviceName + Environment.NewLine +
+                        "Status: " + (selected.IsTrusted ? "Trusted" : "Untrusted") + Environment.NewLine +
+                        "First seen: " + selected.FirstSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
+                        " | Last seen: " + selected.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + Environment.NewLine +
+                        "Sync count: " + selected.SyncCount +
+                        " | ID: " + shortId +
+                        (selected.DeviceId == localDeviceId ? " | This device" : "");
+                }
+
+                deviceList.SelectedIndexChanged += (s, e) => UpdateDetail();
+
+                Button trustButton = new Button();
+                trustButton.Text = "Trust";
+                trustButton.Left = 20;
+                trustButton.Top = 395;
+                trustButton.Width = 110;
+                trustButton.Height = 34;
+                StyleActionButton(trustButton, true);
+                trustButton.Click += (s, e) =>
+                {
+                    KnownVaultDevice? selected = GetSelectedDevice();
+
+                    if (selected == null)
+                    {
+                        return;
+                    }
+
+                    if (!ConfirmVaultCodeForDeviceTrust())
+                    {
+                        return;
+                    }
+
+                    selected.IsTrusted = true;
+                    selected.TrustedChangedAtUtc = DateTime.UtcNow;
+                    selected.TrustNote = "Trusted manually from " + localDeviceName + ".";
+
+                    AddSafetyTimelineEvent(
+                        "Device trusted",
+                        selected.DeviceName + " was marked as trusted from " + localDeviceName + "."
+                    );
+
+                    QueueBackgroundVaultSync("Device trust updated.");
+
+                    RefreshDeviceList();
+                    UpdateDetail();
+                };
+
+                Button untrustButton = new Button();
+                untrustButton.Text = "Untrust";
+                untrustButton.Left = 145;
+                untrustButton.Top = 395;
+                untrustButton.Width = 110;
+                untrustButton.Height = 34;
+                StyleActionButton(untrustButton);
+                untrustButton.Click += (s, e) =>
+                {
+                    KnownVaultDevice? selected = GetSelectedDevice();
+
+                    if (selected == null)
+                    {
+                        return;
+                    }
+
+                    if (!ConfirmVaultCodeForDeviceTrust())
+                    {
+                        return;
+                    }
+
+                    selected.IsTrusted = false;
+                    selected.TrustedChangedAtUtc = DateTime.UtcNow;
+                    selected.TrustNote = "Marked untrusted from " + localDeviceName + ".";
+
+                    AddSafetyTimelineEvent(
+                        "Device untrusted",
+                        selected.DeviceName + " was marked as untrusted from " + localDeviceName + "."
+                    );
+
+                    QueueBackgroundVaultSync("Device trust updated.");
+
+                    RefreshDeviceList();
+                    UpdateDetail();
+                };
+
+                Button removeButton = new Button();
+                removeButton.Text = "Remove";
+                removeButton.Left = 270;
+                removeButton.Top = 395;
+                removeButton.Width = 110;
+                removeButton.Height = 34;
+                StyleActionButton(removeButton);
+                removeButton.Click += (s, e) =>
+                {
+                    KnownVaultDevice? selected = GetSelectedDevice();
+
+                    if (selected == null)
+                    {
+                        return;
+                    }
+
+                    if (selected.DeviceId == localDeviceId)
+                    {
+                        MessageBox.Show(
+                            "You cannot remove the current device from the visible list while using it.",
+                            "Current device",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information
+                        );
+
+                        return;
+                    }
+
+                    DialogResult confirmRemove = MessageBox.Show(
+                        "Remove this device from the visible trust list?" + Environment.NewLine + Environment.NewLine +
+                        selected.DeviceName + Environment.NewLine + Environment.NewLine +
+                        "If this device opens the vault again later, it can appear again as a new/untrusted device.",
+                        "Remove device",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning
+                    );
+
+                    if (confirmRemove != DialogResult.Yes)
+                    {
+                        return;
+                    }
+
+                    if (!ConfirmVaultCodeForDeviceTrust())
+                    {
+                        return;
+                    }
+
+                    currentVaultSettings.KnownDevices.RemoveAll(device => device.DeviceId == selected.DeviceId);
+
+                    AddSafetyTimelineEvent(
+                        "Device removed",
+                        selected.DeviceName + " was removed from the visible trust list by " + localDeviceName + "."
+                    );
+
+                    QueueBackgroundVaultSync("Device trust updated.");
+
+                    RefreshDeviceList();
+                    UpdateDetail();
+                };
+
+                Button closeButton = new Button();
+                closeButton.Text = "Close";
+                closeButton.Left = 570;
+                closeButton.Top = 395;
+                closeButton.Width = 110;
+                closeButton.Height = 34;
+                StyleActionButton(closeButton, true);
+                closeButton.Click += (s, e) => dialog.Close();
+
+                Label warningLabel = new Label();
+                warningLabel.Left = 20;
+                warningLabel.Top = 440;
+                warningLabel.Width = 660;
+                warningLabel.Height = 42;
+                warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                warningLabel.BackColor = Color.Transparent;
+                warningLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+                warningLabel.Text =
+                    "Device trust is a safety warning system, not a full device ban yet. " +
+                    "Someone with your Google account and vault code may still open the vault. " +
+                    "For real blocking, rotate your vault code and recovery key.";
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(introLabel);
+                dialog.Controls.Add(deviceList);
+                dialog.Controls.Add(detailLabel);
+                dialog.Controls.Add(trustButton);
+                dialog.Controls.Add(untrustButton);
+                dialog.Controls.Add(removeButton);
+                dialog.Controls.Add(closeButton);
+                dialog.Controls.Add(warningLabel);
+
+                RefreshDeviceList();
+                UpdateDetail();
+
+                dialog.ShowDialog(this);
+            }
+        }
         private void ShowVaultSelfCheckDialog()
         {
             List<string> passed = new List<string>();
@@ -7044,6 +7400,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
