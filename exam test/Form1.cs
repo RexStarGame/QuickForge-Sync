@@ -1551,8 +1551,12 @@ namespace exam_test
 
             try
             {
-                vaultCode = code;
-                await LoadVaultFromCloudAsync();
+                bool unlocked = await TryLoadVaultFromCloudWithLockoutAsync(code);
+
+                if (!unlocked)
+                {
+                    return;
+                }
 
                 GrantSecretAccessWindow();
 
@@ -5872,6 +5876,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
