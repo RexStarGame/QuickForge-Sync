@@ -2893,7 +2893,8 @@ namespace exam_test
                 Secret = secret,
                 Website = website,
                 Note = note,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             };
 
             vaultEntries.Add(entry);
@@ -2989,7 +2990,7 @@ namespace exam_test
 
             try
             {
-                await SaveCurrentVaultToCloudAsync();
+                await SaveCurrentVaultToCloudWithAutoMergeAsync();
 
                 RefreshVaultList();
 
@@ -6413,12 +6414,14 @@ namespace exam_test
 
     public class VaultEntry
     {
+        public string Id { get; set; } = "";
         public string Platform { get; set; } = "";
         public string Username { get; set; } = "";
         public string Secret { get; set; } = "";
         public string Website { get; set; } = "";
         public string Note { get; set; } = "";
         public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         public bool IsFavorite { get; set; } = false;
 
         public string GetDisplayName()
@@ -6447,6 +6450,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
