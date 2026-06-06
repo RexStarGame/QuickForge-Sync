@@ -99,6 +99,10 @@ Before sharing the app, follow the manual test checklist:
 
 [QuickForge Sync Test Checklist](TESTING.md)
 
+For multi-device sync and restore testing, also follow:
+
+[QuickForge Sync Multi-Device Test Checklist](MULTI_DEVICE_TEST.md)
+
 ## Project Status
 
 This is an active student/prototype project.
@@ -113,6 +117,7 @@ Current focus:
 ## Disclaimer
 
 QuickForge Sync is a learning and prototype project. Do not rely on it as your only password manager until the code has been reviewed and tested properly.
+
 
 
 

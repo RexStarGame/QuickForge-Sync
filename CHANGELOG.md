@@ -1,5 +1,57 @@
 ﻿# Changelog
 
+## QuickForge Sync Beta Preview v0.1.3
+
+### Status
+
+QuickForge Sync is still in **Beta Preview**.
+
+This version is a usability, sync-status, restore-guidance, and multi-device testing update. Use test data only. Do not store real passwords yet.
+
+### Added
+
+- Sync status panel with active state and last save/load timestamps.
+- Manual `Sync now` button.
+- Multi-device test checklist.
+- Live vault code strength feedback on the first-time Create Vault Code screen.
+- Better account switching warning before logout.
+- Better encrypted backup import/restore error messages.
+- Better restore success message after importing an encrypted backup.
+
+### Improved
+
+- Sync status no longer permanently says the last action as if it just happened.
+- Sync status now shows stable `Active` state after save/load actions.
+- Create Vault Code screen now warns about weak vault codes while typing.
+- Create Vault Code subtitle now wraps properly inside the panel.
+- Backup import now explains wrong code/key, corrupted backup, invalid file, and Google Drive restore problems.
+- Account switching now explains that vaults are isolated per Google account.
+- Manual sync button layout cleaned up.
+
+### Security and Testing
+
+- Current automated test count: 19 tests.
+- Debug build passes locally.
+- Release build passes locally.
+- Multi-device manual checklist added for release testing.
+- App is still not real-data ready until longer testing and review are complete.
+
+### Completed real-data-readiness steps in this version
+
+- Sync status transparency.
+- Manual sync control.
+- Account switching warning.
+- Better restore/import guidance.
+- Multi-device test checklist.
+- Live first-time vault code strength feedback.
+
+### Still required before removing the beta warning
+
+- Complete repeated multi-device testing.
+- Test backup import/export across fresh installs.
+- External code/security review.
+- Installer/signing decision for Windows builds.
+- Longer real-world beta testing with test data only.
 ## QuickForge Sync Beta Preview v0.1.2
 
 ### Status
@@ -103,3 +155,4 @@ This version is a security, recovery, and release-readiness update. Use test dat
 ### Notes
 
 This is not a stable/final password manager release yet.
+
