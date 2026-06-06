@@ -4255,14 +4255,24 @@ namespace exam_test
                 isVaultUnlocked &&
                 currentDataKey != null)
             {
-                importedVaultData = VaultCryptoService.DecryptVaultWithExistingDataKey(
-                    encryptedJson,
-                    currentDataKey,
-                    out importedEncryptedVaultFile
-                );
+                try
+                {
+                    importedVaultData = VaultCryptoService.DecryptVaultWithExistingDataKey(
+                        encryptedJson,
+                        currentDataKey,
+                        out importedEncryptedVaultFile
+                    );
 
-                importedDataKey = currentDataKey;
-                decrypted = true;
+                    importedDataKey = currentDataKey;
+                    decrypted = true;
+                }
+                catch
+                {
+                    importedVaultData = null;
+                    importedDataKey = null;
+                    importedEncryptedVaultFile = null;
+                    decrypted = false;
+                }
             }
 
             if (!decrypted ||
@@ -4350,12 +4360,12 @@ namespace exam_test
                         return;
                     }
 
-                    VaultData importedVaultData = VaultCryptoService.DecryptVault(
-                        encryptedJson,
-                        unlockCode,
-                        out byte[] importedDataKey,
-                        out EncryptedVaultFile importedEncryptedVaultFile
-                    );
+                    var importResult = DecryptBackupForImport(encryptedJson, unlockCode);
+
+                    VaultData importedVaultData = importResult.VaultData;
+                    byte[] importedDataKey = importResult.DataKey;
+                    EncryptedVaultFile importedEncryptedVaultFile = importResult.EncryptedVaultFile;
+
                     bool importConfirmed = ShowImportBackupPreviewDialog(importedVaultData);
 
                     if (!importConfirmed)
@@ -4368,13 +4378,17 @@ namespace exam_test
 
                     await GoogleDriveVaultService.UploadEncryptedVaultAsync(
                         currentDriveService,
-                        encryptedJson
+                        importResult.EncryptedJsonToUpload
                     );
 
                     lastCloudSaveUtc = DateTime.UtcNow;
                     SetSyncStatus("Active", success: true);
 
-                    vaultCode = unlockCode;
+                    if (!isVaultUnlocked || string.IsNullOrWhiteSpace(vaultCode))
+                    {
+                        vaultCode = unlockCode;
+                    }
+
                     currentDataKey = importedDataKey;
                     currentEncryptedVaultFile = importedEncryptedVaultFile;
                     currentVaultSettings = importedVaultData.Settings ?? new VaultSettings();
@@ -4395,13 +4409,17 @@ namespace exam_test
                     SetPreviewText(
                         "Encrypted backup imported successfully.",
                         "The backup was verified, loaded into the app, and uploaded to Google Drive.",
-                        "Cloud vault replaced for: " + GetConnectedGoogleEmailDisplay()
+                        importResult.PreservedCurrentVaultCredentials
+                            ? "Your current vault code and recovery-key setup were preserved."
+                            : "Cloud vault replaced for: " + GetConnectedGoogleEmailDisplay()
                     );
 
                     MessageBox.Show(
                         "Encrypted backup imported successfully." + Environment.NewLine + Environment.NewLine +
                         "The backup was verified, loaded into QuickForge, and uploaded to Google Drive as the current encrypted cloud vault." + Environment.NewLine + Environment.NewLine +
-                        "Account: " + GetConnectedGoogleEmailDisplay(),
+                        (importResult.PreservedCurrentVaultCredentials
+                            ? "Your current vault code and recovery-key setup were preserved."
+                            : "Account: " + GetConnectedGoogleEmailDisplay()),
                         "Backup restored",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information
@@ -6539,6 +6557,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
