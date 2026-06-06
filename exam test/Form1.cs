@@ -3114,11 +3114,51 @@ namespace exam_test
             }
         }
 
+        private void ShowImportBackupFailureMessage(Exception ex, string selectedBackupPath)
+        {
+            string fileName = string.IsNullOrWhiteSpace(selectedBackupPath)
+                ? "Unknown"
+                : Path.GetFileName(selectedBackupPath);
+
+            SetSyncStatus("Import failed", error: true);
+
+            SetPreviewText(
+                "Backup import failed.",
+                "The selected backup could not be restored.",
+                "Try your recovery key, check that this is a QuickForge backup, or choose another backup file."
+            );
+
+            MessageBox.Show(
+                "QuickForge could not import this encrypted backup." + Environment.NewLine + Environment.NewLine +
+                "Selected file: " + fileName + Environment.NewLine + Environment.NewLine +
+                "Possible reasons:" + Environment.NewLine +
+                "- Wrong vault code or recovery key for this backup" + Environment.NewLine +
+                "- The selected file is not a QuickForge encrypted backup" + Environment.NewLine +
+                "- The backup file is damaged, incomplete, or corrupted" + Environment.NewLine +
+                "- Google Drive could not be reached while replacing the cloud vault" + Environment.NewLine + Environment.NewLine +
+                "What to try:" + Environment.NewLine +
+                "1. Select the original .qfvault backup file." + Environment.NewLine +
+                "2. Try the recovery key if the vault code does not work." + Environment.NewLine +
+                "3. Try another encrypted backup if this file may be damaged." + Environment.NewLine +
+                "4. Check your Google connection and try again." + Environment.NewLine + Environment.NewLine +
+                "Technical detail:" + Environment.NewLine +
+                ex.Message,
+                "Backup import failed",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            );
+        }
         private async Task ImportEncryptedBackupAsync()
         {
             if (currentDriveService == null)
             {
-                MessageBox.Show("Connect Google first, then import the backup.");
+                MessageBox.Show(
+                    "Connect Google first, then import the backup." + Environment.NewLine + Environment.NewLine +
+                    "The backup will be verified locally, then uploaded to the connected Google account as the new encrypted cloud vault.",
+                    "Google required for restore",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
                 return;
             }
 
@@ -3135,6 +3175,11 @@ namespace exam_test
                 try
                 {
                     string encryptedJson = File.ReadAllText(openDialog.FileName);
+
+                    if (string.IsNullOrWhiteSpace(encryptedJson))
+                    {
+                        throw new InvalidDataException("The selected backup file is empty.");
+                    }
 
                     string? unlockCode = ShowPasswordPrompt(
                         "Import Backup",
@@ -5071,6 +5116,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
