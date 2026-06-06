@@ -3658,7 +3658,7 @@ namespace exam_test
             using (Form dialog = new Form())
             {
                 dialog.Width = 520;
-                dialog.Height = 430;
+                dialog.Height = 520;
                 dialog.Text = "Security Center";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -3713,7 +3713,26 @@ namespace exam_test
                     "Weak passwords: " + weakPasswords + Environment.NewLine +
                     "Reused passwords: " + reusedPasswordEntries + Environment.NewLine +
                     "Missing website links: " + missingWebsiteLinks + Environment.NewLine +
-                    "Recovery key reminder: " + recoveryReminderText;
+                    "Recovery key reminder: " + recoveryReminderText + Environment.NewLine +
+                    Environment.NewLine +
+                    "Real-data status: Not ready yet" + Environment.NewLine +
+                    Environment.NewLine +
+                    "Completed:" + Environment.NewLine +
+                    "- Strong vault code policy" + Environment.NewLine +
+                    "- Recovery key" + Environment.NewLine +
+                    "- recoveryReminderText + Environment.NewLine +
+                    Environment.NewLine +
+                    "Real-data status: Not ready yet" + Environment.NewLine +
+                    Environment.NewLine +
+                    "Completed:" + Encrypted backup" + Environment.NewLine +
+                    "- Cloud conflict protection" + Environment.NewLine +
+                    "- Manual Sync and Refresh" + Environment.NewLine +
+                    Environment.NewLine +
+                    "Still required:" + Environment.NewLine +
+                    "- Repeated multi-device testing" + Environment.NewLine +
+                    "- Fresh install restore testing" + Environment.NewLine +
+                    "- External code/security review" + Environment.NewLine +
+                    "- Installer/signing decision";
 
                 Label adviceLabel = new Label();
                 adviceLabel.Left = 20;
@@ -5392,6 +5411,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
