@@ -115,6 +115,7 @@ namespace exam_test
         private readonly Label vaultTitleLabel = new Label();
         private readonly Label vaultSubtitleLabel = new Label();
         private readonly Label syncStatusLabel = new Label();
+        private readonly Label restrictedModeBannerLabel = new Label();
         private DateTime? lastCloudSaveUtc = null;
         private DateTime? lastCloudLoadUtc = null;
         private string? lastKnownCloudFingerprint = null;
@@ -130,6 +131,7 @@ namespace exam_test
         private string newDeviceDetectedName = "";
         private bool untrustedDeviceDetectedThisSession = false;
         private string untrustedDeviceDetectedName = "";
+        private bool restrictedModeWarningShownThisSession = false;
         private const int MaxSafetyTimelineEvents = 25;
 
         private readonly Label platformLabel = new Label();
@@ -936,6 +938,7 @@ namespace exam_test
             vaultPanel.Controls.Add(vaultTitleLabel);
             vaultPanel.Controls.Add(vaultSubtitleLabel);
             vaultPanel.Controls.Add(syncStatusLabel);
+            vaultPanel.Controls.Add(restrictedModeBannerLabel);
             vaultPanel.Controls.Add(platformLabel);
             vaultPanel.Controls.Add(platformTextBox);
             vaultPanel.Controls.Add(usernameLabel);
@@ -1065,7 +1068,15 @@ namespace exam_test
             backupButton.ForeColor = Color.White;
             backupButton.BackColor = Color.FromArgb(35, 40, 60);
             backupButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
-            backupButton.Click += (s, e) => ShowBackupDialog();
+            backupButton.Click += (s, e) =>
+            {
+                if (!RequireTrustedDeviceForSensitiveAction("Export encrypted backup"))
+                {
+                    return;
+                }
+
+                ShowBackupDialog();
+            };
 
             refreshCloudButton.Text = "Refresh";
             refreshCloudButton.Left = 505;
@@ -2611,6 +2622,166 @@ namespace exam_test
             currentVaultSettings.SafetyTimeline ??= new List<VaultSafetyEvent>();
         }
 
+
+        private bool IsCurrentDeviceTrusted()
+        {
+            if (!isVaultUnlocked)
+            {
+                return true;
+            }
+
+            EnsureLocalDeviceIdentity();
+            EnsureVaultSafetyCollections();
+
+            KnownVaultDevice? currentDevice = currentVaultSettings.KnownDevices
+                .FirstOrDefault(device => device.DeviceId == localDeviceId);
+
+            return currentDevice == null || currentDevice.IsTrusted;
+        }
+
+        private bool IsRestrictedModeActive()
+        {
+            return isVaultUnlocked && !IsCurrentDeviceTrusted();
+        }
+
+        private void ShowLocalSecurityNotification(string title, string message)
+        {
+            try
+            {
+                if (trayIcon != null)
+                {
+                    trayIcon.BalloonTipTitle = title;
+                    trayIcon.BalloonTipText = message;
+                    trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
+                    trayIcon.ShowBalloonTip(7000);
+                }
+            }
+            catch
+            {
+                // Local notifications are best-effort only.
+            }
+        }
+
+        private void ShowRestrictedModeWarningIfNeeded()
+        {
+            if (!IsRestrictedModeActive() || restrictedModeWarningShownThisSession)
+            {
+                return;
+            }
+
+            restrictedModeWarningShownThisSession = true;
+
+            string message =
+                "This device is marked as UNTRUSTED for this vault." + Environment.NewLine + Environment.NewLine +
+                "Sensitive actions are disabled on this device:" + Environment.NewLine +
+                "- Reveal/copy passwords" + Environment.NewLine +
+                "- Open + Fill" + Environment.NewLine +
+                "- Add/edit/delete entries" + Environment.NewLine +
+                "- Backup/import" + Environment.NewLine +
+                "- Change vault code or recovery key" + Environment.NewLine + Environment.NewLine +
+                "Use another trusted device to trust this device again.";
+
+            MessageBox.Show(
+                message,
+                "Untrusted device mode",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
+
+            ShowLocalSecurityNotification(
+                "QuickForge: Untrusted device",
+                "Sensitive actions are disabled on this device."
+            );
+        }
+
+        private bool RequireTrustedDeviceForSensitiveAction(string actionName)
+        {
+            if (!IsRestrictedModeActive())
+            {
+                return true;
+            }
+
+            string message =
+                "This device is UNTRUSTED, so QuickForge blocked this action:" +
+                Environment.NewLine + Environment.NewLine +
+                actionName + Environment.NewLine + Environment.NewLine +
+                "Use another trusted device to trust this device again.";
+
+            SetPreviewText(
+                "UNTRUSTED DEVICE MODE",
+                "Blocked action: " + actionName,
+                "Sensitive actions are disabled until this device is trusted."
+            );
+
+            MessageBox.Show(
+                message,
+                "Restricted Mode",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
+
+            ShowLocalSecurityNotification(
+                "QuickForge blocked an action",
+                "Restricted Mode blocked: " + actionName
+            );
+
+            return false;
+        }
+
+        private void ApplyDeviceTrustRestrictionsToUi()
+        {
+            bool restricted = IsRestrictedModeActive();
+
+            restrictedModeBannerLabel.Visible = restricted;
+
+            if (restricted)
+            {
+                restrictedModeBannerLabel.BringToFront();
+
+                SetPreviewText(
+                    "UNTRUSTED DEVICE MODE",
+                    "This device is not trusted for this vault.",
+                    "Sensitive actions are disabled. Refresh, Sync, Lock, and Security Center remain available."
+                );
+            }
+
+            platformTextBox.Enabled = !restricted;
+            usernameTextBox.Enabled = !restricted;
+            secretTextBox.Enabled = !restricted;
+            websiteTextBox.Enabled = !restricted;
+            noteTextBox.Enabled = !restricted;
+
+            saveEntryButton.Enabled = !restricted;
+            clearButton.Enabled = !restricted;
+            createPasswordButton.Enabled = !restricted;
+            saveChangesButton.Enabled = !restricted && saveChangesButton.Visible;
+            cancelEditButton.Enabled = true;
+
+            editEntryButton.Enabled = !restricted && editingEntry == null;
+            deleteEntryButton.Enabled = !restricted && editingEntry == null;
+            favoriteButton.Enabled = !restricted && editingEntry == null;
+            openAndFillButton.Enabled = !restricted && editingEntry == null;
+
+            revealButton.Enabled = !restricted;
+            copySecretButton.Enabled = !restricted;
+            copyUsernameButton.Enabled = !restricted;
+
+            changeVaultCodeButton.Enabled = !restricted;
+            backupButton.Enabled = !restricted;
+            rotateRecoveryKeyButton.Enabled = !restricted;
+            recoveryReminderComboBox.Enabled = !restricted;
+
+            if (secretVisibilityButton != null)
+            {
+                secretVisibilityButton.Enabled = !restricted;
+            }
+
+            securityCenterButton.Enabled = true;
+            refreshCloudButton.Enabled = true;
+            manualSyncButton.Enabled = true;
+            lockVaultButton.Enabled = true;
+            openSiteButton.Enabled = editingEntry == null;
+        }
         private bool RegisterCurrentDeviceForVault(bool showWarning)
         {
             EnsureLocalDeviceIdentity();
@@ -3529,6 +3700,7 @@ namespace exam_test
 
         private void SaveEntryButton_Click(object? sender, EventArgs e)
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Add entry"))             {                 return;             } 
             if (editingEntry != null)
             {
                 MessageBox.Show("Finish editing or cancel edit first.");
@@ -3585,6 +3757,7 @@ namespace exam_test
         }
         private void EditEntryButton_Click(object? sender, EventArgs e)
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Edit entry"))             {                 return;             } 
             VaultEntry? entry = GetSelectedEntry();
 
             if (entry == null)
@@ -3613,6 +3786,7 @@ namespace exam_test
 
         private void SaveChangesButton_Click(object? sender, EventArgs e)
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Save entry changes"))             {                 return;             } 
             if (editingEntry == null || editingEntryIndex < 0 || editingEntryIndex >= vaultEntries.Count)
             {
                 MessageBox.Show("No entry is being edited.");
@@ -3762,6 +3936,7 @@ namespace exam_test
 
         private async Task OpenAndFillButton_Click()
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Open + Fill"))             {                 return;             } 
             VaultEntry? entry = GetSelectedEntry();
 
             if (entry == null)
@@ -3837,6 +4012,7 @@ namespace exam_test
         }
         private void RevealButton_Click(object? sender, EventArgs e)
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Reveal password/code"))             {                 return;             } 
             VaultEntry? entry = GetSelectedEntry();
 
             if (entry == null)
@@ -3869,6 +4045,7 @@ namespace exam_test
 
         private void CopySecretButton_Click(object? sender, EventArgs e)
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Copy password/code"))             {                 return;             } 
             VaultEntry? entry = GetSelectedEntry();
 
             if (entry == null)
@@ -3902,6 +4079,7 @@ namespace exam_test
         }
         private void CopyUsernameButton_Click(object? sender, EventArgs e)
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Copy username"))             {                 return;             } 
             VaultEntry? entry = GetSelectedEntry();
 
             if (entry == null)
@@ -4012,6 +4190,7 @@ namespace exam_test
         }
         private void FavoriteButton_Click(object? sender, EventArgs e)
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Change favorite status"))             {                 return;             } 
             VaultEntry? entry = GetSelectedEntry();
 
             if (entry == null)
@@ -4071,6 +4250,7 @@ namespace exam_test
         }
         private void DeleteEntryButton_Click(object? sender, EventArgs e)
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Delete entry"))             {                 return;             } 
             VaultEntry? entry = GetSelectedEntry();
 
             if (entry == null)
@@ -4217,6 +4397,7 @@ namespace exam_test
 
         private async void RotateRecoveryKeyButton_Click(object? sender, EventArgs e)
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Rotate recovery key"))             {                 return;             } 
             await RotateRecoveryKeyAsync();
         }
 
@@ -5348,7 +5529,16 @@ namespace exam_test
                 deviceTrustButton.Width = 130;
                 deviceTrustButton.Height = 32;
                 StyleActionButton(deviceTrustButton);
-                deviceTrustButton.Click += (s, e) => ShowDeviceTrustDialog();
+                deviceTrustButton.Enabled = !IsRestrictedModeActive();
+                deviceTrustButton.Click += (s, e) =>
+                {
+                    if (!RequireTrustedDeviceForSensitiveAction("Manage Device Trust"))
+                    {
+                        return;
+                    }
+
+                    ShowDeviceTrustDialog();
+                };
 
                 Button selfCheckButton = new Button();
                 selfCheckButton.Text = "Vault self-check";
@@ -7614,6 +7804,8 @@ namespace exam_test
         }
     }
 }
+
+
 
 
 
