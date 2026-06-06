@@ -1598,6 +1598,211 @@ namespace exam_test
                 await ImportEncryptedBackupAsync();
             }
         }
+
+        private string GetVaultUnlockAttemptAccountId()
+        {
+            return string.IsNullOrWhiteSpace(connectedGoogleEmail)
+                ? "unknown-google-account"
+                : connectedGoogleEmail;
+        }
+
+        private string FormatRemainingLockoutTime(DateTime lockedUntilUtc)
+        {
+            TimeSpan remaining = lockedUntilUtc - DateTime.UtcNow;
+
+            if (remaining <= TimeSpan.Zero)
+            {
+                return "less than a minute";
+            }
+
+            if (remaining.TotalHours >= 1)
+            {
+                int minutes = Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes));
+                return minutes + " minute(s)";
+            }
+
+            return Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes)) + " minute(s)";
+        }
+
+        private void ShowVaultCodeLockoutMessage(VaultUnlockAttemptState state)
+        {
+            MessageBox.Show(
+                "Vault-code unlock is temporarily locked." + Environment.NewLine + Environment.NewLine +
+                "Try again in about " + FormatRemainingLockoutTime(state.LockedUntilUtc) + "." + Environment.NewLine + Environment.NewLine +
+                "If this is your vault, you can still unlock immediately with your recovery key.",
+                "Vault code locked",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
+        }
+
+        private void RecordFailedVaultUnlockAttempt()
+        {
+            string accountId = GetVaultUnlockAttemptAccountId();
+            VaultUnlockAttemptState state = VaultUnlockAttemptService.LoadState(accountId);
+
+            state = VaultUnlockAttemptService.RecordFailure(state, DateTime.UtcNow);
+            VaultUnlockAttemptService.SaveState(accountId, state);
+
+            if (VaultUnlockAttemptService.IsLockedOut(state, DateTime.UtcNow))
+            {
+                SetSyncStatus("Vault code locked", error: true);
+                ShowVaultCodeLockoutMessage(state);
+                return;
+            }
+
+            int remainingAttempts = VaultUnlockAttemptService.RemainingAttempts(state);
+
+            SetSyncStatus("Unlock failed", error: true);
+
+            MessageBox.Show(
+                "Wrong vault code or recovery key." + Environment.NewLine + Environment.NewLine +
+                "Attempts left before lockout: " + remainingAttempts,
+                "Could not unlock vault",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
+        }
+
+        private void ResetVaultUnlockAttemptState()
+        {
+            VaultUnlockAttemptService.ResetAfterSuccessfulUnlock(GetVaultUnlockAttemptAccountId());
+        }
+
+        private async Task<bool> ForceRecoveryKeyRotationAfterRecoveryUnlockAsync()
+        {
+            MessageBox.Show(
+                "You unlocked with your recovery key." + Environment.NewLine + Environment.NewLine +
+                "For safety, QuickForge must now rotate your recovery key." + Environment.NewLine +
+                "The old recovery key will stop working after the new one is saved.",
+                "Recovery key rotation required",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
+
+            bool rotated = await RotateRecoveryKeyAsync();
+
+            if (!rotated)
+            {
+                MessageBox.Show(
+                    "Recovery key rotation is required before opening the vault." + Environment.NewLine + Environment.NewLine +
+                    "Your vault was not opened. Try again and complete recovery key rotation.",
+                    "Recovery key rotation required",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return false;
+            }
+
+            return true;
+        }
+
+        private async Task<bool> TryLoadVaultFromCloudWithLockoutAsync(string unlockCode)
+        {
+            if (currentDriveService == null)
+            {
+                throw new InvalidOperationException("Google Drive is not connected.");
+            }
+
+            SetSyncStatus("Loading from Google Drive...");
+
+            GoogleDriveVaultMetadata? cloudMetadata =
+                await GoogleDriveVaultService.GetVaultMetadataAsync(currentDriveService);
+
+            string? encryptedJson =
+                await GoogleDriveVaultService.DownloadEncryptedVaultAsync(currentDriveService);
+
+            if (string.IsNullOrWhiteSpace(encryptedJson))
+            {
+                throw new InvalidOperationException("No encrypted vault was found.");
+            }
+
+            EncryptedVaultFile encryptedVaultFile =
+                VaultCryptoService.ReadEncryptedVaultFile(encryptedJson);
+
+            bool canUnlockWithVaultCode =
+                VaultCryptoService.CanUnlockWithVaultCode(encryptedVaultFile, unlockCode);
+
+            bool canUnlockWithRecoveryKey =
+                !canUnlockWithVaultCode &&
+                VaultCryptoService.CanUnlockWithRecoveryKey(encryptedVaultFile, unlockCode);
+
+            VaultUnlockAttemptState attemptState =
+                VaultUnlockAttemptService.LoadState(GetVaultUnlockAttemptAccountId());
+
+            if (
+                VaultUnlockAttemptService.IsLockedOut(attemptState, DateTime.UtcNow) &&
+                !canUnlockWithRecoveryKey
+            )
+            {
+                SetSyncStatus("Vault code locked", error: true);
+                ShowVaultCodeLockoutMessage(attemptState);
+                return false;
+            }
+
+            if (!canUnlockWithVaultCode && !canUnlockWithRecoveryKey)
+            {
+                vaultCode = "";
+                currentDataKey = null;
+                currentEncryptedVaultFile = null;
+
+                vaultCodeTextBox.Clear();
+                confirmVaultCodeTextBox.Clear();
+
+                RecordFailedVaultUnlockAttempt();
+                return false;
+            }
+
+            vaultCode = unlockCode;
+
+            VaultData vaultData = VaultCryptoService.DecryptVault(
+                encryptedJson,
+                unlockCode,
+                out byte[] dataKey,
+                out EncryptedVaultFile decryptedEncryptedVaultFile
+            );
+
+            currentVaultSettings = vaultData.Settings ?? new VaultSettings();
+            currentDataKey = dataKey;
+            currentEncryptedVaultFile = decryptedEncryptedVaultFile;
+
+            vaultEntries.Clear();
+
+            foreach (VaultEntry entry in vaultData.Entries)
+            {
+                vaultEntries.Add(entry);
+            }
+
+            RefreshVaultList();
+            lastKnownCloudFingerprint = cloudMetadata?.Fingerprint ?? lastKnownCloudFingerprint;
+            lastCloudLoadUtc = DateTime.UtcNow;
+            SetSyncStatus("Active", success: true);
+
+            ResetVaultUnlockAttemptState();
+
+            if (canUnlockWithRecoveryKey)
+            {
+                currentVaultSettings.RecoveryKeyRotationRequired = true;
+
+                bool rotated = await ForceRecoveryKeyRotationAfterRecoveryUnlockAsync();
+
+                if (!rotated)
+                {
+                    vaultCode = "";
+                    currentDataKey = null;
+                    currentEncryptedVaultFile = null;
+                    vaultEntries.Clear();
+                    RefreshVaultList();
+                    SetSyncStatus("Recovery rotation required", error: true);
+                    return false;
+                }
+            }
+
+            ApplyRecoverySettingsToUi();
+
+            return true;
+        }
         private void SetSyncStatus(string status, bool success = false, bool error = false)
         {
             string lastSaveText = lastCloudSaveUtc.HasValue
@@ -2864,16 +3069,15 @@ namespace exam_test
 
         private async void RotateRecoveryKeyButton_Click(object? sender, EventArgs e)
         {
-            if (!isVaultUnlocked)
-            {
-                MessageBox.Show("Unlock the vault first.");
-                return;
-            }
+            await RotateRecoveryKeyAsync();
+        }
 
+        private async Task<bool> RotateRecoveryKeyAsync()
+        {
             if (currentDataKey == null || currentEncryptedVaultFile == null)
             {
                 MessageBox.Show("Vault is not ready.");
-                return;
+                return false;
             }
 
             string newRecoveryKey = VaultCryptoService.GenerateRecoveryKey();
@@ -2882,7 +3086,7 @@ namespace exam_test
 
             if (!confirmed)
             {
-                return;
+                return false;
             }
 
             try
@@ -2894,17 +3098,21 @@ namespace exam_test
                 );
 
                 currentVaultSettings.LastRecoveryKeyRotatedAt = DateTime.UtcNow;
+                currentVaultSettings.RecoveryKeyRotationRequired = false;
 
                 await SaveCurrentVaultToCloudAsync();
 
                 selectedPreviewLabel.Text = "Recovery key rotated and synced.";
                 MessageBox.Show("Recovery key rotated successfully. The old recovery key no longer works.");
+                return true;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Could not rotate recovery key: " + ex.Message);
+                return false;
             }
         }
+
         private bool ShowFirstRecoveryKeyDialog(string recoveryKey)
         {
             bool copied = false;
@@ -5664,6 +5872,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 

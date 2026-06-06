@@ -13,6 +13,7 @@ namespace exam_test
     {
         public int RecoveryKeyReminderDays { get; set; } = 0;
         public DateTime LastRecoveryKeyRotatedAt { get; set; } = DateTime.UtcNow;
+        public bool RecoveryKeyRotationRequired { get; set; } = false;
 
         public bool BackgroundAnimationEnabled { get; set; } = true;
         public int AutoLockMinutes { get; set; } = 10;

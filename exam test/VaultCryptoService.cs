@@ -96,6 +96,36 @@ namespace exam_test
             return vaultData;
         }
 
+        public static EncryptedVaultFile ReadEncryptedVaultFile(string encryptedJson)
+        {
+            return JsonSerializer.Deserialize<EncryptedVaultFile>(encryptedJson)
+                ?? throw new InvalidOperationException("Encrypted vault file could not be read.");
+        }
+
+        public static bool CanUnlockWithVaultCode(
+            EncryptedVaultFile encryptedVaultFile,
+            string unlockCode)
+        {
+            if (string.IsNullOrWhiteSpace(unlockCode))
+            {
+                return false;
+            }
+
+            return TryUnwrapDataKey(encryptedVaultFile.MasterKeyWrapper, unlockCode, out _);
+        }
+
+        public static bool CanUnlockWithRecoveryKey(
+            EncryptedVaultFile encryptedVaultFile,
+            string unlockCode)
+        {
+            if (string.IsNullOrWhiteSpace(unlockCode))
+            {
+                return false;
+            }
+
+            return TryUnwrapDataKey(encryptedVaultFile.RecoveryKeyWrapper, unlockCode, out _);
+        }
+
         public static string EncryptVaultDataWithExistingKeys(
             VaultData vaultData,
             byte[] dataKey,
@@ -139,26 +169,14 @@ namespace exam_test
             encryptedVaultFile.RecoveryKeyWrapper = WrapDataKey(dataKey, newRecoveryKey);
         }
         public static bool CanUnlockVault(
-    EncryptedVaultFile encryptedVaultFile,
-    string unlockCode)
+            EncryptedVaultFile encryptedVaultFile,
+            string unlockCode)
         {
-            if (string.IsNullOrWhiteSpace(unlockCode))
-            {
-                return false;
-            }
-
-            if (TryUnwrapDataKey(encryptedVaultFile.MasterKeyWrapper, unlockCode, out _))
-            {
-                return true;
-            }
-
-            if (TryUnwrapDataKey(encryptedVaultFile.RecoveryKeyWrapper, unlockCode, out _))
-            {
-                return true;
-            }
-
-            return false;
+            return
+                CanUnlockWithVaultCode(encryptedVaultFile, unlockCode) ||
+                CanUnlockWithRecoveryKey(encryptedVaultFile, unlockCode);
         }
+
         private static KeyWrapper WrapDataKey(byte[] dataKey, string unlockCode)
         {
             byte[] salt = RandomNumberGenerator.GetBytes(SaltSize);
@@ -245,3 +263,4 @@ namespace exam_test
         }
     }
 }
+
