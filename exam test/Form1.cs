@@ -122,6 +122,7 @@ namespace exam_test
         private bool backgroundVaultSyncRunning = false;
         private bool backgroundVaultSyncRequested = false;
         private string backgroundVaultSyncReason = "";
+        private bool hasUnsyncedLocalChanges = false;
 
         private readonly Label platformLabel = new Label();
         private readonly TextBox platformTextBox = new TextBox();
@@ -2346,6 +2347,7 @@ namespace exam_test
 
         private void QueueBackgroundVaultSync(string reason)
         {
+            hasUnsyncedLocalChanges = true;
             backgroundVaultSyncRequested = true;
             backgroundVaultSyncReason = reason;
 
@@ -2374,6 +2376,11 @@ namespace exam_test
                         SetSyncStatus("Syncing in background...");
 
                         bool merged = await SaveCurrentVaultToCloudWithAutoMergeAsync();
+
+                        if (!backgroundVaultSyncRequested)
+                        {
+                            hasUnsyncedLocalChanges = false;
+                        }
 
                         SetSyncStatus("Active", success: true);
 
@@ -6669,6 +6676,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
