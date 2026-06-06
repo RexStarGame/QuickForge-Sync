@@ -1964,54 +1964,22 @@ namespace exam_test
             }
             else
             {
-                SetSyncStatus("Checking vault code...");
-                SetPreviewText(
-                    "Checking vault code...",
-                    "This can take a moment because QuickForge uses strong key protection.",
-                    "Please wait."
-                );
+                bool looksLikeRecoveryKey = unlockCode
+                    .Trim()
+                    .StartsWith("QF-", StringComparison.OrdinalIgnoreCase);
 
-                await Task.Yield();
-
-                var vaultCodeAttempt = await Task.Run(() =>
-                {
-                    bool success = VaultCryptoService.TryDecryptVaultWithVaultCode(
-                        encryptedJson,
-                        unlockCode,
-                        out VaultData? loadedVault,
-                        out byte[]? loadedDataKey,
-                        out EncryptedVaultFile? loadedEncryptedVaultFile
-                    );
-
-                    return (
-                        Success: success,
-                        Vault: loadedVault,
-                        DataKey: loadedDataKey,
-                        EncryptedFile: loadedEncryptedVaultFile
-                    );
-                });
-
-                if (vaultCodeAttempt.Success &&
-                    vaultCodeAttempt.Vault != null &&
-                    vaultCodeAttempt.DataKey != null &&
-                    vaultCodeAttempt.EncryptedFile != null)
-                {
-                    vaultData = vaultCodeAttempt.Vault;
-                    dataKey = vaultCodeAttempt.DataKey;
-                    decryptedEncryptedVaultFile = vaultCodeAttempt.EncryptedFile;
-                }
-                else
+                if (looksLikeRecoveryKey)
                 {
                     SetSyncStatus("Checking recovery key...");
                     SetPreviewText(
-                        "Vault code did not match.",
-                        "Checking whether this is your recovery key...",
+                        "Checking recovery key...",
+                        "Recovery keys start with QF-, so QuickForge skips the slower vault-code check.",
                         "Please wait."
                     );
 
                     await Task.Yield();
 
-                    var fallbackRecoveryAttempt = await Task.Run(() =>
+                    var recoveryKeyAttempt = await Task.Run(() =>
                     {
                         bool success = VaultCryptoService.TryDecryptVaultWithRecoveryKey(
                             encryptedJson,
@@ -2029,14 +1997,14 @@ namespace exam_test
                         );
                     });
 
-                    if (fallbackRecoveryAttempt.Success &&
-                        fallbackRecoveryAttempt.Vault != null &&
-                        fallbackRecoveryAttempt.DataKey != null &&
-                        fallbackRecoveryAttempt.EncryptedFile != null)
+                    if (recoveryKeyAttempt.Success &&
+                        recoveryKeyAttempt.Vault != null &&
+                        recoveryKeyAttempt.DataKey != null &&
+                        recoveryKeyAttempt.EncryptedFile != null)
                     {
-                        vaultData = fallbackRecoveryAttempt.Vault;
-                        dataKey = fallbackRecoveryAttempt.DataKey;
-                        decryptedEncryptedVaultFile = fallbackRecoveryAttempt.EncryptedFile;
+                        vaultData = recoveryKeyAttempt.Vault;
+                        dataKey = recoveryKeyAttempt.DataKey;
+                        decryptedEncryptedVaultFile = recoveryKeyAttempt.EncryptedFile;
                         usedRecoveryKey = true;
                     }
                     else
@@ -2049,8 +2017,55 @@ namespace exam_test
                         return false;
                     }
                 }
-            }
+                else
+                {
+                    SetSyncStatus("Checking vault code...");
+                    SetPreviewText(
+                        "Checking vault code...",
+                        "QuickForge is checking your vault code.",
+                        "Please wait."
+                    );
 
+                    await Task.Yield();
+
+                    var vaultCodeAttempt = await Task.Run(() =>
+                    {
+                        bool success = VaultCryptoService.TryDecryptVaultWithVaultCode(
+                            encryptedJson,
+                            unlockCode,
+                            out VaultData? loadedVault,
+                            out byte[]? loadedDataKey,
+                            out EncryptedVaultFile? loadedEncryptedVaultFile
+                        );
+
+                        return (
+                            Success: success,
+                            Vault: loadedVault,
+                            DataKey: loadedDataKey,
+                            EncryptedFile: loadedEncryptedVaultFile
+                        );
+                    });
+
+                    if (vaultCodeAttempt.Success &&
+                        vaultCodeAttempt.Vault != null &&
+                        vaultCodeAttempt.DataKey != null &&
+                        vaultCodeAttempt.EncryptedFile != null)
+                    {
+                        vaultData = vaultCodeAttempt.Vault;
+                        dataKey = vaultCodeAttempt.DataKey;
+                        decryptedEncryptedVaultFile = vaultCodeAttempt.EncryptedFile;
+                    }
+                    else
+                    {
+                        vaultCode = "";
+                        currentDataKey = null;
+                        currentEncryptedVaultFile = null;
+
+                        RecordFailedVaultUnlockAttempt();
+                        return false;
+                    }
+                }
+            }
             if (vaultData == null || dataKey == null || decryptedEncryptedVaultFile == null)
             {
                 throw new InvalidOperationException("Vault unlock did not complete.");
@@ -5250,11 +5265,11 @@ namespace exam_test
 
             Clipboard.SetText(password);
 
-            await Task.Delay(250);
+            await Task.Delay(100);
 
             SetForegroundWindow(quickFillTargetWindow);
 
-            await Task.Delay(350);
+            await Task.Delay(150);
 
             SendKeys.SendWait("^v");
 
@@ -6567,6 +6582,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
