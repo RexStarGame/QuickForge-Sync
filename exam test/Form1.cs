@@ -2250,13 +2250,29 @@ namespace exam_test
                 throw new InvalidOperationException("No encrypted vault was found.");
             }
 
-            VaultData vaultData = VaultCryptoService.DecryptVault(
-                encryptedJson,
-                vaultCode,
-                out byte[] dataKey,
-                out EncryptedVaultFile encryptedVaultFile
+            VaultData vaultData;
+            byte[] dataKey;
+            EncryptedVaultFile encryptedVaultFile;
 
-            );
+            if (isVaultUnlocked && currentDataKey != null)
+            {
+                vaultData = VaultCryptoService.DecryptVaultWithExistingDataKey(
+                    encryptedJson,
+                    currentDataKey,
+                    out encryptedVaultFile
+                );
+
+                dataKey = currentDataKey;
+            }
+            else
+            {
+                vaultData = VaultCryptoService.DecryptVault(
+                    encryptedJson,
+                    vaultCode,
+                    out dataKey,
+                    out encryptedVaultFile
+                );
+            }
             currentVaultSettings = vaultData.Settings ?? new VaultSettings();
             ApplyRecoverySettingsToUi();
             currentDataKey = dataKey;
@@ -6263,6 +6279,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
