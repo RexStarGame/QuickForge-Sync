@@ -3720,11 +3720,7 @@ namespace exam_test
                     "Completed:" + Environment.NewLine +
                     "- Strong vault code policy" + Environment.NewLine +
                     "- Recovery key" + Environment.NewLine +
-                    "- recoveryReminderText + Environment.NewLine +
-                    Environment.NewLine +
-                    "Real-data status: Not ready yet" + Environment.NewLine +
-                    Environment.NewLine +
-                    "Completed:" + Encrypted backup" + Environment.NewLine +
+                    "- Encrypted backup" + Environment.NewLine +
                     "- Cloud conflict protection" + Environment.NewLine +
                     "- Manual Sync and Refresh" + Environment.NewLine +
                     Environment.NewLine +
@@ -5411,6 +5407,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
