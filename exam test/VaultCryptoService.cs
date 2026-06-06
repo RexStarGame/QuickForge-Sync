@@ -245,6 +245,25 @@ namespace exam_test
                 return false;
             }
         }
+        public static VaultData DecryptVaultWithExistingDataKey(
+            string encryptedJson,
+            byte[] existingDataKey,
+            out EncryptedVaultFile encryptedVaultFile)
+        {
+            if (existingDataKey == null || existingDataKey.Length == 0)
+            {
+                throw new InvalidOperationException("Vault data key is missing.");
+            }
+
+            encryptedVaultFile = ReadEncryptedVaultFile(encryptedJson);
+
+            if (encryptedVaultFile.Version != 2)
+            {
+                throw new InvalidOperationException("Unsupported vault version.");
+            }
+
+            return DecryptVaultPayload(encryptedVaultFile, existingDataKey);
+        }
         private static VaultData DecryptVaultPayload(
             EncryptedVaultFile encryptedVaultFile,
             byte[] dataKey)
@@ -408,6 +427,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 

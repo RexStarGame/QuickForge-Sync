@@ -451,8 +451,36 @@ namespace QuickForge.Tests
             Assert.Null(decryptedDataKey);
             Assert.Null(decryptedEncryptedVaultFile);
         }
+        [Fact]
+        public void DecryptVaultWithExistingDataKey_DecryptsRefreshedVault()
+        {
+            string vaultCode = "correct-vault-code";
+            string recoveryKey = VaultCryptoService.GenerateRecoveryKey();
+
+            VaultData originalVault = CreateSampleVault();
+
+            string encryptedJson = VaultCryptoService.CreateEncryptedVault(
+                originalVault,
+                vaultCode,
+                recoveryKey,
+                out byte[] dataKey,
+                out EncryptedVaultFile encryptedVaultFile
+            );
+
+            VaultData refreshedVault = VaultCryptoService.DecryptVaultWithExistingDataKey(
+                encryptedJson,
+                dataKey,
+                out EncryptedVaultFile refreshedEncryptedVaultFile
+            );
+
+            Assert.NotNull(refreshedVault);
+            Assert.NotNull(refreshedEncryptedVaultFile);
+            Assert.Equal(originalVault.Entries.Count, refreshedVault.Entries.Count);
+            Assert.Equal(encryptedVaultFile.Version, refreshedEncryptedVaultFile.Version);
+        }
     }
 }
+
 
 
 
