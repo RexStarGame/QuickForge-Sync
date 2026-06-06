@@ -4217,6 +4217,95 @@ namespace exam_test
                 MessageBoxIcon.Error
             );
         }
+
+        private (
+            VaultData VaultData,
+            byte[] DataKey,
+            EncryptedVaultFile EncryptedVaultFile,
+            string EncryptedJsonToUpload,
+            bool PreservedCurrentVaultCredentials
+        ) DecryptBackupForImport(string encryptedJson, string unlockCode)
+        {
+            VaultData? importedVaultData = null;
+            byte[]? importedDataKey = null;
+            EncryptedVaultFile? importedEncryptedVaultFile = null;
+
+            bool decrypted =
+                VaultCryptoService.TryDecryptVaultWithVaultCode(
+                    encryptedJson,
+                    unlockCode,
+                    out importedVaultData,
+                    out importedDataKey,
+                    out importedEncryptedVaultFile
+                );
+
+            if (!decrypted)
+            {
+                decrypted =
+                    VaultCryptoService.TryDecryptVaultWithRecoveryKey(
+                        encryptedJson,
+                        unlockCode,
+                        out importedVaultData,
+                        out importedDataKey,
+                        out importedEncryptedVaultFile
+                    );
+            }
+
+            if (!decrypted &&
+                isVaultUnlocked &&
+                currentDataKey != null)
+            {
+                importedVaultData = VaultCryptoService.DecryptVaultWithExistingDataKey(
+                    encryptedJson,
+                    currentDataKey,
+                    out importedEncryptedVaultFile
+                );
+
+                importedDataKey = currentDataKey;
+                decrypted = true;
+            }
+
+            if (!decrypted ||
+                importedVaultData == null ||
+                importedDataKey == null ||
+                importedEncryptedVaultFile == null)
+            {
+                throw new CryptographicException("Wrong vault code or recovery key.");
+            }
+
+            NormalizeVaultEntriesForSync(importedVaultData.Entries);
+
+            if (isVaultUnlocked &&
+                currentDataKey != null &&
+                currentEncryptedVaultFile != null)
+            {
+                string reEncryptedJson = VaultCryptoService.EncryptVaultDataWithExistingKeys(
+                    importedVaultData,
+                    currentDataKey,
+                    currentEncryptedVaultFile
+                );
+
+                EncryptedVaultFile reEncryptedVaultFile =
+                    System.Text.Json.JsonSerializer.Deserialize<EncryptedVaultFile>(reEncryptedJson)
+                    ?? throw new InvalidOperationException("Imported vault could not be prepared for upload.");
+
+                return (
+                    importedVaultData,
+                    currentDataKey,
+                    reEncryptedVaultFile,
+                    reEncryptedJson,
+                    true
+                );
+            }
+
+            return (
+                importedVaultData,
+                importedDataKey,
+                importedEncryptedVaultFile,
+                encryptedJson,
+                false
+            );
+        }
         private async Task ImportEncryptedBackupAsync()
         {
             if (currentDriveService == null)
@@ -6450,6 +6539,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
