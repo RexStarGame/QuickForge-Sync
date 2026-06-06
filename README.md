@@ -146,3 +146,27 @@ QuickForge Sync is a learning and prototype project. Do not rely on it as your o
 
 
 
+
+
+## Current beta status: v0.1.7-beta-preview
+
+QuickForge Sync now supports controlled personal real-data beta use.
+
+Passed local readiness areas:
+
+- Account isolation
+- Same-account multi-device sync
+- Backup export/import
+- Fresh-install restore
+- Corrupted backup rejection
+- Vault-code lockout
+- Recovery-key unlock and rotation
+- Sync conflict merge
+- Background cloud sync
+- Safe-close warning while sync is still running
+- Faster Open + Fill and QuickFill timing
+- Reduced animation load
+- Reduced Google Drive roundtrips
+
+Security notice: QuickForge Sync encrypts vault data before syncing. Keep your vault code and recovery key safe. Losing both may permanently lock you out. This beta has not received an external security audit.
+

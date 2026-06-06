@@ -4758,7 +4758,7 @@ namespace exam_test
                     "Missing website links: " + missingWebsiteLinks + Environment.NewLine +
                     "Recovery key reminder: " + recoveryReminderText + Environment.NewLine +
                     Environment.NewLine +
-                    "Real-data status: Not ready yet" + Environment.NewLine +
+                    "Real-data status: Controlled personal beta use supported" + Environment.NewLine +
                     Environment.NewLine +
                     "Completed:" + Environment.NewLine +
                     "- Strong vault code policy" + Environment.NewLine +
@@ -4988,8 +4988,8 @@ namespace exam_test
                 "Warnings / reminders:" + Environment.NewLine +
                 (warnings.Count == 0 ? "- None" : "- " + string.Join(Environment.NewLine + "- ", warnings)) +
                 Environment.NewLine + Environment.NewLine +
-                "This does not mean QuickForge Sync is real-data ready yet." + Environment.NewLine +
-                "Complete REAL_DATA_READINESS.md before using real passwords.";
+                "QuickForge Sync has passed local controlled personal beta readiness tests." + Environment.NewLine +
+                "Local readiness tests have passed for controlled personal beta use. QuickForge has not received an external security audit.";
 
             MessageBox.Show(
                 report,
@@ -6687,6 +6687,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 

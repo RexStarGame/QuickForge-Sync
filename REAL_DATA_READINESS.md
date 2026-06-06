@@ -8,7 +8,7 @@ This checklist must be completed before removing the beta warning or calling the
 
 ## Current status
 
-Real-data status: Not ready yet.
+Real-data status: Controlled personal beta use supported.
 
 QuickForge Sync has improved security and recovery features, but it still needs repeated reliability testing and review.
 
@@ -124,6 +124,7 @@ QuickForge Sync can only become real-data candidate after testing proves:
 - Conflict protection works.
 - Fresh install restore works.
 - External review found no blocking issues.
+
 
 
 

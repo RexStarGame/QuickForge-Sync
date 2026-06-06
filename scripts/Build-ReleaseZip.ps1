@@ -1,5 +1,5 @@
 ﻿param(
-    [string]$Version = "v0.1.6-beta-preview"
+    [string]$Version = "v0.1.7-beta-preview"
 )
 
 $ErrorActionPreference = "Stop"
@@ -146,5 +146,6 @@ Write-Host (Resolve-Path $zipPath)
 Write-Host (Resolve-Path $hashPath)
 
 Write-Host "`nRelease build completed safely."
+
 
 

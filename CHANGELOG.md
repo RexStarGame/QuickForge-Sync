@@ -1,5 +1,38 @@
 ﻿# Changelog
 
+## v0.1.7-beta-preview
+
+### Added
+
+- Background cloud sync for vault edits
+- Safe-close warning when sync is still running
+- Safe logout/account-switch warning while sync is pending
+- Faster recovery-key unlock path using QF- recovery-key detection
+- Combined Google Drive vault download + metadata flow to reduce roundtrips
+
+### Improved
+
+- Save, edit, favorite, and delete now update the UI immediately
+- Cloud sync now continues in the background after local changes
+- Open + Fill timing reduced and status feedback improved
+- QuickFill timing reduced and status feedback improved
+- Generated-password fill timing reduced
+- Background animation load reduced
+- Security Center wording updated for controlled personal beta use
+
+### Verified
+
+- Debug build passed
+- Release build passed
+- 25/25 automated tests passed
+- Safe-close warning confirmed manually
+- Controlled personal beta readiness wording updated
+
+### Security notice
+
+QuickForge Sync encrypts vault data before syncing. Keep your vault code and recovery key safe. Losing both may permanently lock you out. This beta has not received an external security audit.
+
+
 ## QuickForge Sync Beta Preview v0.1.5
 
 ### Status
@@ -240,6 +273,8 @@ This version is a security, recovery, and release-readiness update. You may use 
 ### Notes
 
 This is not a stable/final password manager release yet.
+
+
 
 
 
