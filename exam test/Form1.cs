@@ -3130,19 +3130,25 @@ namespace exam_test
 
             OpenWebsite(entry.Website);
 
-            await Task.Delay(1800);
+            selectedPreviewLabel.Text = "Opening site. Preparing to fill username and password...";
+
+            await Task.Delay(900);
 
             Clipboard.SetText(entry.Username);
             SendKeys.SendWait("^v");
 
-            await Task.Delay(200);
+            selectedPreviewLabel.Text = "Username filled. Moving to password field...";
+
+            await Task.Delay(120);
 
             SendKeys.SendWait("{TAB}");
 
-            await Task.Delay(200);
+            await Task.Delay(120);
 
             Clipboard.SetText(entry.Secret);
             SendKeys.SendWait("^v");
+
+            selectedPreviewLabel.Text = "Open + Fill completed. Clipboard clears in 20 seconds.";
 
             _ = ClearClipboardLaterAsync(entry.Secret, 20000);
         }
@@ -6239,19 +6245,23 @@ namespace exam_test
 
             quickFillForm?.Hide();
 
-            await Task.Delay(250);
+            SetQuickFillStatus("Filling username and password...");
+
+            await Task.Delay(100);
 
             Clipboard.SetText(entry.Username);
             SendKeys.SendWait("^v");
 
-            await Task.Delay(150);
+            await Task.Delay(120);
 
             SendKeys.SendWait("{TAB}");
 
-            await Task.Delay(150);
+            await Task.Delay(120);
 
             Clipboard.SetText(entry.Secret);
             SendKeys.SendWait("^v");
+
+            SetQuickFillStatus("Auto-fill completed. Clipboard clears in 20 seconds.");
 
             _ = ClearClipboardLaterAsync(entry.Secret, 20000);
         }
@@ -6557,6 +6567,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
