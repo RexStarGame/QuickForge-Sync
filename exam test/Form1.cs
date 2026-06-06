@@ -128,9 +128,9 @@ namespace exam_test
         private string localDeviceName = "";
         private bool newDeviceDetectedThisSession = false;
         private string newDeviceDetectedName = "";
-                private bool untrustedDeviceDetectedThisSession = false;
+        private bool untrustedDeviceDetectedThisSession = false;
         private string untrustedDeviceDetectedName = "";
-private const int MaxSafetyTimelineEvents = 25;
+        private const int MaxSafetyTimelineEvents = 25;
 
         private readonly Label platformLabel = new Label();
         private readonly TextBox platformTextBox = new TextBox();
@@ -7588,6 +7588,7 @@ private const int MaxSafetyTimelineEvents = 25;
         }
     }
 }
+
 
 
 
