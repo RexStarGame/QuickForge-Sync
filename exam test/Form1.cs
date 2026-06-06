@@ -91,7 +91,10 @@ namespace exam_test
         private readonly Label vaultAccessTitleLabel = new Label();
         private readonly Label vaultAccessSubtitleLabel = new Label();
         private readonly Label vaultCodeLabel = new Label();
-        private readonly TextBox vaultCodeTextBox = new TextBox();
+        private readonly TextBox vaultCodeTextBox = new TextBox();
+        private readonly Label vaultCodeStrengthLabel = new Label();
+        private readonly Panel vaultCodeStrengthTrack = new Panel();
+        private readonly Panel vaultCodeStrengthFill = new Panel();
         private readonly Label confirmVaultCodeLabel = new Label();
         private readonly TextBox confirmVaultCodeTextBox = new TextBox();
         private readonly Button createVaultButton = new Button();
@@ -5205,6 +5208,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
