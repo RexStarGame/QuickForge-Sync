@@ -17,7 +17,7 @@ namespace exam_test
     {
         private const string AppName = "QuickForge Sync";
         private const string AppStatus = "Beta Preview";
-        private const string AppVersion = "v0.1.5-beta-preview";
+        private const string AppVersion = "v0.1.6-beta-preview";
         private const string AppDisplayName = AppName + " " + AppStatus;
 
 
@@ -298,7 +298,7 @@ namespace exam_test
             appTitleLabel.Left = 18;
             appTitleLabel.Top = 13;
 
-            appSubtitleLabel.Text = AppStatus + " " + AppVersion + " — use test data only. Do not store real passwords yet.";
+            appSubtitleLabel.Text = AppStatus + " " + AppVersion + " — encrypted cloud vault for controlled personal beta use.";
             appSubtitleLabel.ForeColor = softTextColor;
             appSubtitleLabel.BackColor = Color.Transparent;
             appSubtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
@@ -358,7 +358,7 @@ namespace exam_test
                 AppDisplayName + " " + AppVersion + Environment.NewLine + Environment.NewLine +
                 "Encrypted Windows vault with Google Drive appdata sync." + Environment.NewLine + Environment.NewLine +
                 "Status: Beta Preview" + Environment.NewLine +
-                "Use test data only. Do not store real passwords yet." + Environment.NewLine + Environment.NewLine +
+                "QuickForge encrypts vault data before syncing. Keep your vault code and recovery key safe." + Environment.NewLine + Environment.NewLine +
                 "Tested:" + Environment.NewLine +
                 "- Public release ZIP works" + Environment.NewLine +
                 "- Google login works on separate accounts" + Environment.NewLine +
@@ -4089,7 +4089,7 @@ namespace exam_test
                 "Vault created successfully.",
                 "Before storing important data, export an encrypted backup.",
                 "Keep your recovery key and backup file in safe, separate places.",
-                "During beta, continue using test data only."
+                "This beta has passed local account-isolation, multi-device sync, backup, restore, lockout, recovery-key, and conflict-merge tests. It has not received an external security audit."
             );
 
             backupButton.BackColor = Color.FromArgb(45, 90, 160);
@@ -6557,6 +6557,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
