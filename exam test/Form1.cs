@@ -9,6 +9,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace exam_test
 {
@@ -2197,6 +2198,159 @@ namespace exam_test
             }
         }
 
+
+        private string CreateStableLegacyEntryId(VaultEntry entry)
+        {
+            string raw =
+                (entry.Platform ?? "").Trim().ToLowerInvariant() + "\n" +
+                (entry.Username ?? "").Trim().ToLowerInvariant() + "\n" +
+                (entry.Secret ?? "").Trim() + "\n" +
+                (entry.Website ?? "").Trim().ToLowerInvariant() + "\n" +
+                (entry.Note ?? "").Trim() + "\n" +
+                entry.CreatedAt.ToUniversalTime().ToString("O");
+
+            byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(raw));
+            string hash = Convert.ToHexString(hashBytes).ToLowerInvariant();
+
+            return "legacy-" + hash.Substring(0, 24);
+        }
+
+        private void NormalizeVaultEntryForSync(VaultEntry entry)
+        {
+            if (entry.CreatedAt == DateTime.MinValue)
+            {
+                entry.CreatedAt = DateTime.UtcNow;
+            }
+
+            if (entry.UpdatedAt == DateTime.MinValue)
+            {
+                entry.UpdatedAt = entry.CreatedAt;
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.Id))
+            {
+                entry.Id = CreateStableLegacyEntryId(entry);
+            }
+        }
+
+        private void NormalizeVaultEntriesForSync(IEnumerable<VaultEntry> entries)
+        {
+            foreach (VaultEntry entry in entries)
+            {
+                NormalizeVaultEntryForSync(entry);
+            }
+        }
+
+        private void AddOrReplaceMergedEntry(List<VaultEntry> mergedEntries, VaultEntry entry)
+        {
+            NormalizeVaultEntryForSync(entry);
+
+            int existingIndex = mergedEntries.FindIndex(existing =>
+                string.Equals(existing.Id, entry.Id, StringComparison.OrdinalIgnoreCase)
+            );
+
+            if (existingIndex >= 0)
+            {
+                // Local version wins for the same entry. This preserves the user's latest local edit.
+                mergedEntries[existingIndex] = entry;
+            }
+            else
+            {
+                mergedEntries.Add(entry);
+            }
+        }
+
+        private async Task MergeLatestCloudVaultIntoCurrentSessionAsync()
+        {
+            if (currentDriveService == null)
+            {
+                throw new InvalidOperationException("Google Drive is not connected.");
+            }
+
+            if (currentDataKey == null)
+            {
+                throw new InvalidOperationException("Vault is locked.");
+            }
+
+            SetSyncStatus("Merging cloud changes...");
+
+            GoogleDriveVaultMetadata? cloudMetadata =
+                await GoogleDriveVaultService.GetVaultMetadataAsync(currentDriveService);
+
+            string? encryptedJson =
+                await GoogleDriveVaultService.DownloadEncryptedVaultAsync(currentDriveService);
+
+            if (string.IsNullOrWhiteSpace(encryptedJson))
+            {
+                throw new InvalidOperationException("No encrypted cloud vault was found to merge.");
+            }
+
+            VaultData cloudVault = VaultCryptoService.DecryptVaultWithExistingDataKey(
+                encryptedJson,
+                currentDataKey,
+                out EncryptedVaultFile latestEncryptedVaultFile
+            );
+
+            NormalizeVaultEntriesForSync(cloudVault.Entries);
+            NormalizeVaultEntriesForSync(vaultEntries);
+
+            List<VaultEntry> mergedEntries = new List<VaultEntry>();
+
+            // Cloud first: keeps the newest cloud state from the other PC.
+            foreach (VaultEntry cloudEntry in cloudVault.Entries)
+            {
+                AddOrReplaceMergedEntry(mergedEntries, cloudEntry);
+            }
+
+            // Local second: keeps the unsynced entry/edit from this PC.
+            foreach (VaultEntry localEntry in vaultEntries)
+            {
+                AddOrReplaceMergedEntry(mergedEntries, localEntry);
+            }
+
+            vaultEntries.Clear();
+            vaultEntries.AddRange(mergedEntries);
+
+            currentEncryptedVaultFile = latestEncryptedVaultFile;
+            lastKnownCloudFingerprint = cloudMetadata?.Fingerprint ?? lastKnownCloudFingerprint;
+            lastCloudLoadUtc = DateTime.UtcNow;
+
+            RefreshVaultList();
+
+            SetPreviewText(
+                "Cloud changes merged.",
+                "QuickForge kept the latest cloud vault and your local unsynced changes.",
+                "Syncing merged encrypted vault..."
+            );
+        }
+
+        private async Task<bool> SaveCurrentVaultToCloudWithAutoMergeAsync()
+        {
+            try
+            {
+                await SaveCurrentVaultToCloudAsync();
+                return false;
+            }
+            catch (Exception ex) when (IsCloudConflictException(ex))
+            {
+                SetPreviewText(
+                    "Cloud changed on another device.",
+                    "QuickForge is merging the newest cloud vault with your local unsynced changes.",
+                    "This prevents overwriting another PC."
+                );
+
+                await MergeLatestCloudVaultIntoCurrentSessionAsync();
+                await SaveCurrentVaultToCloudAsync();
+
+                SetPreviewText(
+                    "Merged and synced.",
+                    "Your local changes and the other device changes were saved together.",
+                    "Refresh the other PC to see the merged vault."
+                );
+
+                return true;
+            }
+        }
         private async Task SaveCurrentVaultToCloudAsync()
         {
             if (currentDriveService == null)
@@ -2390,13 +2544,15 @@ namespace exam_test
             try
             {
                 manualSyncButton.Enabled = false;
-                selectedPreviewLabel.Text = "Manual sync started. Saving encrypted vault to Google Drive...";
+                selectedPreviewLabel.Text = "Manual sync started. Checking cloud and saving encrypted vault...";
 
-                await SaveCurrentVaultToCloudAsync();
+                bool merged = await SaveCurrentVaultToCloudWithAutoMergeAsync();
 
-                selectedPreviewLabel.Text =
-                    "Manual sync completed." + Environment.NewLine +
-                    "Your encrypted vault was saved to Google Drive.";
+                selectedPreviewLabel.Text = merged
+                    ? "Manual sync completed after merging cloud changes." + Environment.NewLine +
+                      "Your local changes and the other PC changes were saved together."
+                    : "Manual sync completed." + Environment.NewLine +
+                      "Your encrypted vault was saved to Google Drive.";
             }
             catch (Exception ex) when (IsCloudConflictException(ex))
             {
@@ -2744,15 +2900,27 @@ namespace exam_test
             RefreshVaultList();
             ClearEntryInputs();
 
-            selectedPreviewLabel.Text = "Saved: " + entry.GetDisplayName();
+            selectedPreviewLabel.Text = "Saved locally: " + entry.GetDisplayName();
+
             try
             {
-                await SaveCurrentVaultToCloudAsync();
-                selectedPreviewLabel.Text = "Saved and synced: " + entry.GetDisplayName();
+                bool merged = await SaveCurrentVaultToCloudWithAutoMergeAsync();
+
+                selectedPreviewLabel.Text = merged
+                    ? "Saved, merged, and synced: " + entry.GetDisplayName()
+                    : "Saved and synced: " + entry.GetDisplayName();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Entry was saved locally, but sync failed: " + ex.Message);
+                SetSyncStatus("Sync failed", error: true);
+
+                MessageBox.Show(
+                    "Entry was saved locally, but sync failed: " + ex.Message + Environment.NewLine + Environment.NewLine +
+                    "Recommended next step: export an encrypted backup before closing the app.",
+                    "Sync failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
             }
         }
         private void EditEntryButton_Click(object? sender, EventArgs e)
@@ -6279,6 +6447,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
