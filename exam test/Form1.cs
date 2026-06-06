@@ -3759,6 +3759,15 @@ namespace exam_test
                     adviceLabel.Text = "No urgent action needed.";
                 }
 
+                Button selfCheckButton = new Button();
+                selfCheckButton.Text = "Vault self-check";
+                selfCheckButton.Left = 235;
+                selfCheckButton.Top = 445;
+                selfCheckButton.Width = 130;
+                selfCheckButton.Height = 32;
+                StyleActionButton(selfCheckButton);
+                selfCheckButton.Click += (s, e) => ShowVaultSelfCheckDialog();
+
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
                 closeButton.Left = 380;
@@ -5574,6 +5583,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
