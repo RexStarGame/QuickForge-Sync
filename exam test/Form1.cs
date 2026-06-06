@@ -16,7 +16,7 @@ namespace exam_test
     {
         private const string AppName = "QuickForge Sync";
         private const string AppStatus = "Beta Preview";
-        private const string AppVersion = "v0.1.4-beta-preview";
+        private const string AppVersion = "v0.1.5-beta-preview";
         private const string AppDisplayName = AppName + " " + AppStatus;
 
 
@@ -357,7 +357,7 @@ namespace exam_test
                 "- Public release ZIP works" + Environment.NewLine +
                 "- Google login works on separate accounts" + Environment.NewLine +
                 "- Vault data is isolated per Google account" + Environment.NewLine +
-                "- 9 automated crypto/backup tests pass",
+                "- 19 automated crypto/backup tests pass",
                 "About QuickForge Sync",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information
@@ -5664,6 +5664,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 

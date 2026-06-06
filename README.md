@@ -32,10 +32,12 @@ Do not clone/build the source code unless you are testing as a developer.
 - QuickFill with Ctrl + Alt + Q
 - Password generator with copy and fill options
 - Live password strength feedback
+- Show/hide toggles for sensitive input fields
 - Duplicate password warning
 - Clipboard cleanup after copying secrets
 - Auto-lock for safety
 - Security Center overview
+- Vault self-check
 - Favorite logins
 - Search/filter saved entries
 - Manual encrypted backup export/import
@@ -129,6 +131,7 @@ Current focus:
 ## Disclaimer
 
 QuickForge Sync is a learning and prototype project. Do not rely on it as your only password manager until the code has been reviewed and tested properly.
+
 
 
 

@@ -1,5 +1,89 @@
 ﻿# Changelog
 
+## QuickForge Sync Beta Preview v0.1.5
+
+### Status
+
+QuickForge Sync is still in **Beta Preview**.
+
+This version focuses on usability and security feedback polish. Use test data only. Do not store real passwords yet.
+
+### Added
+
+- Vault self-check button in the Security Center.
+- Show/hide visibility toggles for sensitive input fields.
+- Visibility toggle for the vault code field.
+- Visibility toggle for the confirm vault code field.
+- Visibility toggle for the saved password/secret field.
+
+### Improved
+
+- The Security Center self-check is now reachable from the UI.
+- Vault creation is easier because users can verify both vault code fields before creating the vault.
+- Vault unlock is easier because users can verify their vault code or recovery key before unlocking.
+- The confirm vault code visibility toggle now hides correctly during normal vault unlock.
+- Sensitive fields still start hidden by default.
+
+### Security and Testing
+
+- Current automated test count: 19 tests.
+- Debug build passes locally.
+- Release build passes locally.
+- All automated tests pass locally.
+- App is still not real-data ready until longer testing and external review are complete.
+
+### Still required before removing the beta warning
+
+- Repeated multi-device sync testing.
+- Repeated backup/restore testing on fresh installs.
+- Repeated sync conflict testing.
+- External code/security review.
+- Installer/signing decision.
+- Longer real-world beta testing with test data only.
+
+
+## QuickForge Sync Beta Preview v0.1.5
+
+### Status
+
+QuickForge Sync is still in **Beta Preview**.
+
+This version focuses on usability and security feedback polish. Use test data only. Do not store real passwords yet.
+
+### Added
+
+- Vault self-check button in the Security Center.
+- Show/hide visibility toggles for sensitive input fields.
+- Visibility toggle for the vault code field.
+- Visibility toggle for the confirm vault code field.
+- Visibility toggle for the saved password/secret field.
+
+### Improved
+
+- The Security Center self-check is now reachable from the UI.
+- Vault creation is easier because users can verify both vault code fields before creating the vault.
+- Vault unlock is easier because users can verify their vault code or recovery key before unlocking.
+- The confirm vault code visibility toggle now hides correctly during normal vault unlock.
+- Sensitive fields still start hidden by default.
+
+### Security and Testing
+
+- Current automated test count: 19 tests.
+- Debug build passes locally.
+- Release build passes locally.
+- All automated tests pass locally.
+- App is still not real-data ready until longer testing and external review are complete.
+
+### Still required before removing the beta warning
+
+- Repeated multi-device sync testing.
+- Repeated backup/restore testing on fresh installs.
+- Repeated sync conflict testing.
+- External code/security review.
+- Installer/signing decision.
+- Longer real-world beta testing with test data only.
+
+
 ## QuickForge Sync Beta Preview v0.1.4
 
 ### Status
@@ -198,5 +282,6 @@ This version is a security, recovery, and release-readiness update. Use test dat
 ### Notes
 
 This is not a stable/final password manager release yet.
+
 
 
