@@ -1,4 +1,4 @@
-# QuickForge Sync Release Checklist
+﻿# QuickForge Sync Release Checklist
 
 Use this checklist before publishing any beta preview release.
 
@@ -76,3 +76,4 @@ Release is blocked if Debug build, Release build, tests, or GitHub Actions fail.
 - [ ] Fresh install restore works.
 - [ ] External code/security review is complete.
 - [ ] Installer/signing decision is made.
+

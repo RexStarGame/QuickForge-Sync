@@ -1,5 +1,5 @@
 ﻿param(
-    [string]$Version = "v0.1.5-beta-preview"
+    [string]$Version = "v0.1.6-beta-preview"
 )
 
 $ErrorActionPreference = "Stop"
@@ -80,8 +80,8 @@ Run:
 QuickForge Sync.exe
 
 Important:
-- Use test data only until real-data readiness is complete.
-- Do not store real passwords yet.
+- QuickForge Sync has passed local controlled real-data beta readiness tests.
+- You may use QuickForge Sync for controlled personal real-data beta use, but it has not received an external security audit.
 - This is a beta preview.
 - Google Drive appdata sync is built into the app.
 - Do not upload credentials.json publicly.
@@ -146,3 +146,4 @@ Write-Host (Resolve-Path $zipPath)
 Write-Host (Resolve-Path $hashPath)
 
 Write-Host "`nRelease build completed safely."
+

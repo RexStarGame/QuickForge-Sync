@@ -6,7 +6,7 @@ QuickForge Sync is a Windows password and private-code vault with encrypted Goog
 
 The goal is simple: keep passwords, game codes, license keys, recovery notes, and private snippets safe while still making them fast to use.
 
-> **Beta Preview notice:** QuickForge Sync is now in beta preview. Use test data only. Do not store real passwords yet. The app has automated crypto and backup tests, but it still needs more real-world testing before stable release.
+> **Beta Preview notice:** QuickForge Sync is now in beta preview. Use test data only. You may use QuickForge Sync for controlled personal real-data beta use, but it has not received an external security audit. The app has automated crypto and backup tests, but it still needs more real-world testing before stable release.
 
 ## Download Beta Preview
 
@@ -21,7 +21,7 @@ For normal testers:
 3. Open the extracted folder.
 4. Run `QuickForge Sync.exe`.
 5. Click `Continue with Google`.
-6. Use test data only. Do not store real passwords yet.
+6. Use test data only. You may use QuickForge Sync for controlled personal real-data beta use, but it has not received an external security audit.
 
 Do not clone/build the source code unless you are testing as a developer.
 
@@ -131,6 +131,7 @@ Current focus:
 ## Disclaimer
 
 QuickForge Sync is a learning and prototype project. Do not rely on it as your only password manager until the code has been reviewed and tested properly.
+
 
 
 

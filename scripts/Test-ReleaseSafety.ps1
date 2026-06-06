@@ -1,5 +1,5 @@
 ﻿param(
-    [string]$Version = "v0.1.5-beta-preview"
+    [string]$Version = "v0.1.6-beta-preview"
 )
 
 $ErrorActionPreference = "Stop"
@@ -109,3 +109,4 @@ else
 }
 
 Write-Host "`nRelease safety check passed."
+
