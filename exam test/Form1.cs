@@ -1722,6 +1722,11 @@ namespace exam_test
         {
             try
             {
+                if (!ConfirmAccountSwitchOrLogout())
+                {
+                    return;
+                }
+
                 GoogleAuthService.Logout();
 
                 vaultCode = "";
@@ -5066,6 +5071,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
