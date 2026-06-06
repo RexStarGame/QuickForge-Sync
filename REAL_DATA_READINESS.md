@@ -26,7 +26,6 @@ QuickForge Sync has improved security and recovery features, but it still needs 
 - [x] Refresh from cloud button.
 - [x] Cloud conflict detection.
 - [x] Unsafe upload blocking if cloud changed.
-- [ conflict detection.
 - [x] Unsafe upload blocking if cloud changed.
 - [x] Multi-device test checklist.
 - [x] Release checklist.
@@ -124,3 +123,4 @@ QuickForge Sync can only become real-data candidate after testing proves:
 - Conflict protection works.
 - Fresh install restore works.
 - External review found no blocking issues.
+
