@@ -119,6 +119,10 @@ namespace exam_test
         private DateTime? lastCloudLoadUtc = null;
         private string? lastKnownCloudFingerprint = null;
 
+        private bool backgroundVaultSyncRunning = false;
+        private bool backgroundVaultSyncRequested = false;
+        private string backgroundVaultSyncReason = "";
+
         private readonly Label platformLabel = new Label();
         private readonly TextBox platformTextBox = new TextBox();
 
@@ -2339,6 +2343,67 @@ namespace exam_test
             );
         }
 
+
+        private void QueueBackgroundVaultSync(string reason)
+        {
+            backgroundVaultSyncRequested = true;
+            backgroundVaultSyncReason = reason;
+
+            if (backgroundVaultSyncRunning)
+            {
+                SetSyncStatus("Sync queued");
+                return;
+            }
+
+            _ = RunBackgroundVaultSyncLoopAsync();
+        }
+
+        private async Task RunBackgroundVaultSyncLoopAsync()
+        {
+            backgroundVaultSyncRunning = true;
+
+            try
+            {
+                while (backgroundVaultSyncRequested)
+                {
+                    backgroundVaultSyncRequested = false;
+                    string reason = backgroundVaultSyncReason;
+
+                    try
+                    {
+                        SetSyncStatus("Syncing in background...");
+
+                        bool merged = await SaveCurrentVaultToCloudWithAutoMergeAsync();
+
+                        SetSyncStatus("Active", success: true);
+
+                        selectedPreviewLabel.Text = merged
+                            ? reason + Environment.NewLine + "Cloud changes were merged and synced in the background."
+                            : reason + Environment.NewLine + "Synced in the background.";
+                    }
+                    catch (Exception ex)
+                    {
+                        SetSyncStatus("Background sync failed", error: true);
+
+                        SetPreviewText(
+                            reason,
+                            "Saved locally, but background sync failed.",
+                            "Use Sync now or export an encrypted backup before closing.",
+                            "Error: " + ex.Message
+                        );
+                    }
+                }
+            }
+            finally
+            {
+                backgroundVaultSyncRunning = false;
+
+                if (backgroundVaultSyncRequested)
+                {
+                    _ = RunBackgroundVaultSyncLoopAsync();
+                }
+            }
+        }
         private async Task<bool> SaveCurrentVaultToCloudWithAutoMergeAsync()
         {
             try
@@ -2873,13 +2938,14 @@ namespace exam_test
             }
                 }
 
-        private async void SaveEntryButton_Click(object? sender, EventArgs e)
+        private void SaveEntryButton_Click(object? sender, EventArgs e)
         {
             if (editingEntry != null)
             {
                 MessageBox.Show("Finish editing or cancel edit first.");
                 return;
             }
+
             string platform = platformTextBox.Text.Trim();
             string username = usernameTextBox.Text.Trim();
             string secret = secretTextBox.Text.Trim();
@@ -2897,10 +2963,12 @@ namespace exam_test
                 MessageBox.Show("Fill in at least one field before saving.");
                 return;
             }
+
             if (!HandleDuplicatePasswordBeforeSave(secret, null))
             {
                 return;
             }
+
             VaultEntry entry = new VaultEntry
             {
                 Platform = platform,
@@ -2916,28 +2984,15 @@ namespace exam_test
             RefreshVaultList();
             ClearEntryInputs();
 
-            selectedPreviewLabel.Text = "Saved locally: " + entry.GetDisplayName();
+            string reason = "Saved locally: " + entry.GetDisplayName();
 
-            try
-            {
-                bool merged = await SaveCurrentVaultToCloudWithAutoMergeAsync();
+            selectedPreviewLabel.Text =
+                reason + Environment.NewLine +
+                "Cloud sync is running in the background.";
 
-                selectedPreviewLabel.Text = merged
-                    ? "Saved, merged, and synced: " + entry.GetDisplayName()
-                    : "Saved and synced: " + entry.GetDisplayName();
-            }
-            catch (Exception ex)
-            {
-                SetSyncStatus("Sync failed", error: true);
+            SetSyncStatus("Queued background sync");
 
-                MessageBox.Show(
-                    "Entry was saved locally, but sync failed: " + ex.Message + Environment.NewLine + Environment.NewLine +
-                    "Recommended next step: export an encrypted backup before closing the app.",
-                    "Sync failed",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning
-                );
-            }
+            QueueBackgroundVaultSync(reason);
         }
         private void EditEntryButton_Click(object? sender, EventArgs e)
         {
@@ -2967,7 +3022,7 @@ namespace exam_test
             );
         }
 
-        private async void SaveChangesButton_Click(object? sender, EventArgs e)
+        private void SaveChangesButton_Click(object? sender, EventArgs e)
         {
             if (editingEntry == null || editingEntryIndex < 0 || editingEntryIndex >= vaultEntries.Count)
             {
@@ -2993,42 +3048,42 @@ namespace exam_test
                 MessageBox.Show("Fill in at least one field before saving changes.");
                 return;
             }
+
             if (!HandleDuplicatePasswordBeforeSave(secret, editingEntry))
             {
                 return;
             }
+
             editingEntry.Platform = platform;
             editingEntry.Username = username;
             editingEntry.Secret = secret;
             editingEntry.Website = website;
             editingEntry.Note = note;
+            editingEntry.UpdatedAt = DateTime.UtcNow;
 
-            try
+            VaultEntry savedEntry = editingEntry;
+
+            RefreshVaultList();
+
+            int visibleIndex = visibleVaultEntries.IndexOf(savedEntry);
+
+            if (visibleIndex >= 0 && visibleIndex < vaultListBox.Items.Count)
             {
-                await SaveCurrentVaultToCloudWithAutoMergeAsync();
-
-                RefreshVaultList();
-
-                int visibleIndex = visibleVaultEntries.IndexOf(editingEntry);
-
-                if (visibleIndex >= 0 && visibleIndex < vaultListBox.Items.Count)
-                {
-                    vaultListBox.SelectedIndex = visibleIndex;
-                }
-
-                SetPreviewText(
-                    "Saved changes: " + editingEntry.GetDisplayName(),
-                    "User: " + MaskEmpty(editingEntry.Username),
-                    "Password/code: " + MaskSecret(editingEntry.Secret)
-                );
-
-                ClearEntryInputs();
-                SetEntryEditMode(false);
+                vaultListBox.SelectedIndex = visibleIndex;
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Could not save changes: " + ex.Message);
-            }
+
+            SetPreviewText(
+                "Saved locally: " + savedEntry.GetDisplayName(),
+                "Cloud sync is running in the background.",
+                "User: " + MaskEmpty(savedEntry.Username),
+                "Password/code: " + MaskSecret(savedEntry.Secret)
+            );
+
+            ClearEntryInputs();
+            SetEntryEditMode(false);
+            SetSyncStatus("Queued background sync");
+
+            QueueBackgroundVaultSync("Saved changes locally: " + savedEntry.GetDisplayName());
         }
 
         private void CancelEditButton_Click(object? sender, EventArgs e)
@@ -3366,7 +3421,7 @@ namespace exam_test
 
             return confirmed;
         }
-        private async void FavoriteButton_Click(object? sender, EventArgs e)
+        private void FavoriteButton_Click(object? sender, EventArgs e)
         {
             VaultEntry? entry = GetSelectedEntry();
 
@@ -3377,6 +3432,7 @@ namespace exam_test
             }
 
             entry.IsFavorite = !entry.IsFavorite;
+            entry.UpdatedAt = DateTime.UtcNow;
 
             int selectedIndex = vaultListBox.SelectedIndex;
 
@@ -3389,22 +3445,17 @@ namespace exam_test
 
             UpdateFavoriteButtonText();
 
-            selectedPreviewLabel.Text = entry.IsFavorite
-                ? "Added to favorites: " + entry.GetDisplayName()
-                : "Removed from favorites: " + entry.GetDisplayName();
+            string reason = entry.IsFavorite
+                ? "Added to favorites locally: " + entry.GetDisplayName()
+                : "Removed from favorites locally: " + entry.GetDisplayName();
 
-            try
-            {
-                await SaveCurrentVaultToCloudAsync();
+            selectedPreviewLabel.Text =
+                reason + Environment.NewLine +
+                "Cloud sync is running in the background.";
 
-                selectedPreviewLabel.Text = entry.IsFavorite
-                    ? "Added to favorites and synced: " + entry.GetDisplayName()
-                    : "Removed from favorites and synced: " + entry.GetDisplayName();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Favorite changed locally, but sync failed: " + ex.Message);
-            }
+            SetSyncStatus("Queued background sync");
+
+            QueueBackgroundVaultSync(reason);
         }
 
         private void UpdateFavoriteButtonText()
@@ -3429,7 +3480,7 @@ namespace exam_test
                 favoriteButton.BackColor = Color.FromArgb(35, 40, 60);
             }
         }
-        private async void DeleteEntryButton_Click(object? sender, EventArgs e)
+        private void DeleteEntryButton_Click(object? sender, EventArgs e)
         {
             VaultEntry? entry = GetSelectedEntry();
 
@@ -3445,6 +3496,8 @@ namespace exam_test
                 return;
             }
 
+            string deletedName = entry.GetDisplayName();
+
             vaultEntries.Remove(entry);
 
             if (editingEntry == entry)
@@ -3454,17 +3507,15 @@ namespace exam_test
             }
 
             RefreshVaultList();
-            selectedPreviewLabel.Text = "Deleted entry.";
-            ShowEmptyVaultOnboardingIfNeeded();
 
-            try
-            {
-                await SaveCurrentVaultToCloudAsync();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Entry was deleted locally, but sync failed: " + ex.Message);
-            }
+            selectedPreviewLabel.Text =
+                "Deleted locally: " + deletedName + Environment.NewLine +
+                "Cloud sync is running in the background.";
+
+            ShowEmptyVaultOnboardingIfNeeded();
+            SetSyncStatus("Queued background sync");
+
+            QueueBackgroundVaultSync("Deleted locally: " + deletedName);
         }
         private bool AskForVaultCode()
         {
@@ -6582,6 +6633,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
