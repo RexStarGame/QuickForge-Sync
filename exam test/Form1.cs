@@ -97,6 +97,7 @@ namespace exam_test
         private readonly Panel vaultCodeStrengthFill = new Panel();
         private readonly Label confirmVaultCodeLabel = new Label();
         private readonly TextBox confirmVaultCodeTextBox = new TextBox();
+        private readonly Label vaultUnlockStatusLabel = new Label();
         private Button? vaultCodeVisibilityButton;
         private Button? confirmVaultCodeVisibilityButton;
         private Button? secretVisibilityButton;
@@ -484,7 +485,7 @@ namespace exam_test
             vaultAccessPanel.Left = 175;
             vaultAccessPanel.Top = 135;
             vaultAccessPanel.Width = 450;
-            vaultAccessPanel.Height = 340;
+            vaultAccessPanel.Height = 385;
             vaultAccessPanel.BackColor = Color.FromArgb(16, 20, 34);
 
             vaultAccessTitleLabel.Text = "Create Vault Code";
@@ -559,9 +560,10 @@ namespace exam_test
             confirmVaultCodeTextBox.UseSystemPasswordChar = true;
             confirmVaultCodeTextBox.PlaceholderText = "Repeat vault code";
 
+            UpdateVaultUnlockStatusLabel();
             createVaultButton.Text = "Unlock Vault";
             createVaultButton.Left = 24;
-            createVaultButton.Top = 255;
+            createVaultButton.Top = 305;
             createVaultButton.Width = 120;
             createVaultButton.Height = 32;
             createVaultButton.FlatStyle = FlatStyle.Flat;
@@ -572,7 +574,7 @@ namespace exam_test
 
             resetTestVaultButton.Text = "Reset Test Vault";
             resetTestVaultButton.Left = 155;
-            resetTestVaultButton.Top = 255;
+            resetTestVaultButton.Top = 305;
             resetTestVaultButton.Width = 150;
             resetTestVaultButton.Height = 32;
             resetTestVaultButton.FlatStyle = FlatStyle.Flat;
@@ -584,7 +586,7 @@ namespace exam_test
 
             importBackupAccessButton.Text = "Import Backup";
             importBackupAccessButton.Left = 315;
-            importBackupAccessButton.Top = 255;
+            importBackupAccessButton.Top = 305;
             importBackupAccessButton.Width = 110;
             importBackupAccessButton.Height = 32;
             importBackupAccessButton.FlatStyle = FlatStyle.Flat;
@@ -1325,6 +1327,42 @@ namespace exam_test
 
             return connectedGoogleEmail;
         }
+
+        private void UpdateVaultUnlockStatusLabel()
+        {
+            if (!cloudVaultExists)
+            {
+                vaultUnlockStatusLabel.Visible = false;
+                return;
+            }
+
+            VaultUnlockAttemptState state =
+                VaultUnlockAttemptService.LoadState(GetVaultUnlockAttemptAccountId());
+
+            vaultUnlockStatusLabel.Visible = true;
+
+            if (VaultUnlockAttemptService.IsLockedOut(state, DateTime.UtcNow))
+            {
+                vaultUnlockStatusLabel.Text =
+                    "Vault-code locked for about " + FormatRemainingLockoutTime(state.LockedUntilUtc) + "." +
+                    Environment.NewLine +
+                    "Use recovery key to bypass.";
+
+                vaultUnlockStatusLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                return;
+            }
+
+            int remainingAttempts = VaultUnlockAttemptService.RemainingAttempts(state);
+
+            vaultUnlockStatusLabel.Text =
+                "Vault-code attempts available: " + remainingAttempts +
+                Environment.NewLine +
+                "Recovery key can unlock if needed.";
+
+            vaultUnlockStatusLabel.ForeColor = remainingAttempts <= 1
+                ? Color.FromArgb(255, 190, 90)
+                : softTextColor;
+        }
         private void ConfigureVaultAccessForCreate()
         {
             vaultAccessTitleLabel.Text = "Create Vault Code";
@@ -1344,6 +1382,7 @@ namespace exam_test
             {
                 confirmVaultCodeVisibilityButton.Visible = true;
             }
+            vaultUnlockStatusLabel.Visible = false;
             createVaultButton.Text = "Create Vault";
 
             vaultCodeTextBox.Clear();
@@ -1373,6 +1412,7 @@ namespace exam_test
             {
                 confirmVaultCodeVisibilityButton.Visible = false;
             }
+            UpdateVaultUnlockStatusLabel();
             createVaultButton.Text = "Unlock Vault";
 
             vaultCodeTextBox.Clear();
@@ -1652,6 +1692,7 @@ namespace exam_test
             if (VaultUnlockAttemptService.IsLockedOut(state, DateTime.UtcNow))
             {
                 SetSyncStatus("Vault code locked", error: true);
+                UpdateVaultUnlockStatusLabel();
                 ShowVaultCodeLockoutMessage(state);
                 return;
             }
@@ -1659,6 +1700,7 @@ namespace exam_test
             int remainingAttempts = VaultUnlockAttemptService.RemainingAttempts(state);
 
             SetSyncStatus("Unlock failed", error: true);
+            UpdateVaultUnlockStatusLabel();
 
             MessageBox.Show(
                 "Wrong vault code or recovery key." + Environment.NewLine + Environment.NewLine +
@@ -1674,6 +1716,7 @@ namespace exam_test
         private void ResetVaultUnlockAttemptState()
         {
             VaultUnlockAttemptService.ResetAfterSuccessfulUnlock(GetVaultUnlockAttemptAccountId());
+            UpdateVaultUnlockStatusLabel();
         }
 
         private async Task<bool> ForceRecoveryKeyRotationAfterRecoveryUnlockAsync()
@@ -5965,6 +6008,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
