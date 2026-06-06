@@ -29,6 +29,12 @@ namespace exam_test
         }
     }
 
+    public sealed class GoogleDriveVaultDownload
+    {
+        public string EncryptedJson { get; init; } = "";
+        public GoogleDriveVaultMetadata Metadata { get; init; } = new GoogleDriveVaultMetadata();
+    }
+
     public static class GoogleDriveVaultService
     {
         private const string VaultFileName = "encrypted_vault_v2.json";
@@ -51,6 +57,25 @@ namespace exam_test
             return CreateMetadata(file);
         }
 
+        public static async Task<GoogleDriveVaultDownload?> DownloadEncryptedVaultWithMetadataAsync(
+            DriveService driveService)
+        {
+            DriveFile? file = await FindVaultFileAsync(driveService);
+
+            if (file == null || string.IsNullOrWhiteSpace(file.Id))
+            {
+                return null;
+            }
+
+            using MemoryStream stream = new MemoryStream();
+            await driveService.Files.Get(file.Id).DownloadAsync(stream);
+
+            return new GoogleDriveVaultDownload
+            {
+                EncryptedJson = Encoding.UTF8.GetString(stream.ToArray()),
+                Metadata = CreateMetadata(file)
+            };
+        }
         public static async Task<string?> DownloadEncryptedVaultAsync(DriveService driveService)
         {
             DriveFile? file = await FindVaultFileAsync(driveService);
@@ -150,3 +175,4 @@ namespace exam_test
         }
     }
 }
+
