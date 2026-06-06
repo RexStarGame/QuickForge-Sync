@@ -2070,6 +2070,8 @@ namespace exam_test
                 isVaultUnlocked = false;
                 cloudVaultExists = false;
 
+                lastKnownCloudFingerprint = null;
+
                 vaultCodeTextBox.Clear();
                 confirmVaultCodeTextBox.Clear();
 
@@ -5390,6 +5392,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
