@@ -2726,6 +2726,42 @@ namespace exam_test
                 MessageBox.Show("Could not change vault code: " + ex.Message);
             }
         }
+
+        private bool HasPendingBackgroundVaultSync()
+        {
+            return backgroundVaultSyncRunning || backgroundVaultSyncRequested;
+        }
+
+        private bool ConfirmPendingBackgroundSyncBeforeExit(string actionText)
+        {
+            if (!HasPendingBackgroundVaultSync())
+            {
+                return true;
+            }
+
+            SetSyncStatus("Background sync still running");
+
+            DialogResult result = MessageBox.Show(
+                "Cloud sync is still running." + Environment.NewLine + Environment.NewLine +
+                "Your latest local changes may still be uploading to Google Drive." + Environment.NewLine + Environment.NewLine +
+                "Recommended: choose No, wait until Sync shows Active, then " + actionText + "." + Environment.NewLine + Environment.NewLine +
+                "Do you want to continue anyway?",
+                "Sync still running",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2
+            );
+
+            return result == DialogResult.Yes;
+        }
+
+        private void Form1_FormClosing(object? sender, FormClosingEventArgs e)
+        {
+            if (!ConfirmPendingBackgroundSyncBeforeExit("close QuickForge"))
+            {
+                e.Cancel = true;
+            }
+        }
         private bool ConfirmAccountSwitchOrLogout()
         {
             if (
@@ -6633,6 +6669,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
