@@ -494,9 +494,11 @@ namespace exam_test
             vaultAccessSubtitleLabel.ForeColor = softTextColor;
             vaultAccessSubtitleLabel.BackColor = Color.Transparent;
             vaultAccessSubtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
-            vaultAccessSubtitleLabel.AutoSize = true;
+            vaultAccessSubtitleLabel.AutoSize = false;
             vaultAccessSubtitleLabel.Left = 24;
             vaultAccessSubtitleLabel.Top = 55;
+            vaultAccessSubtitleLabel.Width = 390;
+            vaultAccessSubtitleLabel.Height = 36;
 
             vaultCodeLabel.Text = "Vault code";
             vaultCodeLabel.ForeColor = Color.White;
@@ -590,6 +592,8 @@ namespace exam_test
             vaultAccessPanel.Controls.Add(vaultAccessSubtitleLabel);
             vaultAccessPanel.Controls.Add(vaultCodeLabel);
             vaultAccessPanel.Controls.Add(vaultCodeTextBox);
+            vaultAccessPanel.Controls.Add(vaultCodeStrengthLabel);
+            vaultAccessPanel.Controls.Add(vaultCodeStrengthTrack);
             vaultAccessPanel.Controls.Add(confirmVaultCodeLabel);
             vaultAccessPanel.Controls.Add(confirmVaultCodeTextBox);
             vaultAccessPanel.Controls.Add(createVaultButton);
@@ -1314,6 +1318,10 @@ namespace exam_test
 
             vaultCodeTextBox.Clear();
             confirmVaultCodeTextBox.Clear();
+
+            vaultCodeStrengthLabel.Visible = true;
+            vaultCodeStrengthTrack.Visible = true;
+            UpdateVaultCodeStrengthPreview();
         }
 
         private void ConfigureVaultAccessForUnlock()
@@ -1329,6 +1337,9 @@ namespace exam_test
 
             vaultCodeTextBox.Clear();
             confirmVaultCodeTextBox.Clear();
+
+            vaultCodeStrengthLabel.Visible = false;
+            vaultCodeStrengthTrack.Visible = false;
         }
         private void UpdateDeveloperTestControls()
         {
@@ -5212,6 +5223,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
