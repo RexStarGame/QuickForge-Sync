@@ -17,7 +17,7 @@ namespace exam_test
     {
         private const string AppName = "QuickForge Sync";
         private const string AppStatus = "Beta Preview";
-        private const string AppVersion = "v0.1.6-beta-preview";
+        private const string AppVersion = "v0.1.7-beta-preview";
         private const string AppDisplayName = AppName + " " + AppStatus;
 
 
@@ -219,7 +219,7 @@ namespace exam_test
                 VkQ
             );
 
-            animationTimer.Interval = 16;
+            animationTimer.Interval = 33;
             animationTimer.Tick += AnimationTimer_Tick;
             animationTimer.Start();
 
@@ -6557,6 +6557,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
