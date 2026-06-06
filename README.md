@@ -103,6 +103,14 @@ For multi-device sync and restore testing, also follow:
 
 [QuickForge Sync Multi-Device Test Checklist](MULTI_DEVICE_TEST.md)
 
+Before publishing a beta release, follow:
+
+[QuickForge Sync Release Checklist](RELEASE_CHECKLIST.md)
+
+Installer/signing planning notes:
+
+[Installer and Signing Notes](INSTALLER_SIGNING_NOTES.md)
+
 ## Project Status
 
 This is an active student/prototype project.
@@ -117,6 +125,7 @@ Current focus:
 ## Disclaimer
 
 QuickForge Sync is a learning and prototype project. Do not rely on it as your only password manager until the code has been reviewed and tested properly.
+
 
 
 
