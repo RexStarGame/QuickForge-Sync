@@ -12,3 +12,13 @@ credentials.json
 **/credentials.json
 
 release/
+
+# Extra secret / release safety
+client_secret*.json
+**/client_secret*.json
+token*.json
+**/token*.json
+*.qfvault
+*.qfbackup
+*.pdb
+*.zip.sha256.txt
