@@ -5624,7 +5624,17 @@ namespace exam_test
                         return;
                     }
 
-                    currentVaultSettings.KnownDevices.RemoveAll(device => device.DeviceId == selected.DeviceId);
+                    KnownVaultDevice? deviceToRemove = currentVaultSettings.KnownDevices
+                        .FirstOrDefault(device => device.DeviceId == selected.DeviceId);
+
+                    if (deviceToRemove != null)
+                    {
+                        deviceToRemove.IsTrusted = false;
+                        deviceToRemove.IsHiddenFromTrustList = true;
+                        deviceToRemove.RemovedFromTrustListAtUtc = DateTime.UtcNow;
+                        deviceToRemove.TrustedChangedAtUtc = DateTime.UtcNow;
+                        deviceToRemove.TrustNote = "Removed from visible trust list by " + localDeviceName + ".";
+                    }
 
                     AddSafetyTimelineEvent(
                         "Device removed",
@@ -7531,6 +7541,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
