@@ -1304,7 +1304,9 @@ namespace exam_test
         private void ConfigureVaultAccessForCreate()
         {
             vaultAccessTitleLabel.Text = "Create Vault Code";
-            vaultAccessSubtitleLabel.Text = "First time setup for " + GetConnectedGoogleEmailDisplay() + ". This code unlocks only this Google account vault.";
+            vaultAccessSubtitleLabel.Text =
+                "First-time setup for " + GetConnectedGoogleEmailDisplay() + "." + Environment.NewLine +
+                "This vault is tied to this Google account.";
             vaultCodeLabel.Text = "Create vault code";
             confirmVaultCodeLabel.Visible = true;
             confirmVaultCodeTextBox.Visible = true;
@@ -1317,7 +1319,9 @@ namespace exam_test
         private void ConfigureVaultAccessForUnlock()
         {
             vaultAccessTitleLabel.Text = "Unlock Vault";
-            vaultAccessSubtitleLabel.Text = "Vault for " + GetConnectedGoogleEmailDisplay() + ". Enter your vault code or recovery key.";
+            vaultAccessSubtitleLabel.Text =
+                "Vault for " + GetConnectedGoogleEmailDisplay() + "." + Environment.NewLine +
+                "Enter your vault code or recovery key.";
             vaultCodeLabel.Text = "Vault code / recovery key";
             confirmVaultCodeLabel.Visible = false;
             confirmVaultCodeTextBox.Visible = false;
@@ -5208,6 +5212,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
