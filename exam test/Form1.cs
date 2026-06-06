@@ -97,6 +97,9 @@ namespace exam_test
         private readonly Panel vaultCodeStrengthFill = new Panel();
         private readonly Label confirmVaultCodeLabel = new Label();
         private readonly TextBox confirmVaultCodeTextBox = new TextBox();
+        private Button? vaultCodeVisibilityButton;
+        private Button? confirmVaultCodeVisibilityButton;
+        private Button? secretVisibilityButton;
         private readonly Button createVaultButton = new Button();
         private readonly Button resetTestVaultButton = new Button();
         private readonly Button importBackupAccessButton = new Button();
@@ -598,8 +601,8 @@ namespace exam_test
             vaultAccessPanel.Controls.Add(vaultCodeStrengthTrack);
             vaultAccessPanel.Controls.Add(confirmVaultCodeLabel);
             vaultAccessPanel.Controls.Add(confirmVaultCodeTextBox);
-            AttachPasswordVisibilityToggle(vaultAccessPanel, vaultCodeTextBox);
-            AttachPasswordVisibilityToggle(vaultAccessPanel, confirmVaultCodeTextBox);
+            vaultCodeVisibilityButton = AttachPasswordVisibilityToggle(vaultAccessPanel, vaultCodeTextBox);
+            confirmVaultCodeVisibilityButton = AttachPasswordVisibilityToggle(vaultAccessPanel, confirmVaultCodeTextBox);
             vaultAccessPanel.Controls.Add(createVaultButton);
             vaultAccessPanel.Controls.Add(resetTestVaultButton);
             vaultAccessPanel.Controls.Add(importBackupAccessButton);
@@ -888,7 +891,7 @@ namespace exam_test
 
             vaultPanel.Controls.Add(secretLabel);
             vaultPanel.Controls.Add(secretTextBox);
-            AttachPasswordVisibilityToggle(vaultPanel, secretTextBox);
+            secretVisibilityButton = AttachPasswordVisibilityToggle(vaultPanel, secretTextBox);
             vaultPanel.Controls.Add(createPasswordButton);
             vaultPanel.Controls.Add(passwordStrengthLabel);
             vaultPanel.Controls.Add(passwordStrengthTrack);
@@ -1331,6 +1334,16 @@ namespace exam_test
             vaultCodeLabel.Text = "Create vault code";
             confirmVaultCodeLabel.Visible = true;
             confirmVaultCodeTextBox.Visible = true;
+
+            if (vaultCodeVisibilityButton != null)
+            {
+                vaultCodeVisibilityButton.Visible = true;
+            }
+
+            if (confirmVaultCodeVisibilityButton != null)
+            {
+                confirmVaultCodeVisibilityButton.Visible = true;
+            }
             createVaultButton.Text = "Create Vault";
 
             vaultCodeTextBox.Clear();
@@ -1350,6 +1363,16 @@ namespace exam_test
             vaultCodeLabel.Text = "Vault code / recovery key";
             confirmVaultCodeLabel.Visible = false;
             confirmVaultCodeTextBox.Visible = false;
+
+            if (vaultCodeVisibilityButton != null)
+            {
+                vaultCodeVisibilityButton.Visible = true;
+            }
+
+            if (confirmVaultCodeVisibilityButton != null)
+            {
+                confirmVaultCodeVisibilityButton.Visible = false;
+            }
             createVaultButton.Text = "Unlock Vault";
 
             vaultCodeTextBox.Clear();
@@ -4692,6 +4715,7 @@ namespace exam_test
             };
 
             parent.Controls.Add(toggleButton);
+            toggleButton.Visible = targetTextBox.Visible;
             toggleButton.BringToFront();
 
             return toggleButton;
@@ -5640,6 +5664,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
