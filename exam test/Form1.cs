@@ -5596,6 +5596,8 @@ namespace exam_test
                     }
 
                     selected.IsTrusted = true;
+                    selected.IsHiddenFromTrustList = false;
+                    selected.RemovedFromTrustListAtUtc = null;
                     selected.TrustedChangedAtUtc = DateTime.UtcNow;
                     selected.TrustNote = "Trusted manually from " + localDeviceName + ".";
 
@@ -5632,6 +5634,8 @@ namespace exam_test
                     }
 
                     selected.IsTrusted = false;
+                    selected.IsHiddenFromTrustList = false;
+                    selected.RemovedFromTrustListAtUtc = null;
                     selected.TrustedChangedAtUtc = DateTime.UtcNow;
                     selected.TrustNote = "Marked untrusted from " + localDeviceName + ".";
 
