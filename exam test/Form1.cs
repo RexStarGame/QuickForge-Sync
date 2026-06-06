@@ -2747,7 +2747,7 @@ namespace exam_test
 
         private bool HasPendingBackgroundVaultSync()
         {
-            return backgroundVaultSyncRunning || backgroundVaultSyncRequested;
+            return hasUnsyncedLocalChanges || backgroundVaultSyncRunning || backgroundVaultSyncRequested;
         }
 
         private bool ConfirmPendingBackgroundSyncBeforeExit(string actionText)
@@ -6687,6 +6687,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
