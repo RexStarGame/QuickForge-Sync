@@ -19,6 +19,24 @@ namespace exam_test
         public int AutoLockMinutes { get; set; } = 10;
     }
 
+    public class KnownVaultDevice
+    {
+        public string DeviceId { get; set; } = "";
+        public string DeviceName { get; set; } = "";
+        public DateTime FirstSeenAtUtc { get; set; } = DateTime.UtcNow;
+        public DateTime LastSeenAtUtc { get; set; } = DateTime.UtcNow;
+        public int SyncCount { get; set; } = 0;
+    }
+
+    public class VaultSafetyEvent
+    {
+        public DateTime EventAtUtc { get; set; } = DateTime.UtcNow;
+        public string DeviceId { get; set; } = "";
+        public string DeviceName { get; set; } = "";
+        public string Action { get; set; } = "";
+        public string Detail { get; set; } = "";
+    }
+
     public class EncryptedVaultFile
     {
         public int Version { get; set; } = 2;
@@ -42,3 +60,4 @@ namespace exam_test
         public string EncryptedDataKey { get; set; } = "";
     }
 }
+

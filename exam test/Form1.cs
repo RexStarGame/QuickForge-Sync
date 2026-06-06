@@ -17,7 +17,7 @@ namespace exam_test
     {
         private const string AppName = "QuickForge Sync";
         private const string AppStatus = "Beta Preview";
-        private const string AppVersion = "v0.1.7-beta-preview";
+        private const string AppVersion = "v0.1.8-beta-preview";
         private const string AppDisplayName = AppName + " " + AppStatus;
 
 
@@ -123,6 +123,12 @@ namespace exam_test
         private bool backgroundVaultSyncRequested = false;
         private string backgroundVaultSyncReason = "";
         private bool hasUnsyncedLocalChanges = false;
+
+        private string localDeviceId = "";
+        private string localDeviceName = "";
+        private bool newDeviceDetectedThisSession = false;
+        private string newDeviceDetectedName = "";
+        private const int MaxSafetyTimelineEvents = 25;
 
         private readonly Label platformLabel = new Label();
         private readonly TextBox platformTextBox = new TextBox();
@@ -2421,6 +2427,345 @@ namespace exam_test
                     _ = RunBackgroundVaultSyncLoopAsync();
                 }
             }
+        }
+
+        private void EnsureLocalDeviceIdentity()
+        {
+            if (!string.IsNullOrWhiteSpace(localDeviceId))
+            {
+                return;
+            }
+
+            localDeviceName = string.IsNullOrWhiteSpace(Environment.MachineName)
+                ? "This device"
+                : Environment.MachineName.Trim();
+
+            string appDataFolder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "QuickForge Sync"
+            );
+
+            string deviceFilePath = Path.Combine(appDataFolder, "device.id");
+
+            try
+            {
+                if (File.Exists(deviceFilePath))
+                {
+                    string[] lines = File.ReadAllLines(deviceFilePath);
+
+                    if (lines.Length >= 2 &&
+                        !string.IsNullOrWhiteSpace(lines[0]) &&
+                        !string.IsNullOrWhiteSpace(lines[1]))
+                    {
+                        localDeviceId = lines[0].Trim();
+                        localDeviceName = lines[1].Trim();
+                        return;
+                    }
+                }
+            }
+            catch
+            {
+                // If local device identity cannot be read, create a new one safely.
+            }
+
+            localDeviceId = Guid.NewGuid().ToString("N");
+
+            try
+            {
+                Directory.CreateDirectory(appDataFolder);
+                File.WriteAllLines(deviceFilePath, new[] { localDeviceId, localDeviceName });
+            }
+            catch
+            {
+                // App can still run; the device will be temporary for this session.
+            }
+        }
+
+        private void EnsureVaultSafetyCollections()
+        {
+            currentVaultSettings.KnownDevices ??= new List<KnownVaultDevice>();
+            currentVaultSettings.SafetyTimeline ??= new List<VaultSafetyEvent>();
+        }
+
+        private bool RegisterCurrentDeviceForVault(bool showWarning)
+        {
+            EnsureLocalDeviceIdentity();
+            EnsureVaultSafetyCollections();
+
+            int knownDeviceCountBefore = currentVaultSettings.KnownDevices.Count;
+
+            KnownVaultDevice? device = currentVaultSettings.KnownDevices
+                .FirstOrDefault(item => item.DeviceId == localDeviceId);
+
+            bool isNewDevice = device == null;
+
+            if (device == null)
+            {
+                device = new KnownVaultDevice
+                {
+                    DeviceId = localDeviceId,
+                    DeviceName = localDeviceName,
+                    FirstSeenAtUtc = DateTime.UtcNow,
+                    LastSeenAtUtc = DateTime.UtcNow,
+                    SyncCount = 0
+                };
+
+                currentVaultSettings.KnownDevices.Add(device);
+
+                AddSafetyTimelineEvent(
+                    "New device registered",
+                    localDeviceName + " was added to this vault."
+                );
+            }
+            else
+            {
+                device.DeviceName = localDeviceName;
+                device.LastSeenAtUtc = DateTime.UtcNow;
+            }
+
+            if (isNewDevice &&
+                knownDeviceCountBefore > 0 &&
+                showWarning &&
+                !newDeviceWarningShownThisSession)
+            {
+                newDeviceWarningShownThisSession = true;
+                newDeviceDetectedName = localDeviceName;
+
+                MessageBox.Show(
+                    "New device detected on this vault." + Environment.NewLine + Environment.NewLine +
+                    "Device: " + localDeviceName + Environment.NewLine + Environment.NewLine +
+                    "If this was you, no action is needed." + Environment.NewLine +
+                    "If this was not you, change your vault code and rotate your recovery key.",
+                    "New device detected",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+            }
+
+            return isNewDevice;
+        }
+
+        private void AddSafetyTimelineEvent(string action, string detail)
+        {
+            EnsureLocalDeviceIdentity();
+            EnsureVaultSafetyCollections();
+
+            currentVaultSettings.SafetyTimeline.Add(new VaultSafetyEvent
+            {
+                EventAtUtc = DateTime.UtcNow,
+                DeviceId = localDeviceId,
+                DeviceName = localDeviceName,
+                Action = action,
+                Detail = detail
+            });
+
+            currentVaultSettings.SafetyTimeline = currentVaultSettings.SafetyTimeline
+                .OrderByDescending(item => item.EventAtUtc)
+                .Take(MaxSafetyTimelineEvents)
+                .ToList();
+        }
+
+        private void MarkVaultChangedByCurrentDevice(string action)
+        {
+            EnsureLocalDeviceIdentity();
+            EnsureVaultSafetyCollections();
+
+            RegisterCurrentDeviceForVault(false);
+
+            KnownVaultDevice? device = currentVaultSettings.KnownDevices
+                .FirstOrDefault(item => item.DeviceId == localDeviceId);
+
+            if (device != null)
+            {
+                device.LastSeenAtUtc = DateTime.UtcNow;
+                device.SyncCount++;
+            }
+
+            currentVaultSettings.LastChangedByDeviceId = localDeviceId;
+            currentVaultSettings.LastChangedByDeviceName = localDeviceName;
+            currentVaultSettings.LastChangedAtUtc = DateTime.UtcNow;
+
+            AddSafetyTimelineEvent(action, "Vault changed by " + localDeviceName + ".");
+        }
+
+        private void MarkBackupCreatedByCurrentDevice(string fileName)
+        {
+            currentVaultSettings.LastBackupAtUtc = DateTime.UtcNow;
+
+            AddSafetyTimelineEvent(
+                "Encrypted backup exported",
+                string.IsNullOrWhiteSpace(fileName)
+                    ? "Encrypted backup was exported."
+                    : "Backup file: " + fileName
+            );
+        }
+
+        private string BuildKnownDevicesText()
+        {
+            EnsureVaultSafetyCollections();
+
+            if (currentVaultSettings.KnownDevices.Count == 0)
+            {
+                return "- No known devices recorded yet.";
+            }
+
+            return string.Join(
+                Environment.NewLine,
+                currentVaultSettings.KnownDevices
+                    .OrderByDescending(device => device.LastSeenAtUtc)
+                    .Take(6)
+                    .Select(device =>
+                        "- " + device.DeviceName +
+                        " — last seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
+                        (device.DeviceId == localDeviceId ? " (this device)" : "")
+                    )
+            );
+        }
+
+        private string BuildSafetyTimelineText()
+        {
+            EnsureVaultSafetyCollections();
+
+            if (currentVaultSettings.SafetyTimeline.Count == 0)
+            {
+                return "- No safety events recorded yet.";
+            }
+
+            return string.Join(
+                Environment.NewLine,
+                currentVaultSettings.SafetyTimeline
+                    .OrderByDescending(item => item.EventAtUtc)
+                    .Take(8)
+                    .Select(item =>
+                        "- " + item.EventAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
+                        " — " + item.Action +
+                        " — " + item.DeviceName
+                    )
+            );
+        }
+
+        private string BuildVaultSafetyReport(
+            int totalEntries,
+            int weakPasswords,
+            int reusedPasswordEntries,
+            int missingWebsiteLinks)
+        {
+            EnsureLocalDeviceIdentity();
+            EnsureVaultSafetyCollections();
+
+            int score = 100;
+            List<string> good = new List<string>();
+            List<string> warnings = new List<string>();
+
+            bool backupRecent =
+                currentVaultSettings.LastBackupAtUtc.HasValue &&
+                (DateTime.UtcNow - currentVaultSettings.LastBackupAtUtc.Value).TotalDays <= 7;
+
+            if (backupRecent)
+            {
+                good.Add("Backup created recently");
+            }
+            else if (currentVaultSettings.LastBackupAtUtc.HasValue)
+            {
+                int backupAgeDays = Math.Max(1, (int)(DateTime.UtcNow - currentVaultSettings.LastBackupAtUtc.Value).TotalDays);
+                warnings.Add("Last backup is " + backupAgeDays + " day(s) old");
+                score -= Math.Min(20, backupAgeDays);
+            }
+            else
+            {
+                warnings.Add("No encrypted backup timestamp recorded yet");
+                score -= 20;
+            }
+
+            if (currentEncryptedVaultFile?.RecoveryKeyWrapper != null)
+            {
+                good.Add("Recovery key exists");
+            }
+            else
+            {
+                warnings.Add("Recovery key wrapper missing");
+                score -= 25;
+            }
+
+            if (newDeviceDetectedThisSession)
+            {
+                warnings.Add("New device detected this session: " + newDeviceDetectedName);
+                score -= 15;
+            }
+            else
+            {
+                good.Add("No unknown device detected this session");
+            }
+
+            if (lastCloudSaveUtc.HasValue || lastCloudLoadUtc.HasValue)
+            {
+                good.Add("Sync activity detected");
+            }
+            else
+            {
+                warnings.Add("No sync timestamp recorded this session");
+                score -= 10;
+            }
+
+            if (!HasPendingBackgroundVaultSync())
+            {
+                good.Add("Safe-close protection active");
+            }
+            else
+            {
+                warnings.Add("Background sync is still pending");
+                score -= 10;
+            }
+
+            if (reusedPasswordEntries > 0)
+            {
+                warnings.Add(reusedPasswordEntries + " entries have reused passwords");
+                score -= Math.Min(25, reusedPasswordEntries * 8);
+            }
+            else if (totalEntries > 0)
+            {
+                good.Add("No reused passwords detected");
+            }
+
+            if (weakPasswords > 0)
+            {
+                warnings.Add(weakPasswords + " weak password(s) detected");
+                score -= Math.Min(25, weakPasswords * 6);
+            }
+            else if (totalEntries > 0)
+            {
+                good.Add("No weak passwords detected");
+            }
+
+            if (missingWebsiteLinks > 0)
+            {
+                warnings.Add(missingWebsiteLinks + " entries are missing website links");
+                score -= Math.Min(8, missingWebsiteLinks);
+            }
+
+            score = Math.Max(0, Math.Min(100, score));
+
+            string lastChangedText = currentVaultSettings.LastChangedAtUtc.HasValue
+                ? currentVaultSettings.LastChangedAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
+                  " by " + MaskEmpty(currentVaultSettings.LastChangedByDeviceName)
+                : "Not recorded yet";
+
+            return
+                "Vault Safety Score: " + score + "/100" + Environment.NewLine +
+                "Last changed: " + lastChangedText + Environment.NewLine +
+                "This device: " + localDeviceName + Environment.NewLine +
+                Environment.NewLine +
+                "Good:" + Environment.NewLine +
+                (good.Count == 0 ? "- None yet" : "✓ " + string.Join(Environment.NewLine + "✓ ", good)) +
+                Environment.NewLine + Environment.NewLine +
+                "Warnings:" + Environment.NewLine +
+                (warnings.Count == 0 ? "- No warnings" : "⚠ " + string.Join(Environment.NewLine + "⚠ ", warnings)) +
+                Environment.NewLine + Environment.NewLine +
+                "Known devices:" + Environment.NewLine +
+                BuildKnownDevicesText() +
+                Environment.NewLine + Environment.NewLine +
+                "Safety timeline:" + Environment.NewLine +
+                BuildSafetyTimelineText();
         }
         private async Task<bool> SaveCurrentVaultToCloudWithAutoMergeAsync()
         {
@@ -6687,6 +7032,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
