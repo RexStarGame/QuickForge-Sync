@@ -3206,10 +3206,15 @@ namespace exam_test
                         return;
                     }
 
+                    SetSyncStatus("Restoring backup...");
+
                     await GoogleDriveVaultService.UploadEncryptedVaultAsync(
                         currentDriveService,
                         encryptedJson
                     );
+
+                    lastCloudSaveUtc = DateTime.UtcNow;
+                    SetSyncStatus("Active", success: true);
 
                     vaultCode = unlockCode;
                     currentDataKey = importedDataKey;
@@ -5116,6 +5121,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
