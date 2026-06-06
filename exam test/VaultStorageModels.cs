@@ -38,6 +38,8 @@ namespace exam_test
         public bool IsTrusted { get; set; } = true;
         public DateTime? TrustedChangedAtUtc { get; set; } = null;
         public string TrustNote { get; set; } = "";
+        public bool IsHiddenFromTrustList { get; set; } = false;
+        public DateTime? RemovedFromTrustListAtUtc { get; set; } = null;
     }
 
     public class VaultSafetyEvent
@@ -72,5 +74,6 @@ namespace exam_test
         public string EncryptedDataKey { get; set; } = "";
     }
 }
+
 
 

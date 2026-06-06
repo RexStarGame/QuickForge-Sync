@@ -2297,6 +2297,126 @@ namespace exam_test
             }
         }
 
+
+        private DateTime GetDeviceTrustVersionUtc(KnownVaultDevice device)
+        {
+            DateTime trustChanged = device.TrustedChangedAtUtc ?? device.FirstSeenAtUtc;
+            DateTime removedChanged = device.RemovedFromTrustListAtUtc ?? DateTime.MinValue;
+
+            return removedChanged > trustChanged ? removedChanged : trustChanged;
+        }
+
+        private KnownVaultDevice CloneKnownDevice(KnownVaultDevice source)
+        {
+            return new KnownVaultDevice
+            {
+                DeviceId = source.DeviceId,
+                DeviceName = source.DeviceName,
+                FirstSeenAtUtc = source.FirstSeenAtUtc,
+                LastSeenAtUtc = source.LastSeenAtUtc,
+                SyncCount = source.SyncCount,
+                IsTrusted = source.IsTrusted,
+                TrustedChangedAtUtc = source.TrustedChangedAtUtc,
+                TrustNote = source.TrustNote,
+                IsHiddenFromTrustList = source.IsHiddenFromTrustList,
+                RemovedFromTrustListAtUtc = source.RemovedFromTrustListAtUtc
+            };
+        }
+
+        private void MergeKnownDeviceIntoCurrent(KnownVaultDevice incomingDevice)
+        {
+            if (incomingDevice == null || string.IsNullOrWhiteSpace(incomingDevice.DeviceId))
+            {
+                return;
+            }
+
+            EnsureVaultSafetyCollections();
+
+            KnownVaultDevice? existingDevice = currentVaultSettings.KnownDevices
+                .FirstOrDefault(device =>
+                    string.Equals(device.DeviceId, incomingDevice.DeviceId, StringComparison.OrdinalIgnoreCase)
+                );
+
+            if (existingDevice == null)
+            {
+                currentVaultSettings.KnownDevices.Add(CloneKnownDevice(incomingDevice));
+                return;
+            }
+
+            if (incomingDevice.FirstSeenAtUtc < existingDevice.FirstSeenAtUtc)
+            {
+                existingDevice.FirstSeenAtUtc = incomingDevice.FirstSeenAtUtc;
+            }
+
+            if (incomingDevice.LastSeenAtUtc > existingDevice.LastSeenAtUtc)
+            {
+                existingDevice.LastSeenAtUtc = incomingDevice.LastSeenAtUtc;
+                existingDevice.DeviceName = incomingDevice.DeviceName;
+            }
+
+            existingDevice.SyncCount = Math.Max(existingDevice.SyncCount, incomingDevice.SyncCount);
+
+            DateTime incomingTrustVersion = GetDeviceTrustVersionUtc(incomingDevice);
+            DateTime existingTrustVersion = GetDeviceTrustVersionUtc(existingDevice);
+
+            if (incomingTrustVersion >= existingTrustVersion)
+            {
+                existingDevice.IsTrusted = incomingDevice.IsTrusted;
+                existingDevice.TrustedChangedAtUtc = incomingDevice.TrustedChangedAtUtc;
+                existingDevice.TrustNote = incomingDevice.TrustNote;
+                existingDevice.IsHiddenFromTrustList = incomingDevice.IsHiddenFromTrustList;
+                existingDevice.RemovedFromTrustListAtUtc = incomingDevice.RemovedFromTrustListAtUtc;
+            }
+        }
+
+        private void MergeVaultSettingsFromCloud(VaultSettings? cloudSettings)
+        {
+            if (cloudSettings == null)
+            {
+                return;
+            }
+
+            EnsureVaultSafetyCollections();
+
+            cloudSettings.KnownDevices ??= new List<KnownVaultDevice>();
+            cloudSettings.SafetyTimeline ??= new List<VaultSafetyEvent>();
+
+            foreach (KnownVaultDevice cloudDevice in cloudSettings.KnownDevices)
+            {
+                MergeKnownDeviceIntoCurrent(cloudDevice);
+            }
+
+            List<VaultSafetyEvent> mergedTimeline = currentVaultSettings.SafetyTimeline
+                .Concat(cloudSettings.SafetyTimeline)
+                .GroupBy(item =>
+                    item.EventAtUtc.ToString("O") + "|" +
+                    item.DeviceId + "|" +
+                    item.Action + "|" +
+                    item.Detail
+                )
+                .Select(group => group.First())
+                .OrderByDescending(item => item.EventAtUtc)
+                .Take(MaxSafetyTimelineEvents)
+                .ToList();
+
+            currentVaultSettings.SafetyTimeline = mergedTimeline;
+
+            if (cloudSettings.LastBackupAtUtc.HasValue &&
+                (!currentVaultSettings.LastBackupAtUtc.HasValue ||
+                 cloudSettings.LastBackupAtUtc.Value > currentVaultSettings.LastBackupAtUtc.Value))
+            {
+                currentVaultSettings.LastBackupAtUtc = cloudSettings.LastBackupAtUtc;
+            }
+
+            if (cloudSettings.LastChangedAtUtc.HasValue &&
+                (!currentVaultSettings.LastChangedAtUtc.HasValue ||
+                 cloudSettings.LastChangedAtUtc.Value > currentVaultSettings.LastChangedAtUtc.Value))
+            {
+                currentVaultSettings.LastChangedAtUtc = cloudSettings.LastChangedAtUtc;
+                currentVaultSettings.LastChangedByDeviceId = cloudSettings.LastChangedByDeviceId;
+                currentVaultSettings.LastChangedByDeviceName = cloudSettings.LastChangedByDeviceName;
+            }
+        }
         private async Task MergeLatestCloudVaultIntoCurrentSessionAsync()
         {
             if (currentDriveService == null)
@@ -7411,6 +7531,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
