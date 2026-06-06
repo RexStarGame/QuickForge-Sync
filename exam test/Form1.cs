@@ -2652,6 +2652,7 @@ namespace exam_test
         {
             EnsureLocalDeviceIdentity();
             EnsureVaultSafetyCollections();
+            RegisterCurrentDeviceForVault(false);
 
             int score = 100;
             List<string> good = new List<string>();
@@ -7034,6 +7035,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
