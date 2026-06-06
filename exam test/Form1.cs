@@ -5151,6 +5151,16 @@ namespace exam_test
                     adviceLabel.Text = "No urgent action needed.";
                 }
 
+
+                Button deviceTrustButton = new Button();
+                deviceTrustButton.Text = "Device Trust";
+                deviceTrustButton.Left = 90;
+                deviceTrustButton.Top = 445;
+                deviceTrustButton.Width = 130;
+                deviceTrustButton.Height = 32;
+                StyleActionButton(deviceTrustButton);
+                deviceTrustButton.Click += (s, e) => ShowDeviceTrustDialog();
+
                 Button selfCheckButton = new Button();
                 selfCheckButton.Text = "Vault self-check";
                 selfCheckButton.Left = 235;
@@ -5173,6 +5183,7 @@ namespace exam_test
                 dialog.Controls.Add(summaryLabel);
                 dialog.Controls.Add(statusBox);
                 dialog.Controls.Add(adviceLabel);
+                dialog.Controls.Add(deviceTrustButton);
                 dialog.Controls.Add(selfCheckButton);
                 dialog.Controls.Add(closeButton);
 
