@@ -3781,6 +3781,7 @@ namespace exam_test
                 dialog.Controls.Add(summaryLabel);
                 dialog.Controls.Add(statusBox);
                 dialog.Controls.Add(adviceLabel);
+                dialog.Controls.Add(selfCheckButton);
                 dialog.Controls.Add(closeButton);
 
                 dialog.ShowDialog(this);
@@ -5583,6 +5584,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
