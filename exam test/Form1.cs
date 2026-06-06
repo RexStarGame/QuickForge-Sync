@@ -5091,6 +5091,8 @@ namespace exam_test
                 statusBox.BorderStyle = BorderStyle.FixedSingle;
 
                 statusBox.Text =
+                    BuildVaultSafetyReport(totalEntries, weakPasswords, reusedPasswordEntries, missingWebsiteLinks) +
+                    Environment.NewLine + Environment.NewLine +
                     "Vault: " + (isVaultUnlocked ? "Unlocked" : "Locked") + Environment.NewLine +
                     "Google sync: " + (currentDriveService != null ? "Connected" : "Not connected") + Environment.NewLine +
                     "Auto-lock: " + autoLockText + Environment.NewLine +
@@ -7032,6 +7034,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
