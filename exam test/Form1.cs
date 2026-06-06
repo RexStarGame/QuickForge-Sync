@@ -23,6 +23,7 @@ namespace exam_test
         private readonly System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer();
         private readonly System.Windows.Forms.Timer hideRevealTimer = new System.Windows.Forms.Timer();
         private readonly System.Windows.Forms.Timer autoLockTimer = new System.Windows.Forms.Timer();
+        private readonly System.Windows.Forms.Timer unlockStatusTimer = new System.Windows.Forms.Timer();
 
         private float time = 0f;
 
@@ -43,6 +44,8 @@ namespace exam_test
         private DateTime secretAccessValidUntilUtc = DateTime.MinValue;
         private VaultSettings currentVaultSettings = new VaultSettings();
         private bool hasShownRecoveryReminderThisSession = false;
+        private bool isVaultUnlockAttemptRunning = false;
+        private DateTime vaultUnlockSubmitBlockedUntilUtc = DateTime.MinValue;
 
         private readonly NotifyIcon trayIcon = new NotifyIcon();
         private readonly ContextMenuStrip trayMenu = new ContextMenuStrip();
@@ -485,8 +488,17 @@ namespace exam_test
             vaultAccessPanel.Left = 175;
             vaultAccessPanel.Top = 135;
             vaultAccessPanel.Width = 450;
-            vaultAccessPanel.Height = 385;
+            vaultAccessPanel.Height = 430;
             vaultAccessPanel.BackColor = Color.FromArgb(16, 20, 34);
+
+            unlockStatusTimer.Interval = 1000;
+            unlockStatusTimer.Tick += (s, e) =>
+            {
+                if (vaultAccessPanel.Visible && cloudVaultExists)
+                {
+                    UpdateVaultUnlockStatusLabel();
+                }
+            };
 
             vaultAccessTitleLabel.Text = "Create Vault Code";
             vaultAccessTitleLabel.ForeColor = Color.White;
@@ -560,7 +572,16 @@ namespace exam_test
             confirmVaultCodeTextBox.UseSystemPasswordChar = true;
             confirmVaultCodeTextBox.PlaceholderText = "Repeat vault code";
 
-            UpdateVaultUnlockStatusLabel();
+            vaultUnlockStatusLabel.Text = "Vault-code attempts available: 3";
+            vaultUnlockStatusLabel.Left = 24;
+            vaultUnlockStatusLabel.Top = 252;
+            vaultUnlockStatusLabel.Width = 400;
+            vaultUnlockStatusLabel.Height = 96;
+            vaultUnlockStatusLabel.ForeColor = softTextColor;
+            vaultUnlockStatusLabel.BackColor = Color.Transparent;
+            vaultUnlockStatusLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+            vaultUnlockStatusLabel.Visible = false;
+
             createVaultButton.Text = "Unlock Vault";
             createVaultButton.Left = 24;
             createVaultButton.Top = 305;
@@ -1346,7 +1367,9 @@ namespace exam_test
                 vaultUnlockStatusLabel.Text =
                     "Vault-code locked for about " + FormatRemainingLockoutTime(state.LockedUntilUtc) + "." +
                     Environment.NewLine +
-                    "Use recovery key to bypass.";
+                    "Recovery key can bypass the waiting time." +
+                    Environment.NewLine +
+                    "If the cloud vault is damaged, use Import Backup.";
 
                 vaultUnlockStatusLabel.ForeColor = Color.FromArgb(255, 190, 90);
                 return;
@@ -1357,7 +1380,9 @@ namespace exam_test
             vaultUnlockStatusLabel.Text =
                 "Vault-code attempts available: " + remainingAttempts +
                 Environment.NewLine +
-                "Recovery key can unlock if needed.";
+                "Recovery key can unlock if needed." +
+                Environment.NewLine +
+                "If the cloud vault is damaged, use Import Backup.";
 
             vaultUnlockStatusLabel.ForeColor = remainingAttempts <= 1
                 ? Color.FromArgb(255, 190, 90)
@@ -1382,7 +1407,10 @@ namespace exam_test
             {
                 confirmVaultCodeVisibilityButton.Visible = true;
             }
+            unlockStatusTimer.Stop();
             vaultUnlockStatusLabel.Visible = false;
+            vaultCodeTextBox.PlaceholderText = "Create a vault code";
+            SetVaultAccessButtonRowTop(255);
             createVaultButton.Text = "Create Vault";
 
             vaultCodeTextBox.Clear();
@@ -1412,7 +1440,16 @@ namespace exam_test
             {
                 confirmVaultCodeVisibilityButton.Visible = false;
             }
-            UpdateVaultUnlockStatusLabel();
+            vaultUnlockStatusLabel.Text = "Vault-code attempts available: 3";
+            vaultUnlockStatusLabel.Left = 24;
+            vaultUnlockStatusLabel.Top = 252;
+            vaultUnlockStatusLabel.Width = 400;
+            vaultUnlockStatusLabel.Height = 96;
+            vaultUnlockStatusLabel.ForeColor = softTextColor;
+            vaultUnlockStatusLabel.BackColor = Color.Transparent;
+            vaultUnlockStatusLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+            vaultUnlockStatusLabel.Visible = false;
+
             createVaultButton.Text = "Unlock Vault";
 
             vaultCodeTextBox.Clear();
@@ -1681,6 +1718,97 @@ namespace exam_test
             );
         }
 
+
+        private void SetVaultAccessButtonRowTop(int top)
+        {
+            createVaultButton.Top = top;
+            resetTestVaultButton.Top = top;
+            importBackupAccessButton.Top = top;
+        }
+
+        private bool TryBeginVaultUnlockSubmit()
+        {
+            if (isVaultUnlockAttemptRunning)
+            {
+                vaultUnlockStatusLabel.Visible = true;
+                vaultUnlockStatusLabel.Text =
+                    "Unlock already in progress." +
+                    Environment.NewLine +
+                    "Please wait for the current check to finish." +
+                    Environment.NewLine +
+                    "This prevents accidental double-submit.";
+
+                vaultUnlockStatusLabel.ForeColor = softTextColor;
+                return false;
+            }
+
+            TimeSpan remainingDelay = vaultUnlockSubmitBlockedUntilUtc - DateTime.UtcNow;
+
+            if (remainingDelay > TimeSpan.Zero)
+            {
+                vaultUnlockStatusLabel.Visible = true;
+                vaultUnlockStatusLabel.Text =
+                    "Please wait a moment before trying again." +
+                    Environment.NewLine +
+                    "This prevents accidental double-submit.";
+
+                vaultUnlockStatusLabel.ForeColor = softTextColor;
+                return false;
+            }
+
+            isVaultUnlockAttemptRunning = true;
+            vaultUnlockSubmitBlockedUntilUtc = DateTime.UtcNow.AddSeconds(1);
+
+            createVaultButton.Enabled = false;
+            vaultCodeTextBox.Enabled = false;
+
+            return true;
+        }
+
+        private async Task EndVaultUnlockSubmitGuardAsync()
+        {
+            TimeSpan remainingDelay = vaultUnlockSubmitBlockedUntilUtc - DateTime.UtcNow;
+
+            if (remainingDelay > TimeSpan.Zero)
+            {
+                await Task.Delay(remainingDelay);
+            }
+
+            isVaultUnlockAttemptRunning = false;
+            createVaultButton.Enabled = true;
+            vaultCodeTextBox.Enabled = true;
+            vaultCodeTextBox.Focus();
+        }
+
+        private void ClearVaultCodeInputForRetry()
+        {
+            vaultCodeTextBox.Clear();
+            confirmVaultCodeTextBox.Clear();
+            vaultCodeTextBox.Focus();
+        }
+
+        private void ShowInlineVaultUnlockFailure(int remainingAttempts)
+        {
+            vaultUnlockStatusLabel.Visible = true;
+            vaultUnlockStatusLabel.Text =
+                "Wrong vault code or recovery key." +
+                Environment.NewLine +
+                "Attempts left before lockout: " + remainingAttempts +
+                Environment.NewLine +
+                "Recovery key can unlock if this should have worked." +
+                Environment.NewLine +
+                "If the cloud vault is damaged, use Import Backup.";
+
+            vaultUnlockStatusLabel.ForeColor = remainingAttempts <= 1
+                ? Color.FromArgb(255, 190, 90)
+                : softTextColor;
+
+            SetPreviewText(
+                "Could not unlock vault.",
+                "Wrong vault code or recovery key. Attempts left: " + remainingAttempts,
+                "Try your recovery key, or use Import Backup if the cloud vault is damaged."
+            );
+        }
         private void RecordFailedVaultUnlockAttempt()
         {
             string accountId = GetVaultUnlockAttemptAccountId();
@@ -1689,10 +1817,12 @@ namespace exam_test
             state = VaultUnlockAttemptService.RecordFailure(state, DateTime.UtcNow);
             VaultUnlockAttemptService.SaveState(accountId, state);
 
+            UpdateVaultUnlockStatusLabel();
+            ClearVaultCodeInputForRetry();
+
             if (VaultUnlockAttemptService.IsLockedOut(state, DateTime.UtcNow))
             {
                 SetSyncStatus("Vault code locked", error: true);
-                UpdateVaultUnlockStatusLabel();
                 ShowVaultCodeLockoutMessage(state);
                 return;
             }
@@ -1700,17 +1830,7 @@ namespace exam_test
             int remainingAttempts = VaultUnlockAttemptService.RemainingAttempts(state);
 
             SetSyncStatus("Unlock failed", error: true);
-            UpdateVaultUnlockStatusLabel();
-
-            MessageBox.Show(
-                "Wrong vault code or recovery key." + Environment.NewLine + Environment.NewLine +
-                "Attempts left before vault-code lockout: " + remainingAttempts + Environment.NewLine + Environment.NewLine +
-                "Try your recovery key if this should have worked." + Environment.NewLine +
-                "If the cloud vault is damaged, use Import encrypted backup.",
-                "Could not unlock vault",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning
-            );
+            ShowInlineVaultUnlockFailure(remainingAttempts);
         }
 
         private void ResetVaultUnlockAttemptState()
@@ -1815,6 +1935,8 @@ namespace exam_test
                 }
                 catch
                 {
+                    UpdateVaultUnlockStatusLabel();
+                    ClearVaultCodeInputForRetry();
                     ShowVaultCodeLockoutMessage(attemptState);
                     return false;
                 }
@@ -2459,6 +2581,7 @@ namespace exam_test
         }
         private void ShowLoggedOutUi()
         {
+            unlockStatusTimer.Stop();
             loginCard.Visible = true;
             loginCard.Enabled = true;
             vaultAccessPanel.Visible = false;
@@ -2486,6 +2609,7 @@ namespace exam_test
 
         private void ShowVaultUi()
         {
+            unlockStatusTimer.Stop();
             isVaultUnlocked = true;
 
             ApplyRecoverySettingsToUi();
@@ -6097,6 +6221,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
