@@ -17,6 +17,15 @@ namespace exam_test
 
         public bool BackgroundAnimationEnabled { get; set; } = true;
         public int AutoLockMinutes { get; set; } = 10;
+
+        public List<KnownVaultDevice> KnownDevices { get; set; } = new List<KnownVaultDevice>();
+        public List<VaultSafetyEvent> SafetyTimeline { get; set; } = new List<VaultSafetyEvent>();
+
+        public string LastChangedByDeviceId { get; set; } = "";
+        public string LastChangedByDeviceName { get; set; } = "";
+        public DateTime? LastChangedAtUtc { get; set; } = null;
+
+        public DateTime? LastBackupAtUtc { get; set; } = null;
     }
 
     public class KnownVaultDevice

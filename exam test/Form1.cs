@@ -2526,9 +2526,9 @@ namespace exam_test
             if (isNewDevice &&
                 knownDeviceCountBefore > 0 &&
                 showWarning &&
-                !newDeviceWarningShownThisSession)
+                !newDeviceDetectedThisSession)
             {
-                newDeviceWarningShownThisSession = true;
+                newDeviceDetectedThisSession = true;
                 newDeviceDetectedName = localDeviceName;
 
                 MessageBox.Show(
@@ -7032,6 +7032,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
