@@ -3208,6 +3208,52 @@ namespace exam_test
             await RotateRecoveryKeyAsync();
         }
 
+
+        private void ShowRecoveryKeyRotationProgress(string mainText, string detailText)
+        {
+            SetSyncStatus("Rotating recovery key...");
+
+            if (vaultAccessPanel.Visible)
+            {
+                vaultUnlockStatusLabel.Visible = true;
+                vaultUnlockStatusLabel.Text =
+                    mainText + Environment.NewLine +
+                    detailText;
+
+                vaultUnlockStatusLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                vaultUnlockStatusLabel.Refresh();
+                vaultAccessPanel.Refresh();
+            }
+
+            if (vaultPanel.Visible)
+            {
+                SetPreviewText(
+                    mainText,
+                    detailText,
+                    "Please wait."
+                );
+
+                vaultPanel.Refresh();
+            }
+
+            if (!string.IsNullOrWhiteSpace(connectedGoogleEmail))
+            {
+                accountStatusLabel.Text = "Securing recovery key...";
+                accountStatusLabel.ForeColor = Color.FromArgb(200, 210, 255);
+                accountStatusLabel.Refresh();
+            }
+
+            Application.DoEvents();
+        }
+
+        private void RestoreConnectedAccountStatus()
+        {
+            if (!string.IsNullOrWhiteSpace(connectedGoogleEmail))
+            {
+                accountStatusLabel.Text = "Connected: " + connectedGoogleEmail;
+                accountStatusLabel.ForeColor = successColor;
+            }
+        }
         private async Task<bool> RotateRecoveryKeyAsync()
         {
             if (currentDataKey == null || currentEncryptedVaultFile == null)
@@ -3225,18 +3271,50 @@ namespace exam_test
                 return false;
             }
 
+            bool previousCreateEnabled = createVaultButton.Enabled;
+            bool previousImportEnabled = importBackupAccessButton.Enabled;
+            bool previousResetEnabled = resetTestVaultButton.Enabled;
+
             try
             {
-                VaultCryptoService.RotateRecoveryKey(
-                    currentEncryptedVaultFile,
-                    currentDataKey,
-                    newRecoveryKey
+                createVaultButton.Enabled = false;
+                importBackupAccessButton.Enabled = false;
+                resetTestVaultButton.Enabled = false;
+                UseWaitCursor = true;
+                Cursor = Cursors.WaitCursor;
+
+                ShowRecoveryKeyRotationProgress(
+                    "New recovery key confirmed.",
+                    "Encrypting and saving the new recovery key..."
                 );
+
+                await Task.Yield();
+
+                await Task.Run(() =>
+                {
+                    VaultCryptoService.RotateRecoveryKey(
+                        currentEncryptedVaultFile,
+                        currentDataKey,
+                        newRecoveryKey
+                    );
+                });
 
                 currentVaultSettings.LastRecoveryKeyRotatedAt = DateTime.UtcNow;
                 currentVaultSettings.RecoveryKeyRotationRequired = false;
 
+                ShowRecoveryKeyRotationProgress(
+                    "New recovery key encrypted.",
+                    "Syncing it safely to Google Drive..."
+                );
+
                 await SaveCurrentVaultToCloudAsync();
+
+                ShowRecoveryKeyRotationProgress(
+                    "Recovery key rotation complete.",
+                    "Opening your vault..."
+                );
+
+                await Task.Delay(250);
 
                 selectedPreviewLabel.Text = "Recovery key rotated and synced.";
                 MessageBox.Show("Recovery key rotated successfully. The old recovery key no longer works.");
@@ -3246,6 +3324,17 @@ namespace exam_test
             {
                 MessageBox.Show("Could not rotate recovery key: " + ex.Message);
                 return false;
+            }
+            finally
+            {
+                UseWaitCursor = false;
+                Cursor = Cursors.Default;
+
+                createVaultButton.Enabled = previousCreateEnabled;
+                importBackupAccessButton.Enabled = previousImportEnabled;
+                resetTestVaultButton.Enabled = previousResetEnabled;
+
+                RestoreConnectedAccountStatus();
             }
         }
 
@@ -6008,6 +6097,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
