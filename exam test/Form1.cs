@@ -16,7 +16,7 @@ namespace exam_test
     {
         private const string AppName = "QuickForge Sync";
         private const string AppStatus = "Beta Preview";
-        private const string AppVersion = "v0.1.3-beta-preview";
+        private const string AppVersion = "v0.1.4-beta-preview";
         private const string AppDisplayName = AppName + " " + AppStatus;
 
 
@@ -5392,6 +5392,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 

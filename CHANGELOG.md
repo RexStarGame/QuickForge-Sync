@@ -1,5 +1,48 @@
 ﻿# Changelog
 
+## QuickForge Sync Beta Preview v0.1.4
+
+### Status
+
+QuickForge Sync is still in **Beta Preview**.
+
+This version focuses on safer multi-device sync, conflict prevention, release cleanup, and installer/signing planning. Use test data only. Do not store real passwords yet.
+
+### Added
+
+- Safe sync conflict detection using Google Drive cloud metadata.
+- Cloud fingerprint tracking for the encrypted vault file.
+- Upload blocking when the cloud vault changed on another device.
+- `Refresh` button to load the latest encrypted vault from Google Drive.
+- Conflict recovery guidance explaining how to avoid overwriting newer cloud changes.
+- Release checklist documentation.
+- Installer and signing planning notes.
+- `release/` ignored in `.gitignore`.
+
+### Improved
+
+- `Sync` now checks cloud state before upload.
+- `Refresh` gives users a safer way to load newer cloud data before syncing.
+- Sync conflict messages now recommend refreshing or exporting an encrypted backup first.
+- Logout and developer test reset now clear cloud fingerprint tracking.
+- Release process is better documented for future beta uploads.
+
+### Security and Testing
+
+- Current automated test count: 19 tests.
+- Debug build passes locally.
+- Release build passes locally.
+- GitHub Actions should pass before release upload.
+- Multi-device conflict testing is still required before real-data readiness.
+
+### Still required before removing the beta warning
+
+- Repeated multi-device sync testing.
+- Repeated backup/restore testing on fresh installs.
+- External code/security review.
+- Installer/signing decision.
+- Longer real-world beta testing with test data only.
+
 ## QuickForge Sync Beta Preview v0.1.3
 
 ### Status
@@ -155,4 +198,5 @@ This version is a security, recovery, and release-readiness update. Use test dat
 ### Notes
 
 This is not a stable/final password manager release yet.
+
 
