@@ -128,7 +128,9 @@ namespace exam_test
         private string localDeviceName = "";
         private bool newDeviceDetectedThisSession = false;
         private string newDeviceDetectedName = "";
-        private const int MaxSafetyTimelineEvents = 25;
+                private bool untrustedDeviceDetectedThisSession = false;
+        private string untrustedDeviceDetectedName = "";
+private const int MaxSafetyTimelineEvents = 25;
 
         private readonly Label platformLabel = new Label();
         private readonly TextBox platformTextBox = new TextBox();
@@ -2448,6 +2450,8 @@ namespace exam_test
                 out EncryptedVaultFile latestEncryptedVaultFile
             );
 
+            MergeVaultSettingsFromCloud(cloudVault.Settings);
+
             NormalizeVaultEntriesForSync(cloudVault.Entries);
             NormalizeVaultEntriesForSync(vaultEntries);
 
@@ -2627,7 +2631,14 @@ namespace exam_test
                     DeviceName = localDeviceName,
                     FirstSeenAtUtc = DateTime.UtcNow,
                     LastSeenAtUtc = DateTime.UtcNow,
-                    SyncCount = 0
+                    SyncCount = 0,
+                    IsTrusted = knownDeviceCountBefore == 0,
+                    TrustedChangedAtUtc = DateTime.UtcNow,
+                    TrustNote = knownDeviceCountBefore == 0
+                        ? "First device automatically trusted."
+                        : "New device awaits manual trust.",
+                    IsHiddenFromTrustList = false,
+                    RemovedFromTrustListAtUtc = null
                 };
 
                 currentVaultSettings.KnownDevices.Add(device);
@@ -2641,6 +2652,20 @@ namespace exam_test
             {
                 device.DeviceName = localDeviceName;
                 device.LastSeenAtUtc = DateTime.UtcNow;
+
+                if (device.IsHiddenFromTrustList)
+                {
+                    device.IsHiddenFromTrustList = false;
+                    device.RemovedFromTrustListAtUtc = null;
+                    device.IsTrusted = false;
+                    device.TrustedChangedAtUtc = DateTime.UtcNow;
+                    device.TrustNote = "Device reopened after being removed; marked untrusted.";
+
+                    AddSafetyTimelineEvent(
+                        "Removed device reopened",
+                        localDeviceName + " opened the vault again after being removed, so it was marked untrusted."
+                    );
+                }
             }
 
             if (isNewDevice &&
@@ -2657,6 +2682,24 @@ namespace exam_test
                     "If this was you, no action is needed." + Environment.NewLine +
                     "If this was not you, change your vault code and rotate your recovery key.",
                     "New device detected",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+            }
+
+            if (!isNewDevice &&
+                device != null &&
+                !device.IsTrusted &&
+                showWarning)
+            {
+                untrustedDeviceDetectedThisSession = true;
+                untrustedDeviceDetectedName = localDeviceName;
+
+                MessageBox.Show(
+                    "This device is marked as untrusted for this vault." + Environment.NewLine + Environment.NewLine +
+                    "Device: " + localDeviceName + Environment.NewLine + Environment.NewLine +
+                    "You can still view the vault, but sensitive trust changes should only be made from a trusted device.",
+                    "Untrusted device",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning
                 );
@@ -2724,21 +2767,25 @@ namespace exam_test
         {
             EnsureVaultSafetyCollections();
 
-            if (currentVaultSettings.KnownDevices.Count == 0)
+            List<KnownVaultDevice> visibleDevices = currentVaultSettings.KnownDevices
+                .Where(device => !device.IsHiddenFromTrustList || device.DeviceId == localDeviceId)
+                .OrderByDescending(device => device.LastSeenAtUtc)
+                .Take(6)
+                .ToList();
+
+            if (visibleDevices.Count == 0)
             {
                 return "- No known devices recorded yet.";
             }
 
             return string.Join(
                 Environment.NewLine,
-                currentVaultSettings.KnownDevices
-                    .OrderByDescending(device => device.LastSeenAtUtc)
-                    .Take(6)
-                    .Select(device =>
-                        "- " + device.DeviceName +
-                        " — last seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
-                        (device.DeviceId == localDeviceId ? " (this device)" : "")
-                    )
+                visibleDevices.Select(device =>
+                    "- " + device.DeviceName +
+                    " — last seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
+                    " — " + (device.IsTrusted ? "trusted" : "UNTRUSTED") +
+                    (device.DeviceId == localDeviceId ? " (this device)" : "")
+                )
             );
         }
 
@@ -7541,6 +7588,8 @@ namespace exam_test
         }
     }
 }
+
+
 
 
 
