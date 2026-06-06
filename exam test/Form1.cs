@@ -476,7 +476,7 @@ namespace exam_test
             vaultAccessPanel.Left = 175;
             vaultAccessPanel.Top = 135;
             vaultAccessPanel.Width = 450;
-            vaultAccessPanel.Height = 300;
+            vaultAccessPanel.Height = 340;
             vaultAccessPanel.BackColor = Color.FromArgb(16, 20, 34);
 
             vaultAccessTitleLabel.Text = "Create Vault Code";
@@ -509,6 +509,30 @@ namespace exam_test
             vaultCodeTextBox.Height = 26;
             vaultCodeTextBox.UseSystemPasswordChar = true;
             vaultCodeTextBox.PlaceholderText = "Create a vault code";
+            vaultCodeTextBox.TextChanged += (s, e) => UpdateVaultCodeStrengthPreview();
+
+            vaultCodeStrengthLabel.Text = "Vault code strength: Not checked yet";
+            vaultCodeStrengthLabel.Left = 24;
+            vaultCodeStrengthLabel.Top = 142;
+            vaultCodeStrengthLabel.Width = 390;
+            vaultCodeStrengthLabel.Height = 32;
+            vaultCodeStrengthLabel.ForeColor = softTextColor;
+            vaultCodeStrengthLabel.BackColor = Color.Transparent;
+            vaultCodeStrengthLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+            vaultCodeStrengthTrack.Left = 24;
+            vaultCodeStrengthTrack.Top = 174;
+            vaultCodeStrengthTrack.Width = 390;
+            vaultCodeStrengthTrack.Height = 7;
+            vaultCodeStrengthTrack.BackColor = Color.FromArgb(35, 40, 60);
+
+            vaultCodeStrengthFill.Left = 0;
+            vaultCodeStrengthFill.Top = 0;
+            vaultCodeStrengthFill.Width = 0;
+            vaultCodeStrengthFill.Height = 7;
+            vaultCodeStrengthFill.BackColor = softTextColor;
+
+            vaultCodeStrengthTrack.Controls.Add(vaultCodeStrengthFill);
 
             confirmVaultCodeLabel.Text = "Confirm vault code";
             confirmVaultCodeLabel.ForeColor = Color.White;
@@ -516,10 +540,10 @@ namespace exam_test
             confirmVaultCodeLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             confirmVaultCodeLabel.AutoSize = true;
             confirmVaultCodeLabel.Left = 24;
-            confirmVaultCodeLabel.Top = 150;
+            confirmVaultCodeLabel.Top = 195;
 
             confirmVaultCodeTextBox.Left = 24;
-            confirmVaultCodeTextBox.Top = 172;
+            confirmVaultCodeTextBox.Top = 217;
             confirmVaultCodeTextBox.Width = 390;
             confirmVaultCodeTextBox.Height = 26;
             confirmVaultCodeTextBox.UseSystemPasswordChar = true;
@@ -527,7 +551,7 @@ namespace exam_test
 
             createVaultButton.Text = "Unlock Vault";
             createVaultButton.Left = 24;
-            createVaultButton.Top = 210;
+            createVaultButton.Top = 255;
             createVaultButton.Width = 120;
             createVaultButton.Height = 32;
             createVaultButton.FlatStyle = FlatStyle.Flat;
@@ -538,7 +562,7 @@ namespace exam_test
 
             resetTestVaultButton.Text = "Reset Test Vault";
             resetTestVaultButton.Left = 155;
-            resetTestVaultButton.Top = 210;
+            resetTestVaultButton.Top = 255;
             resetTestVaultButton.Width = 150;
             resetTestVaultButton.Height = 32;
             resetTestVaultButton.FlatStyle = FlatStyle.Flat;
@@ -550,7 +574,7 @@ namespace exam_test
 
             importBackupAccessButton.Text = "Import Backup";
             importBackupAccessButton.Left = 315;
-            importBackupAccessButton.Top = 210;
+            importBackupAccessButton.Top = 255;
             importBackupAccessButton.Width = 110;
             importBackupAccessButton.Height = 32;
             importBackupAccessButton.FlatStyle = FlatStyle.Flat;
@@ -1312,6 +1336,54 @@ namespace exam_test
             resetTestVaultButton.Visible = false;
 #endif
         }
+        private void UpdateVaultCodeStrengthPreview()
+        {
+            string code = vaultCodeTextBox.Text;
+
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                vaultCodeStrengthLabel.Text = "Vault code strength: Not checked yet";
+                vaultCodeStrengthLabel.ForeColor = softTextColor;
+                vaultCodeStrengthFill.Width = 0;
+                vaultCodeStrengthFill.BackColor = softTextColor;
+                return;
+            }
+
+            int score = 0;
+
+            if (code.Length >= 12) score += 25;
+            if (code.Length >= 16) score += 10;
+            if (code.Any(char.IsLower)) score += 10;
+            if (code.Any(char.IsUpper)) score += 15;
+            if (code.Any(char.IsDigit)) score += 15;
+            if (code.Any(ch => !char.IsLetterOrDigit(ch))) score += 20;
+            if (code.Distinct().Count() >= Math.Min(8, code.Length)) score += 5;
+
+            score = Math.Max(0, Math.Min(100, score));
+            vaultCodeStrengthFill.Width = (int)(vaultCodeStrengthTrack.Width * (score / 100.0));
+
+            if (!VaultCodePolicy.IsStrongEnough(code, out string warning))
+            {
+                vaultCodeStrengthLabel.Text = "Vault code strength: Weak — " + warning;
+                vaultCodeStrengthLabel.ForeColor = dangerColor;
+                vaultCodeStrengthFill.BackColor = dangerColor;
+                return;
+            }
+
+            if (score >= 85)
+            {
+                vaultCodeStrengthLabel.Text = "Vault code strength: Strong";
+                vaultCodeStrengthLabel.ForeColor = successColor;
+                vaultCodeStrengthFill.BackColor = successColor;
+            }
+            else
+            {
+                vaultCodeStrengthLabel.Text = "Vault code strength: Good — add more length/symbols for stronger protection";
+                vaultCodeStrengthLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                vaultCodeStrengthFill.BackColor = Color.FromArgb(255, 190, 90);
+            }
+        }
+
         private void ShowVaultCodeStrengthMessage(string reason)
         {
             MessageBox.Show(
@@ -5133,6 +5205,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
