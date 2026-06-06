@@ -10,3 +10,5 @@ obj/
 # Local secrets
 credentials.json
 **/credentials.json
+
+release/

@@ -1037,6 +1037,7 @@ namespace exam_test
             vaultPanel.Controls.Add(rotateRecoveryKeyButton);
             vaultPanel.Controls.Add(securityCenterButton);
             vaultPanel.Controls.Add(backupButton);
+            vaultPanel.Controls.Add(refreshCloudButton);
             vaultPanel.Controls.Add(manualSyncButton);
 
             performanceSettingsLabel.Text = "Performance & safety";
@@ -1992,6 +1993,7 @@ namespace exam_test
                 connectedGoogleEmail = "";
                 lastCloudSaveUtc = null;
                 lastCloudLoadUtc = null;
+                lastKnownCloudFingerprint = null;
                 SetSyncStatus("Not connected");
                 accountStatusLabel.Text = "Not connected";
                 accountStatusLabel.ForeColor = softTextColor;
@@ -5388,6 +5390,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
