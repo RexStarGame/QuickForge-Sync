@@ -111,6 +111,10 @@ Installer/signing planning notes:
 
 [Installer and Signing Notes](INSTALLER_SIGNING_NOTES.md)
 
+Before using real passwords, follow:
+
+[Real-Data Readiness Checklist](REAL_DATA_READINESS.md)
+
 ## Project Status
 
 This is an active student/prototype project.
@@ -125,6 +129,7 @@ Current focus:
 ## Disclaimer
 
 QuickForge Sync is a learning and prototype project. Do not rely on it as your only password manager until the code has been reviewed and tested properly.
+
 
 
 

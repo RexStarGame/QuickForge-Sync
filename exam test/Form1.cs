@@ -3693,7 +3693,7 @@ namespace exam_test
                 statusBox.Left = 20;
                 statusBox.Top = 90;
                 statusBox.Width = 460;
-                statusBox.Height = 220;
+                statusBox.Height = 300;
                 statusBox.Multiline = true;
                 statusBox.ReadOnly = true;
                 statusBox.WordWrap = true;
@@ -3717,7 +3717,7 @@ namespace exam_test
 
                 Label adviceLabel = new Label();
                 adviceLabel.Left = 20;
-                adviceLabel.Top = 320;
+                adviceLabel.Top = 400;
                 adviceLabel.Width = 460;
                 adviceLabel.Height = 40;
                 adviceLabel.ForeColor = softTextColor;
@@ -3747,7 +3747,7 @@ namespace exam_test
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
                 closeButton.Left = 380;
-                closeButton.Top = 365;
+                closeButton.Top = 445;
                 closeButton.Width = 100;
                 closeButton.Height = 32;
                 StyleActionButton(closeButton, true);
@@ -5392,6 +5392,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
