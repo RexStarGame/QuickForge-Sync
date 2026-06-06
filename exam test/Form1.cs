@@ -94,7 +94,8 @@ namespace exam_test
         private readonly Label vaultAccessTitleLabel = new Label();
         private readonly Label vaultAccessSubtitleLabel = new Label();
         private readonly Label vaultCodeLabel = new Label();
-        private readonly TextBox vaultCodeTextBox = new TextBox();
+        private readonly TextBox vaultCodeTextBox = new TextBox();
+
         private readonly Label vaultCodeStrengthLabel = new Label();
         private readonly Panel vaultCodeStrengthTrack = new Panel();
         private readonly Panel vaultCodeStrengthFill = new Panel();
@@ -1928,17 +1929,35 @@ namespace exam_test
 
                 try
                 {
-                    (vaultData, dataKey, decryptedEncryptedVaultFile) = await Task.Run(() =>
+                    var recoveryAttempt = await Task.Run(() =>
                     {
-                        VaultData loadedVault = VaultCryptoService.DecryptVaultWithRecoveryKey(
+                        bool success = VaultCryptoService.TryDecryptVaultWithRecoveryKey(
                             encryptedJson,
                             unlockCode,
-                            out byte[] loadedDataKey,
-                            out EncryptedVaultFile loadedEncryptedVaultFile
+                            out VaultData? loadedVault,
+                            out byte[]? loadedDataKey,
+                            out EncryptedVaultFile? loadedEncryptedVaultFile
                         );
 
-                        return (loadedVault, loadedDataKey, loadedEncryptedVaultFile);
+                        return (
+                            Success: success,
+                            Vault: loadedVault,
+                            DataKey: loadedDataKey,
+                            EncryptedFile: loadedEncryptedVaultFile
+                        );
                     });
+
+                    if (!recoveryAttempt.Success ||
+                        recoveryAttempt.Vault == null ||
+                        recoveryAttempt.DataKey == null ||
+                        recoveryAttempt.EncryptedFile == null)
+                    {
+                        throw new CryptographicException("Wrong recovery key.");
+                    }
+
+                    vaultData = recoveryAttempt.Vault;
+                    dataKey = recoveryAttempt.DataKey;
+                    decryptedEncryptedVaultFile = recoveryAttempt.EncryptedFile;
 
                     usedRecoveryKey = true;
                 }
@@ -1965,17 +1984,35 @@ namespace exam_test
 
                     await Task.Yield();
 
-                    (vaultData, dataKey, decryptedEncryptedVaultFile) = await Task.Run(() =>
+                    var vaultCodeAttempt = await Task.Run(() =>
                     {
-                        VaultData loadedVault = VaultCryptoService.DecryptVaultWithVaultCode(
+                        bool success = VaultCryptoService.TryDecryptVaultWithVaultCode(
                             encryptedJson,
                             unlockCode,
-                            out byte[] loadedDataKey,
-                            out EncryptedVaultFile loadedEncryptedVaultFile
+                            out VaultData? loadedVault,
+                            out byte[]? loadedDataKey,
+                            out EncryptedVaultFile? loadedEncryptedVaultFile
                         );
 
-                        return (loadedVault, loadedDataKey, loadedEncryptedVaultFile);
+                        return (
+                            Success: success,
+                            Vault: loadedVault,
+                            DataKey: loadedDataKey,
+                            EncryptedFile: loadedEncryptedVaultFile
+                        );
                     });
+
+                    if (!vaultCodeAttempt.Success ||
+                        vaultCodeAttempt.Vault == null ||
+                        vaultCodeAttempt.DataKey == null ||
+                        vaultCodeAttempt.EncryptedFile == null)
+                    {
+                        throw new CryptographicException("Wrong vault code.");
+                    }
+
+                    vaultData = vaultCodeAttempt.Vault;
+                    dataKey = vaultCodeAttempt.DataKey;
+                    decryptedEncryptedVaultFile = vaultCodeAttempt.EncryptedFile;
                 }
                 catch
                 {
@@ -1990,17 +2027,35 @@ namespace exam_test
 
                         await Task.Yield();
 
-                        (vaultData, dataKey, decryptedEncryptedVaultFile) = await Task.Run(() =>
-                        {
-                            VaultData loadedVault = VaultCryptoService.DecryptVaultWithRecoveryKey(
-                                encryptedJson,
-                                unlockCode,
-                                out byte[] loadedDataKey,
-                                out EncryptedVaultFile loadedEncryptedVaultFile
-                            );
+                        var recoveryAttempt = await Task.Run(() =>
+                    {
+                        bool success = VaultCryptoService.TryDecryptVaultWithRecoveryKey(
+                            encryptedJson,
+                            unlockCode,
+                            out VaultData? loadedVault,
+                            out byte[]? loadedDataKey,
+                            out EncryptedVaultFile? loadedEncryptedVaultFile
+                        );
 
-                            return (loadedVault, loadedDataKey, loadedEncryptedVaultFile);
-                        });
+                        return (
+                            Success: success,
+                            Vault: loadedVault,
+                            DataKey: loadedDataKey,
+                            EncryptedFile: loadedEncryptedVaultFile
+                        );
+                    });
+
+                    if (!recoveryAttempt.Success ||
+                        recoveryAttempt.Vault == null ||
+                        recoveryAttempt.DataKey == null ||
+                        recoveryAttempt.EncryptedFile == null)
+                    {
+                        throw new CryptographicException("Wrong recovery key.");
+                    }
+
+                    vaultData = recoveryAttempt.Vault;
+                    dataKey = recoveryAttempt.DataKey;
+                    decryptedEncryptedVaultFile = recoveryAttempt.EncryptedFile;
 
                         usedRecoveryKey = true;
                     }
@@ -6232,6 +6287,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 

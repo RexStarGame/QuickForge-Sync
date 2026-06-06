@@ -390,7 +390,69 @@ namespace QuickForge.Tests
                 );
             });
         }
+        [Fact]
+        public void TryDecryptVaultWithVaultCode_WrongCode_ReturnsFalse()
+        {
+            string vaultCode = "correct-vault-code";
+            string wrongCode = "wrong-vault-code";
+            string recoveryKey = VaultCryptoService.GenerateRecoveryKey();
+
+            VaultData originalVault = CreateSampleVault();
+
+            string encryptedJson = VaultCryptoService.CreateEncryptedVault(
+                originalVault,
+                vaultCode,
+                recoveryKey,
+                out byte[] dataKey,
+                out EncryptedVaultFile encryptedVaultFile
+            );
+
+            bool success = VaultCryptoService.TryDecryptVaultWithVaultCode(
+                encryptedJson,
+                wrongCode,
+                out VaultData? decryptedVault,
+                out byte[]? decryptedDataKey,
+                out EncryptedVaultFile? decryptedEncryptedVaultFile
+            );
+
+            Assert.False(success);
+            Assert.Null(decryptedVault);
+            Assert.Null(decryptedDataKey);
+            Assert.Null(decryptedEncryptedVaultFile);
+        }
+
+        [Fact]
+        public void TryDecryptVaultWithRecoveryKey_WrongKey_ReturnsFalse()
+        {
+            string vaultCode = "correct-vault-code";
+            string recoveryKey = VaultCryptoService.GenerateRecoveryKey();
+            string wrongRecoveryKey = VaultCryptoService.GenerateRecoveryKey();
+
+            VaultData originalVault = CreateSampleVault();
+
+            string encryptedJson = VaultCryptoService.CreateEncryptedVault(
+                originalVault,
+                vaultCode,
+                recoveryKey,
+                out byte[] dataKey,
+                out EncryptedVaultFile encryptedVaultFile
+            );
+
+            bool success = VaultCryptoService.TryDecryptVaultWithRecoveryKey(
+                encryptedJson,
+                wrongRecoveryKey,
+                out VaultData? decryptedVault,
+                out byte[]? decryptedDataKey,
+                out EncryptedVaultFile? decryptedEncryptedVaultFile
+            );
+
+            Assert.False(success);
+            Assert.Null(decryptedVault);
+            Assert.Null(decryptedDataKey);
+            Assert.Null(decryptedEncryptedVaultFile);
+        }
     }
 }
+
 
 

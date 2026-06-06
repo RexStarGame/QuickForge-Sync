@@ -168,6 +168,83 @@ namespace exam_test
             return DecryptVaultPayload(encryptedVaultFile, dataKey);
         }
 
+        public static bool TryDecryptVaultWithVaultCode(
+            string encryptedJson,
+            string vaultCode,
+            out VaultData? vaultData,
+            out byte[]? dataKey,
+            out EncryptedVaultFile? encryptedVaultFile)
+        {
+            vaultData = null;
+            dataKey = null;
+            encryptedVaultFile = null;
+
+            try
+            {
+                EncryptedVaultFile loadedEncryptedVaultFile = ReadEncryptedVaultFile(encryptedJson);
+
+                if (loadedEncryptedVaultFile.Version != 2)
+                {
+                    return false;
+                }
+
+                if (!TryUnwrapDataKey(loadedEncryptedVaultFile.MasterKeyWrapper, vaultCode, out byte[] loadedDataKey))
+                {
+                    return false;
+                }
+
+                vaultData = DecryptVaultPayload(loadedEncryptedVaultFile, loadedDataKey);
+                dataKey = loadedDataKey;
+                encryptedVaultFile = loadedEncryptedVaultFile;
+                return true;
+            }
+            catch
+            {
+                vaultData = null;
+                dataKey = null;
+                encryptedVaultFile = null;
+                return false;
+            }
+        }
+
+        public static bool TryDecryptVaultWithRecoveryKey(
+            string encryptedJson,
+            string recoveryKey,
+            out VaultData? vaultData,
+            out byte[]? dataKey,
+            out EncryptedVaultFile? encryptedVaultFile)
+        {
+            vaultData = null;
+            dataKey = null;
+            encryptedVaultFile = null;
+
+            try
+            {
+                EncryptedVaultFile loadedEncryptedVaultFile = ReadEncryptedVaultFile(encryptedJson);
+
+                if (loadedEncryptedVaultFile.Version != 2)
+                {
+                    return false;
+                }
+
+                if (!TryUnwrapDataKey(loadedEncryptedVaultFile.RecoveryKeyWrapper, recoveryKey, out byte[] loadedDataKey))
+                {
+                    return false;
+                }
+
+                vaultData = DecryptVaultPayload(loadedEncryptedVaultFile, loadedDataKey);
+                dataKey = loadedDataKey;
+                encryptedVaultFile = loadedEncryptedVaultFile;
+                return true;
+            }
+            catch
+            {
+                vaultData = null;
+                dataKey = null;
+                encryptedVaultFile = null;
+                return false;
+            }
+        }
         private static VaultData DecryptVaultPayload(
             EncryptedVaultFile encryptedVaultFile,
             byte[] dataKey)
@@ -331,5 +408,6 @@ namespace exam_test
         }
     }
 }
+
 
 
