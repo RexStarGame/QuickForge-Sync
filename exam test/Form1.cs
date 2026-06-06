@@ -5087,6 +5087,7 @@ namespace exam_test
                 statusBox.ReadOnly = true;
                 statusBox.WordWrap = true;
                 statusBox.ScrollBars = ScrollBars.Vertical;
+                statusBox.TabStop = false;
                 statusBox.BackColor = Color.FromArgb(24, 28, 44);
                 statusBox.ForeColor = Color.White;
                 statusBox.BorderStyle = BorderStyle.FixedSingle;
@@ -5174,6 +5175,14 @@ namespace exam_test
                 dialog.Controls.Add(adviceLabel);
                 dialog.Controls.Add(selfCheckButton);
                 dialog.Controls.Add(closeButton);
+
+
+                dialog.Shown += (s, e) =>
+                {
+                    statusBox.SelectionStart = 0;
+                    statusBox.SelectionLength = 0;
+                    closeButton.Focus();
+                };
 
                 dialog.ShowDialog(this);
             }
