@@ -126,6 +126,74 @@ namespace exam_test
             return TryUnwrapDataKey(encryptedVaultFile.RecoveryKeyWrapper, unlockCode, out _);
         }
 
+        public static VaultData DecryptVaultWithVaultCode(
+            string encryptedJson,
+            string vaultCode,
+            out byte[] dataKey,
+            out EncryptedVaultFile encryptedVaultFile)
+        {
+            encryptedVaultFile = ReadEncryptedVaultFile(encryptedJson);
+
+            if (encryptedVaultFile.Version != 2)
+            {
+                throw new InvalidOperationException("Unsupported vault version.");
+            }
+
+            if (!TryUnwrapDataKey(encryptedVaultFile.MasterKeyWrapper, vaultCode, out dataKey))
+            {
+                throw new CryptographicException("Wrong vault code.");
+            }
+
+            return DecryptVaultPayload(encryptedVaultFile, dataKey);
+        }
+
+        public static VaultData DecryptVaultWithRecoveryKey(
+            string encryptedJson,
+            string recoveryKey,
+            out byte[] dataKey,
+            out EncryptedVaultFile encryptedVaultFile)
+        {
+            encryptedVaultFile = ReadEncryptedVaultFile(encryptedJson);
+
+            if (encryptedVaultFile.Version != 2)
+            {
+                throw new InvalidOperationException("Unsupported vault version.");
+            }
+
+            if (!TryUnwrapDataKey(encryptedVaultFile.RecoveryKeyWrapper, recoveryKey, out dataKey))
+            {
+                throw new CryptographicException("Wrong recovery key.");
+            }
+
+            return DecryptVaultPayload(encryptedVaultFile, dataKey);
+        }
+
+        private static VaultData DecryptVaultPayload(
+            EncryptedVaultFile encryptedVaultFile,
+            byte[] dataKey)
+        {
+            byte[] nonce = Convert.FromBase64String(encryptedVaultFile.VaultNonce);
+            byte[] tag = Convert.FromBase64String(encryptedVaultFile.VaultTag);
+            byte[] cipherBytes = Convert.FromBase64String(encryptedVaultFile.VaultCipherText);
+
+            byte[] plainBytes = new byte[cipherBytes.Length];
+
+            using (AesGcm aes = new AesGcm(dataKey, TagSize))
+            {
+                aes.Decrypt(nonce, cipherBytes, tag, plainBytes);
+            }
+
+            string plainJson = Encoding.UTF8.GetString(plainBytes);
+
+            VaultData? vaultData = JsonSerializer.Deserialize<VaultData>(plainJson);
+
+            if (vaultData == null)
+            {
+                throw new InvalidOperationException("Vault data could not be decrypted.");
+            }
+
+            return vaultData;
+        }
         public static string EncryptVaultDataWithExistingKeys(
             VaultData vaultData,
             byte[] dataKey,
@@ -263,4 +331,5 @@ namespace exam_test
         }
     }
 }
+
 

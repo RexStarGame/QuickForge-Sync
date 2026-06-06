@@ -1633,7 +1633,8 @@ namespace exam_test
             MessageBox.Show(
                 "Vault-code unlock is temporarily locked." + Environment.NewLine + Environment.NewLine +
                 "Try again in about " + FormatRemainingLockoutTime(state.LockedUntilUtc) + "." + Environment.NewLine + Environment.NewLine +
-                "If this is your vault, you can still unlock immediately with your recovery key.",
+                "If this is your vault, you can still unlock immediately with your recovery key." + Environment.NewLine + Environment.NewLine +
+                "If the cloud vault is damaged, use Import encrypted backup.",
                 "Vault code locked",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning
@@ -1661,7 +1662,9 @@ namespace exam_test
 
             MessageBox.Show(
                 "Wrong vault code or recovery key." + Environment.NewLine + Environment.NewLine +
-                "Attempts left before lockout: " + remainingAttempts,
+                "Attempts left before vault-code lockout: " + remainingAttempts + Environment.NewLine + Environment.NewLine +
+                "Try your recovery key if this should have worked." + Environment.NewLine +
+                "If the cloud vault is damaged, use Import encrypted backup.",
                 "Could not unlock vault",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning
@@ -1710,6 +1713,13 @@ namespace exam_test
             }
 
             SetSyncStatus("Loading from Google Drive...");
+            SetPreviewText(
+                "Checking unlock code...",
+                "QuickForge uses strong encryption checks, so this can take a moment.",
+                "Please wait."
+            );
+
+            await Task.Yield();
 
             GoogleDriveVaultMetadata? cloudMetadata =
                 await GoogleDriveVaultService.GetVaultMetadataAsync(currentDriveService);
@@ -1722,51 +1732,123 @@ namespace exam_test
                 throw new InvalidOperationException("No encrypted vault was found.");
             }
 
-            EncryptedVaultFile encryptedVaultFile =
-                VaultCryptoService.ReadEncryptedVaultFile(encryptedJson);
-
-            bool canUnlockWithVaultCode =
-                VaultCryptoService.CanUnlockWithVaultCode(encryptedVaultFile, unlockCode);
-
-            bool canUnlockWithRecoveryKey =
-                !canUnlockWithVaultCode &&
-                VaultCryptoService.CanUnlockWithRecoveryKey(encryptedVaultFile, unlockCode);
-
             VaultUnlockAttemptState attemptState =
                 VaultUnlockAttemptService.LoadState(GetVaultUnlockAttemptAccountId());
 
-            if (
-                VaultUnlockAttemptService.IsLockedOut(attemptState, DateTime.UtcNow) &&
-                !canUnlockWithRecoveryKey
-            )
+            bool isLockedOut =
+                VaultUnlockAttemptService.IsLockedOut(attemptState, DateTime.UtcNow);
+
+            bool usedRecoveryKey = false;
+            VaultData? vaultData = null;
+            byte[]? dataKey = null;
+            EncryptedVaultFile? decryptedEncryptedVaultFile = null;
+
+            if (isLockedOut)
             {
                 SetSyncStatus("Vault code locked", error: true);
-                ShowVaultCodeLockoutMessage(attemptState);
-                return false;
+                SetPreviewText(
+                    "Vault-code unlock is temporarily locked.",
+                    "Checking whether this is your recovery key...",
+                    "Recovery key can bypass the waiting time."
+                );
+
+                await Task.Yield();
+
+                try
+                {
+                    (vaultData, dataKey, decryptedEncryptedVaultFile) = await Task.Run(() =>
+                    {
+                        VaultData loadedVault = VaultCryptoService.DecryptVaultWithRecoveryKey(
+                            encryptedJson,
+                            unlockCode,
+                            out byte[] loadedDataKey,
+                            out EncryptedVaultFile loadedEncryptedVaultFile
+                        );
+
+                        return (loadedVault, loadedDataKey, loadedEncryptedVaultFile);
+                    });
+
+                    usedRecoveryKey = true;
+                }
+                catch
+                {
+                    ShowVaultCodeLockoutMessage(attemptState);
+                    return false;
+                }
+            }
+            else
+            {
+                try
+                {
+                    SetSyncStatus("Checking vault code...");
+                    SetPreviewText(
+                        "Checking vault code...",
+                        "This can take a moment because QuickForge uses strong key protection.",
+                        "Please wait."
+                    );
+
+                    await Task.Yield();
+
+                    (vaultData, dataKey, decryptedEncryptedVaultFile) = await Task.Run(() =>
+                    {
+                        VaultData loadedVault = VaultCryptoService.DecryptVaultWithVaultCode(
+                            encryptedJson,
+                            unlockCode,
+                            out byte[] loadedDataKey,
+                            out EncryptedVaultFile loadedEncryptedVaultFile
+                        );
+
+                        return (loadedVault, loadedDataKey, loadedEncryptedVaultFile);
+                    });
+                }
+                catch
+                {
+                    try
+                    {
+                        SetSyncStatus("Checking recovery key...");
+                        SetPreviewText(
+                            "Vault code did not match.",
+                            "Checking whether this is your recovery key...",
+                            "Please wait."
+                        );
+
+                        await Task.Yield();
+
+                        (vaultData, dataKey, decryptedEncryptedVaultFile) = await Task.Run(() =>
+                        {
+                            VaultData loadedVault = VaultCryptoService.DecryptVaultWithRecoveryKey(
+                                encryptedJson,
+                                unlockCode,
+                                out byte[] loadedDataKey,
+                                out EncryptedVaultFile loadedEncryptedVaultFile
+                            );
+
+                            return (loadedVault, loadedDataKey, loadedEncryptedVaultFile);
+                        });
+
+                        usedRecoveryKey = true;
+                    }
+                    catch
+                    {
+                        vaultCode = "";
+                        currentDataKey = null;
+                        currentEncryptedVaultFile = null;
+
+                        vaultCodeTextBox.Clear();
+                        confirmVaultCodeTextBox.Clear();
+
+                        RecordFailedVaultUnlockAttempt();
+                        return false;
+                    }
+                }
             }
 
-            if (!canUnlockWithVaultCode && !canUnlockWithRecoveryKey)
+            if (vaultData == null || dataKey == null || decryptedEncryptedVaultFile == null)
             {
-                vaultCode = "";
-                currentDataKey = null;
-                currentEncryptedVaultFile = null;
-
-                vaultCodeTextBox.Clear();
-                confirmVaultCodeTextBox.Clear();
-
-                RecordFailedVaultUnlockAttempt();
-                return false;
+                throw new InvalidOperationException("Vault unlock did not complete.");
             }
 
             vaultCode = unlockCode;
-
-            VaultData vaultData = VaultCryptoService.DecryptVault(
-                encryptedJson,
-                unlockCode,
-                out byte[] dataKey,
-                out EncryptedVaultFile decryptedEncryptedVaultFile
-            );
-
             currentVaultSettings = vaultData.Settings ?? new VaultSettings();
             currentDataKey = dataKey;
             currentEncryptedVaultFile = decryptedEncryptedVaultFile;
@@ -1785,9 +1867,15 @@ namespace exam_test
 
             ResetVaultUnlockAttemptState();
 
-            if (canUnlockWithRecoveryKey)
+            if (usedRecoveryKey)
             {
                 currentVaultSettings.RecoveryKeyRotationRequired = true;
+
+                SetPreviewText(
+                    "Recovery key accepted.",
+                    "QuickForge must now rotate your recovery key for safety.",
+                    "Complete the rotation to open the vault."
+                );
 
                 bool rotated = await ForceRecoveryKeyRotationAfterRecoveryUnlockAsync();
 
@@ -1807,6 +1895,7 @@ namespace exam_test
 
             return true;
         }
+
         private void SetSyncStatus(string status, bool success = false, bool error = false)
         {
             string lastSaveText = lastCloudSaveUtc.HasValue
@@ -5876,6 +5965,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
