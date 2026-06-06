@@ -6,7 +6,7 @@
 
 QuickForge Sync is still in **Beta Preview**.
 
-This version focuses on usability and security feedback polish. Use test data only. You may use QuickForge Sync for controlled personal real-data beta use, but it has not received an external security audit.
+This version focuses on usability and security feedback polish. You may use QuickForge Sync for controlled personal real-data beta use, but it has not received an external security audit.
 
 ### Added
 
@@ -48,7 +48,7 @@ This version focuses on usability and security feedback polish. Use test data on
 
 QuickForge Sync is still in **Beta Preview**.
 
-This version focuses on safer multi-device sync, conflict prevention, release cleanup, and installer/signing planning. Use test data only. You may use QuickForge Sync for controlled personal real-data beta use, but it has not received an external security audit.
+This version focuses on safer multi-device sync, conflict prevention, release cleanup, and installer/signing planning. You may use QuickForge Sync for controlled personal real-data beta use, but it has not received an external security audit.
 
 ### Added
 
@@ -91,7 +91,7 @@ This version focuses on safer multi-device sync, conflict prevention, release cl
 
 QuickForge Sync is still in **Beta Preview**.
 
-This version is a usability, sync-status, restore-guidance, and multi-device testing update. Use test data only. You may use QuickForge Sync for controlled personal real-data beta use, but it has not received an external security audit.
+This version is a usability, sync-status, restore-guidance, and multi-device testing update. You may use QuickForge Sync for controlled personal real-data beta use, but it has not received an external security audit.
 
 ### Added
 
@@ -143,7 +143,7 @@ This version is a usability, sync-status, restore-guidance, and multi-device tes
 
 QuickForge Sync is still in **Beta Preview**.
 
-This version is a security, recovery, and release-readiness update. Use test data only. You may use QuickForge Sync for controlled personal real-data beta use, but it has not received an external security audit.
+This version is a security, recovery, and release-readiness update. You may use QuickForge Sync for controlled personal real-data beta use, but it has not received an external security audit.
 
 ### Added
 
@@ -240,6 +240,7 @@ This version is a security, recovery, and release-readiness update. Use test dat
 ### Notes
 
 This is not a stable/final password manager release yet.
+
 
 
 

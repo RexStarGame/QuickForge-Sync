@@ -408,7 +408,7 @@ namespace exam_test
             bulletLabel.Text =
                 "• Your vault is encrypted before sync" + Environment.NewLine +
                 "• Each Google account has its own isolated vault" + Environment.NewLine +
-                "• Use test data only during beta" + Environment.NewLine +
+                "• Controlled personal beta use is now supported" + Environment.NewLine +
                 "• Save your recovery key safely";
             bulletLabel.ForeColor = softTextColor;
             bulletLabel.BackColor = Color.Transparent;
@@ -421,7 +421,7 @@ namespace exam_test
             bulletLabel.Click += GoogleLoginCard_Click;
 
             Label betaWarningLabel = new Label();
-            betaWarningLabel.Text = "Beta Preview: do not store real passwords yet.";
+            betaWarningLabel.Text = "Beta Preview: encrypted cloud vault for controlled personal beta use.";
             betaWarningLabel.ForeColor = Color.FromArgb(255, 190, 90);
             betaWarningLabel.BackColor = Color.Transparent;
             betaWarningLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
@@ -2853,7 +2853,7 @@ namespace exam_test
                 SetPreviewText(
                     "Your vault is empty.",
                     "Add your first login, game code, license key or private note.",
-                    "Use test data only during beta."
+                    "Controlled personal beta use is supported. Keep your vault code and recovery key safe."
                 );
             }
                 }
@@ -6557,6 +6557,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
