@@ -598,7 +598,7 @@ namespace exam_test
             vaultAccessPanel.Controls.Add(vaultCodeStrengthTrack);
             vaultAccessPanel.Controls.Add(confirmVaultCodeLabel);
             vaultAccessPanel.Controls.Add(confirmVaultCodeTextBox);
-                        AttachPasswordVisibilityToggle(vaultAccessPanel, vaultCodeTextBox);
+            AttachPasswordVisibilityToggle(vaultAccessPanel, vaultCodeTextBox);
             AttachPasswordVisibilityToggle(vaultAccessPanel, confirmVaultCodeTextBox);
             vaultAccessPanel.Controls.Add(createVaultButton);
             vaultAccessPanel.Controls.Add(resetTestVaultButton);
@@ -888,7 +888,7 @@ namespace exam_test
 
             vaultPanel.Controls.Add(secretLabel);
             vaultPanel.Controls.Add(secretTextBox);
-                        AttachPasswordVisibilityToggle(vaultPanel, secretTextBox);
+            AttachPasswordVisibilityToggle(vaultPanel, secretTextBox);
             vaultPanel.Controls.Add(createPasswordButton);
             vaultPanel.Controls.Add(passwordStrengthLabel);
             vaultPanel.Controls.Add(passwordStrengthTrack);
@@ -5640,6 +5640,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
