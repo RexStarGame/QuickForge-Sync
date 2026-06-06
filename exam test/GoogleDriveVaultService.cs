@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,6 +9,26 @@ using DriveFile = Google.Apis.Drive.v3.Data.File;
 
 namespace exam_test
 {
+    public sealed class GoogleDriveVaultMetadata
+    {
+        public string FileId { get; init; } = "";
+        public DateTime? ModifiedTime { get; init; }
+        public string Md5Checksum { get; init; } = "";
+        public long? Version { get; init; }
+
+        public string Fingerprint
+        {
+            get
+            {
+                string modifiedTicks = ModifiedTime.HasValue
+                    ? ModifiedTime.Value.ToUniversalTime().Ticks.ToString()
+                    : "";
+
+                return FileId + "|" + (Version?.ToString() ?? "") + "|" + modifiedTicks + "|" + Md5Checksum;
+            }
+        }
+    }
+
     public static class GoogleDriveVaultService
     {
         private const string VaultFileName = "encrypted_vault_v2.json";
@@ -16,6 +37,18 @@ namespace exam_test
         {
             DriveFile? file = await FindVaultFileAsync(driveService);
             return file != null;
+        }
+
+        public static async Task<GoogleDriveVaultMetadata?> GetVaultMetadataAsync(DriveService driveService)
+        {
+            DriveFile? file = await FindVaultFileAsync(driveService);
+
+            if (file == null || string.IsNullOrWhiteSpace(file.Id))
+            {
+                return null;
+            }
+
+            return CreateMetadata(file);
         }
 
         public static async Task<string?> DownloadEncryptedVaultAsync(DriveService driveService)
@@ -28,20 +61,18 @@ namespace exam_test
             }
 
             using MemoryStream stream = new MemoryStream();
-
             await driveService.Files.Get(file.Id).DownloadAsync(stream);
 
             return Encoding.UTF8.GetString(stream.ToArray());
         }
 
-        public static async Task UploadEncryptedVaultAsync(
+        public static async Task<GoogleDriveVaultMetadata?> UploadEncryptedVaultAsync(
             DriveService driveService,
             string encryptedJson)
         {
             DriveFile? existingFile = await FindVaultFileAsync(driveService);
 
             byte[] bytes = Encoding.UTF8.GetBytes(encryptedJson);
-
             using MemoryStream stream = new MemoryStream(bytes);
 
             if (existingFile == null || string.IsNullOrWhiteSpace(existingFile.Id))
@@ -58,8 +89,7 @@ namespace exam_test
                     "application/json"
                 );
 
-                createRequest.Fields = "id";
-
+                createRequest.Fields = "id, modifiedTime, md5Checksum, version";
                 await createRequest.UploadAsync();
             }
             else
@@ -76,11 +106,13 @@ namespace exam_test
                     "application/json"
                 );
 
-                updateRequest.Fields = "id";
-
+                updateRequest.Fields = "id, modifiedTime, md5Checksum, version";
                 await updateRequest.UploadAsync();
             }
+
+            return await GetVaultMetadataAsync(driveService);
         }
+
         public static async Task DeleteVaultAsync(DriveService driveService)
         {
             DriveFile? file = await FindVaultFileAsync(driveService);
@@ -92,17 +124,29 @@ namespace exam_test
 
             await driveService.Files.Delete(file.Id).ExecuteAsync();
         }
+
         private static async Task<DriveFile?> FindVaultFileAsync(DriveService driveService)
         {
             var listRequest = driveService.Files.List();
 
             listRequest.Spaces = "appDataFolder";
             listRequest.Q = $"name='{VaultFileName}' and trashed=false";
-            listRequest.Fields = "files(id, name)";
+            listRequest.Fields = "files(id, name, modifiedTime, md5Checksum, version)";
 
             var result = await listRequest.ExecuteAsync();
 
             return result.Files?.FirstOrDefault();
+        }
+
+        private static GoogleDriveVaultMetadata CreateMetadata(DriveFile file)
+        {
+            return new GoogleDriveVaultMetadata
+            {
+                FileId = file.Id ?? "",
+                ModifiedTime = file.ModifiedTimeDateTimeOffset?.DateTime,
+                Md5Checksum = file.Md5Checksum ?? "",
+                Version = file.Version
+            };
         }
     }
 }

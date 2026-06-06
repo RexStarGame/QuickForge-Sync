@@ -108,6 +108,7 @@ namespace exam_test
         private readonly Label syncStatusLabel = new Label();
         private DateTime? lastCloudSaveUtc = null;
         private DateTime? lastCloudLoadUtc = null;
+        private string? lastKnownCloudFingerprint = null;
 
         private readonly Label platformLabel = new Label();
         private readonly TextBox platformTextBox = new TextBox();
@@ -154,6 +155,7 @@ namespace exam_test
 
         private readonly Button changeVaultCodeButton = new Button();
         private readonly Button backupButton = new Button();
+        private readonly Button refreshCloudButton = new Button();
         private readonly Button manualSyncButton = new Button();
         private readonly Button securityCenterButton = new Button();
         private readonly Label securitySettingsLabel = new Label();
@@ -988,7 +990,7 @@ namespace exam_test
             securityCenterButton.Text = "Security check";
             securityCenterButton.Left = 315;
             securityCenterButton.Top = 515;
-            securityCenterButton.Width = 130;
+            securityCenterButton.Width = 105;
             securityCenterButton.Height = 30;
             securityCenterButton.FlatStyle = FlatStyle.Flat;
             securityCenterButton.ForeColor = Color.White;
@@ -997,9 +999,9 @@ namespace exam_test
             securityCenterButton.Click += (s, e) => ShowSecurityCenterDialog();
 
             backupButton.Text = "Backup";
-            backupButton.Left = 455;
+            backupButton.Left = 430;
             backupButton.Top = 515;
-            backupButton.Width = 90;
+            backupButton.Width = 70;
             backupButton.Height = 30;
             backupButton.FlatStyle = FlatStyle.Flat;
             backupButton.ForeColor = Color.White;
@@ -1007,10 +1009,21 @@ namespace exam_test
             backupButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
             backupButton.Click += (s, e) => ShowBackupDialog();
 
-            manualSyncButton.Text = "Sync now";
-            manualSyncButton.Left = 555;
+            refreshCloudButton.Text = "Refresh";
+            refreshCloudButton.Left = 505;
+            refreshCloudButton.Top = 515;
+            refreshCloudButton.Width = 75;
+            refreshCloudButton.Height = 30;
+            refreshCloudButton.FlatStyle = FlatStyle.Flat;
+            refreshCloudButton.ForeColor = Color.White;
+            refreshCloudButton.BackColor = Color.FromArgb(35, 40, 60);
+            refreshCloudButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
+            refreshCloudButton.Click += RefreshCloudButton_Click;
+
+            manualSyncButton.Text = "Sync";
+            manualSyncButton.Left = 585;
             manualSyncButton.Top = 515;
-            manualSyncButton.Width = 95;
+            manualSyncButton.Width = 65;
             manualSyncButton.Height = 30;
             manualSyncButton.FlatStyle = FlatStyle.Flat;
             manualSyncButton.ForeColor = Color.White;
@@ -1586,6 +1599,72 @@ namespace exam_test
                 syncStatusLabel.ForeColor = softTextColor;
             }
         }
+        private bool IsCloudConflictException(Exception ex)
+        {
+            return ex.Message.Contains(
+                "Cloud vault changed on another device",
+                StringComparison.OrdinalIgnoreCase
+            );
+        }
+
+        private void ShowCloudConflictMessage(Exception ex)
+        {
+            SetSyncStatus("Conflict detected", error: true);
+
+            SetPreviewText(
+                "Cloud vault changed on another device.",
+                "QuickForge blocked upload to avoid overwriting newer cloud changes.",
+                "Use Refresh first, or export an encrypted backup before replacing anything."
+            );
+
+            MessageBox.Show(
+                "Cloud vault changed on another device." + Environment.NewLine + Environment.NewLine +
+                "QuickForge stopped the upload because your local vault may be older than the Google Drive vault." + Environment.NewLine + Environment.NewLine +
+                "Recommended next steps:" + Environment.NewLine +
+                "1. Export an encrypted backup if you want to keep this local state." + Environment.NewLine +
+                "2. Click Refresh to load the newest cloud vault." + Environment.NewLine +
+                "3. Re-apply your change after refreshing if needed." + Environment.NewLine + Environment.NewLine +
+                "Technical detail:" + Environment.NewLine +
+                ex.Message,
+                "Sync conflict detected",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
+        }
+
+        private async Task EnsureCloudVaultIsSafeToOverwriteAsync()
+        {
+            if (currentDriveService == null)
+            {
+                throw new InvalidOperationException("Google Drive is not connected.");
+            }
+
+            GoogleDriveVaultMetadata? cloudMetadata =
+                await GoogleDriveVaultService.GetVaultMetadataAsync(currentDriveService);
+
+            if (cloudMetadata == null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(lastKnownCloudFingerprint))
+            {
+                lastKnownCloudFingerprint = cloudMetadata.Fingerprint;
+                return;
+            }
+
+            if (!string.Equals(
+                cloudMetadata.Fingerprint,
+                lastKnownCloudFingerprint,
+                StringComparison.Ordinal
+            ))
+            {
+                throw new InvalidOperationException(
+                    "Cloud vault changed on another device. Refresh from cloud before syncing, or export an encrypted backup first."
+                );
+            }
+        }
+
         private async Task SaveCurrentVaultToCloudAsync()
         {
             if (currentDriveService == null)
@@ -1598,14 +1677,21 @@ namespace exam_test
                 throw new InvalidOperationException("Vault is locked.");
             }
 
+            SetSyncStatus("Checking cloud...");
+
+            await EnsureCloudVaultIsSafeToOverwriteAsync();
+
             SetSyncStatus("Saving...");
 
             string encryptedJson = CreateCurrentEncryptedVaultJson();
 
-            await GoogleDriveVaultService.UploadEncryptedVaultAsync(
-                currentDriveService,
-                encryptedJson
-            );
+            GoogleDriveVaultMetadata? uploadedMetadata =
+                await GoogleDriveVaultService.UploadEncryptedVaultAsync(
+                    currentDriveService,
+                    encryptedJson
+                );
+
+            lastKnownCloudFingerprint = uploadedMetadata?.Fingerprint ?? lastKnownCloudFingerprint;
 
             cloudVaultExists = true;
             lastCloudSaveUtc = DateTime.UtcNow;
@@ -1620,6 +1706,9 @@ namespace exam_test
             }
 
             SetSyncStatus("Loading from Google Drive...");
+
+            GoogleDriveVaultMetadata? cloudMetadata =
+                await GoogleDriveVaultService.GetVaultMetadataAsync(currentDriveService);
 
             string? encryptedJson =
                 await GoogleDriveVaultService.DownloadEncryptedVaultAsync(currentDriveService);
@@ -1649,9 +1738,81 @@ namespace exam_test
             }
 
             RefreshVaultList();
+            lastKnownCloudFingerprint = cloudMetadata?.Fingerprint ?? lastKnownCloudFingerprint;
             lastCloudLoadUtc = DateTime.UtcNow;
             SetSyncStatus("Active", success: true);
         }
+        private async void RefreshCloudButton_Click(object? sender, EventArgs e)
+        {
+            if (currentDriveService == null)
+            {
+                SetSyncStatus("Not connected", error: true);
+                MessageBox.Show(
+                    "Google Drive is not connected. Log in with Google before refreshing from cloud.",
+                    "Refresh unavailable",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+                return;
+            }
+
+            if (!isVaultUnlocked)
+            {
+                SetSyncStatus("Vault locked", error: true);
+                MessageBox.Show(
+                    "Unlock your vault before refreshing from cloud.",
+                    "Vault locked",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+                return;
+            }
+
+            DialogResult confirm = MessageBox.Show(
+                "Refresh will load the latest encrypted vault from Google Drive." + Environment.NewLine + Environment.NewLine +
+                "This is the safest option if another device may have newer changes." + Environment.NewLine + Environment.NewLine +
+                "If you want to preserve the current local state first, export an encrypted backup before refreshing." + Environment.NewLine + Environment.NewLine +
+                "Continue?",
+                "Refresh from cloud",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Information
+            );
+
+            if (confirm != DialogResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                refreshCloudButton.Enabled = false;
+                manualSyncButton.Enabled = false;
+
+                selectedPreviewLabel.Text = "Refreshing from Google Drive...";
+
+                await LoadVaultFromCloudAsync();
+
+                selectedPreviewLabel.Text =
+                    "Refresh completed." + Environment.NewLine +
+                    "Latest encrypted vault loaded from Google Drive.";
+            }
+            catch (Exception ex)
+            {
+                SetSyncStatus("Refresh failed", error: true);
+                MessageBox.Show(
+                    "Refresh from cloud failed: " + ex.Message,
+                    "Refresh failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+            }
+            finally
+            {
+                refreshCloudButton.Enabled = true;
+                manualSyncButton.Enabled = true;
+            }
+        }
+
         private async void ManualSyncButton_Click(object? sender, EventArgs e)
         {
             if (currentDriveService == null)
@@ -1688,6 +1849,10 @@ namespace exam_test
                 selectedPreviewLabel.Text =
                     "Manual sync completed." + Environment.NewLine +
                     "Your encrypted vault was saved to Google Drive.";
+            }
+            catch (Exception ex) when (IsCloudConflictException(ex))
+            {
+                ShowCloudConflictMessage(ex);
             }
             catch (Exception ex)
             {
@@ -5223,6 +5388,10 @@ namespace exam_test
         }
     }
 }
+
+
+
+
 
 
 
