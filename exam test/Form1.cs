@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -5147,11 +5147,15 @@ if (currentDriveService == null)
         }
         private void ShowBackupDialog()
         {
+            string backupStatusText = currentVaultSettings.LastBackupAtUtc.HasValue
+                ? "Last backup: " + currentVaultSettings.LastBackupAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                : "No encrypted backup recorded yet";
+
             using (Form dialog = new Form())
             {
-                dialog.Width = 500;
-                dialog.Height = 280;
-                dialog.Text = "Encrypted Backup";
+                dialog.Width = 720;
+                dialog.Height = 520;
+                dialog.Text = "Backup Center";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialog.MaximizeBox = false;
@@ -5159,75 +5163,172 @@ if (currentDriveService == null)
                 dialog.BackColor = Color.FromArgb(16, 20, 34);
 
                 Label titleLabel = new Label();
-                titleLabel.Text = "Encrypted backup";
-                titleLabel.Left = 20;
-                titleLabel.Top = 18;
-                titleLabel.Width = 420;
-                titleLabel.Height = 30;
+                titleLabel.Text = "Backup Center";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 600;
+                titleLabel.Height = 34;
                 titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
-                titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+                titleLabel.Font = new Font("Segoe UI", 16, FontStyle.Bold);
 
-                Label infoLabel = new Label();
-                infoLabel.Text =
-                    "Export a safe encrypted backup, or import one if Google sync has a problem.";
-                infoLabel.Left = 20;
-                infoLabel.Top = 52;
-                infoLabel.Width = 430;
-                infoLabel.Height = 40;
-                infoLabel.ForeColor = softTextColor;
-                infoLabel.BackColor = Color.Transparent;
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "Create an encrypted backup or restore your vault if something goes wrong.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 650;
+                subtitleLabel.Height = 26;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
 
-                Label warningLabel = new Label();
-                warningLabel.Text =
-                    "Backup files are encrypted. You still need your vault code or recovery key to open them.";
-                warningLabel.Left = 20;
-                warningLabel.Top = 470;
-                warningLabel.Width = 430;
-                warningLabel.Height = 55;
-                warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
-                warningLabel.BackColor = Color.Transparent;
+                Label statusLabel = new Label();
+                statusLabel.Text = backupStatusText;
+                statusLabel.Left = 24;
+                statusLabel.Top = 92;
+                statusLabel.Width = 650;
+                statusLabel.Height = 26;
+                statusLabel.ForeColor = currentVaultSettings.LastBackupAtUtc.HasValue ? successColor : Color.FromArgb(255, 190, 90);
+                statusLabel.BackColor = Color.Transparent;
+                statusLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Panel CreateActionCard(string title, string mainText, string detailText, int left, int top)
+                {
+                    Panel card = new Panel();
+                    card.Left = left;
+                    card.Top = top;
+                    card.Width = 315;
+                    card.Height = 190;
+                    card.BackColor = Color.FromArgb(24, 28, 44);
+                    card.BorderStyle = BorderStyle.FixedSingle;
+
+                    Label cardTitle = new Label();
+                    cardTitle.Text = title;
+                    cardTitle.Left = 16;
+                    cardTitle.Top = 14;
+                    cardTitle.Width = 280;
+                    cardTitle.Height = 24;
+                    cardTitle.ForeColor = Color.White;
+                    cardTitle.BackColor = Color.Transparent;
+                    cardTitle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+
+                    Label cardMain = new Label();
+                    cardMain.Text = mainText;
+                    cardMain.Left = 16;
+                    cardMain.Top = 48;
+                    cardMain.Width = 280;
+                    cardMain.Height = 48;
+                    cardMain.ForeColor = softTextColor;
+                    cardMain.BackColor = Color.Transparent;
+                    cardMain.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                    Label cardDetail = new Label();
+                    cardDetail.Text = detailText;
+                    cardDetail.Left = 16;
+                    cardDetail.Top = 100;
+                    cardDetail.Width = 280;
+                    cardDetail.Height = 54;
+                    cardDetail.ForeColor = Color.FromArgb(255, 190, 90);
+                    cardDetail.BackColor = Color.Transparent;
+                    cardDetail.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+
+                    card.Controls.Add(cardTitle);
+                    card.Controls.Add(cardMain);
+                    card.Controls.Add(cardDetail);
+
+                    return card;
+                }
+
+                Panel exportCard = CreateActionCard(
+                    "Create encrypted backup",
+                    "Save a copy of your encrypted vault file so you can restore later.",
+                    "Keep it safe. You still need your vault code or recovery key to restore it.",
+                    24,
+                    135
+                );
 
                 Button exportButton = new Button();
-                exportButton.Text = "Export encrypted backup";
-                exportButton.Left = 20;
-                exportButton.Top = 155;
-                exportButton.Width = 190;
-                exportButton.Height = 36;
+                exportButton.Text = "Create backup";
+                exportButton.Left = 16;
+                exportButton.Top = 150;
+                exportButton.Width = 130;
+                exportButton.Height = 34;
                 StyleActionButton(exportButton, true);
                 exportButton.Click += (s, e) =>
                 {
                     dialog.Close();
                     ExportEncryptedBackup();
                 };
+                exportCard.Controls.Add(exportButton);
+
+                Panel restoreCard = CreateActionCard(
+                    "Restore from backup",
+                    "Use this if your cloud vault is missing, damaged, or you are setting up a new PC.",
+                    "Only import QuickForge backup files you trust.",
+                    370,
+                    135
+                );
 
                 Button importButton = new Button();
-                importButton.Text = "Import encrypted backup";
-                importButton.Left = 225;
-                importButton.Top = 155;
-                importButton.Width = 190;
-                importButton.Height = 36;
+                importButton.Text = "Restore backup";
+                importButton.Left = 16;
+                importButton.Top = 150;
+                importButton.Width = 135;
+                importButton.Height = 34;
                 StyleActionButton(importButton);
                 importButton.Click += async (s, e) =>
                 {
                     dialog.Close();
                     await ImportEncryptedBackupAsync();
                 };
+                restoreCard.Controls.Add(importButton);
+
+                Panel safetyPanel = new Panel();
+                safetyPanel.Left = 24;
+                safetyPanel.Top = 345;
+                safetyPanel.Width = 660;
+                safetyPanel.Height = 82;
+                safetyPanel.BackColor = Color.FromArgb(20, 25, 42);
+                safetyPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label safetyTitle = new Label();
+                safetyTitle.Text = "Safety note";
+                safetyTitle.Left = 14;
+                safetyTitle.Top = 10;
+                safetyTitle.Width = 620;
+                safetyTitle.Height = 22;
+                safetyTitle.ForeColor = Color.White;
+                safetyTitle.BackColor = Color.Transparent;
+                safetyTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label safetyText = new Label();
+                safetyText.Text = "Vault files are not meant to be opened directly. Use QuickForge to unlock, export, import, or restore."; 
+                safetyText.Left = 14;
+                safetyText.Top = 36;
+                safetyText.Width = 620;
+                safetyText.Height = 34;
+                safetyText.ForeColor = softTextColor;
+                safetyText.BackColor = Color.Transparent;
+                safetyText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                safetyPanel.Controls.Add(safetyTitle);
+                safetyPanel.Controls.Add(safetyText);
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 360;
-                closeButton.Top = 425;
-                closeButton.Width = 95;
-                closeButton.Height = 32;
-                StyleActionButton(closeButton);
+                closeButton.Left = 585;
+                closeButton.Top = 445;
+                closeButton.Width = 100;
+                closeButton.Height = 34;
+                StyleActionButton(closeButton, true);
                 closeButton.Click += (s, e) => dialog.Close();
 
                 dialog.Controls.Add(titleLabel);
-                dialog.Controls.Add(infoLabel);
-                dialog.Controls.Add(warningLabel);
-                dialog.Controls.Add(exportButton);
-                dialog.Controls.Add(importButton);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(statusLabel);
+                dialog.Controls.Add(exportCard);
+                dialog.Controls.Add(restoreCard);
+                dialog.Controls.Add(safetyPanel);
                 dialog.Controls.Add(closeButton);
 
                 dialog.ShowDialog(this);
@@ -5667,9 +5768,9 @@ if (currentDriveService == null)
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 600;
-                dialog.Height = 430;
-                dialog.Text = "Import encrypted backup";
+                dialog.Width = 680;
+                dialog.Height = 520;
+                dialog.Text = "Restore encrypted backup";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialog.MaximizeBox = false;
@@ -5677,60 +5778,109 @@ if (currentDriveService == null)
                 dialog.BackColor = Color.FromArgb(16, 20, 34);
 
                 Label titleLabel = new Label();
-                titleLabel.Text = "Encrypted backup verified";
-                titleLabel.Left = 22;
-                titleLabel.Top = 18;
-                titleLabel.Width = 500;
-                titleLabel.Height = 28;
-                titleLabel.ForeColor = Color.White;
+                titleLabel.Text = "Backup verified";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 600;
+                titleLabel.Height = 32;
+                titleLabel.ForeColor = successColor;
                 titleLabel.BackColor = Color.Transparent;
-                titleLabel.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "QuickForge can read this encrypted backup. Review it before restoring."; 
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 600;
+                subtitleLabel.Height = 26;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+
+                Panel summaryPanel = new Panel();
+                summaryPanel.Left = 24;
+                summaryPanel.Top = 100;
+                summaryPanel.Width = 625;
+                summaryPanel.Height = 150;
+                summaryPanel.BackColor = Color.FromArgb(24, 28, 44);
+                summaryPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label summaryTitle = new Label();
+                summaryTitle.Text = "Backup contents";
+                summaryTitle.Left = 16;
+                summaryTitle.Top = 12;
+                summaryTitle.Width = 580;
+                summaryTitle.Height = 24;
+                summaryTitle.ForeColor = Color.White;
+                summaryTitle.BackColor = Color.Transparent;
+                summaryTitle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
 
                 Label summaryLabel = new Label();
                 summaryLabel.Text =
-                    "This backup contains:" + Environment.NewLine + Environment.NewLine +
                     "Saved entries: " + totalEntries + Environment.NewLine +
                     "Favorites: " + favoriteEntries + Environment.NewLine +
                     "Missing website links: " + missingWebsiteLinks + Environment.NewLine +
                     "Last updated: " + updatedText;
-                summaryLabel.Left = 22;
-                summaryLabel.Top = 58;
-                summaryLabel.Width = 500;
-                summaryLabel.Height = 120;
+                summaryLabel.Left = 16;
+                summaryLabel.Top = 45;
+                summaryLabel.Width = 580;
+                summaryLabel.Height = 90;
                 summaryLabel.ForeColor = softTextColor;
                 summaryLabel.BackColor = Color.Transparent;
-                summaryLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+                summaryLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+
+                summaryPanel.Controls.Add(summaryTitle);
+                summaryPanel.Controls.Add(summaryLabel);
+
+                Panel warningPanel = new Panel();
+                warningPanel.Left = 24;
+                warningPanel.Top = 270;
+                warningPanel.Width = 625;
+                warningPanel.Height = 105;
+                warningPanel.BackColor = Color.FromArgb(36, 30, 30);
+                warningPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label warningTitle = new Label();
+                warningTitle.Text = "Before you restore";
+                warningTitle.Left = 16;
+                warningTitle.Top = 12;
+                warningTitle.Width = 580;
+                warningTitle.Height = 24;
+                warningTitle.ForeColor = Color.FromArgb(255, 190, 90);
+                warningTitle.BackColor = Color.Transparent;
+                warningTitle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
 
                 Label warningLabel = new Label();
                 warningLabel.Text =
-                    "Only import encrypted QuickForge backup files you trust." +
-                    Environment.NewLine +
-                    "Importing this backup will replace your current cloud vault after upload." +
-                    Environment.NewLine +
-                    "Cancel now if this is not the backup you expected.";
-                warningLabel.Left = 22;
-                warningLabel.Top = 470;
-                warningLabel.Width = 540;
-                warningLabel.Height = 55;
-                warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                    "Only restore QuickForge backup files you trust." + Environment.NewLine +
+                    "This will upload the backup as your current encrypted cloud vault." + Environment.NewLine +
+                    "Cancel now if this is not the backup you expected."; 
+                warningLabel.Left = 16;
+                warningLabel.Top = 42;
+                warningLabel.Width = 580;
+                warningLabel.Height = 56;
+                warningLabel.ForeColor = softTextColor;
                 warningLabel.BackColor = Color.Transparent;
-                warningLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                warningLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                warningPanel.Controls.Add(warningTitle);
+                warningPanel.Controls.Add(warningLabel);
 
                 Button cancelButton = new Button();
                 cancelButton.Text = "Cancel";
-                cancelButton.Left = 315;
-                cancelButton.Top = 320;
-                cancelButton.Width = 95;
-                cancelButton.Height = 34;
+                cancelButton.Left = 390;
+                cancelButton.Top = 405;
+                cancelButton.Width = 100;
+                cancelButton.Height = 36;
                 cancelButton.DialogResult = DialogResult.Cancel;
                 StyleActionButton(cancelButton);
 
                 Button importButton = new Button();
-                importButton.Text = "Import and replace vault";
-                importButton.Left = 425;
-                importButton.Top = 320;
+                importButton.Text = "Restore backup";
+                importButton.Left = 505;
+                importButton.Top = 405;
                 importButton.Width = 145;
-                importButton.Height = 34;
+                importButton.Height = 36;
                 StyleActionButton(importButton, true);
 
                 importButton.Click += (s, e) =>
@@ -5748,8 +5898,9 @@ if (currentDriveService == null)
                 };
 
                 dialog.Controls.Add(titleLabel);
-                dialog.Controls.Add(summaryLabel);
-                dialog.Controls.Add(warningLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(summaryPanel);
+                dialog.Controls.Add(warningPanel);
                 dialog.Controls.Add(cancelButton);
                 dialog.Controls.Add(importButton);
 
