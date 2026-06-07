@@ -7049,6 +7049,29 @@ if (currentDriveService == null)
                 autoLockComboBox.SelectedIndex = 0;
             }
 
+            if (currentVaultSettings.AutoRefreshMinutes == 1)
+            {
+                autoRefreshComboBox.SelectedIndex = 1;
+            }
+            else if (currentVaultSettings.AutoRefreshMinutes == 15)
+            {
+                autoRefreshComboBox.SelectedIndex = 3;
+            }
+            else if (currentVaultSettings.AutoRefreshMinutes == 30)
+            {
+                autoRefreshComboBox.SelectedIndex = 4;
+            }
+            else if (currentVaultSettings.AutoRefreshMinutes <= 0)
+            {
+                autoRefreshComboBox.SelectedIndex = 0;
+            }
+            else
+            {
+                autoRefreshComboBox.SelectedIndex = 2;
+                currentVaultSettings.AutoRefreshMinutes = 5;
+            }
+
+            ConfigureAutoRefreshTimer();
             UpdateAnimationState();
         }
 
@@ -7151,6 +7174,7 @@ if (currentDriveService == null)
                         StringComparison.Ordinal
                     ))
                 {
+                    SetSyncStatus("Auto-check OK", success: true);
                     return;
                 }
 
