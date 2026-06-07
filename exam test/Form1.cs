@@ -335,7 +335,7 @@ namespace exam_test
             appTitleLabel.Left = 18;
             appTitleLabel.Top = 13;
 
-            appSubtitleLabel.Text = AppStatus + " " + AppVersion + " ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â encrypted cloud vault for controlled personal beta use.";
+            appSubtitleLabel.Text = AppStatus + " " + AppVersion + " ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â encrypted cloud vault for controlled personal beta use.";
             appSubtitleLabel.ForeColor = softTextColor;
             appSubtitleLabel.BackColor = Color.Transparent;
             appSubtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
@@ -443,10 +443,10 @@ namespace exam_test
 
             Label bulletLabel = new Label();
             bulletLabel.Text =
-                "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Your vault is encrypted before sync" + Environment.NewLine +
-                "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Each Google account has its own isolated vault" + Environment.NewLine +
-                "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Controlled personal beta use is now supported" + Environment.NewLine +
-                "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Save your recovery key safely";
+                "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ Your vault is encrypted before sync" + Environment.NewLine +
+                "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ Each Google account has its own isolated vault" + Environment.NewLine +
+                "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ Controlled personal beta use is now supported" + Environment.NewLine +
+                "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ Save your recovery key safely";
             bulletLabel.ForeColor = softTextColor;
             bulletLabel.BackColor = Color.Transparent;
             bulletLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
@@ -1603,7 +1603,7 @@ namespace exam_test
 
             if (!VaultCodePolicy.IsStrongEnough(code, out string warning))
             {
-                vaultCodeStrengthLabel.Text = "Vault code strength: Weak ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â " + warning;
+                vaultCodeStrengthLabel.Text = "Vault code strength: Weak ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â " + warning;
                 vaultCodeStrengthLabel.ForeColor = dangerColor;
                 vaultCodeStrengthFill.BackColor = dangerColor;
                 return;
@@ -1617,7 +1617,7 @@ namespace exam_test
             }
             else
             {
-                vaultCodeStrengthLabel.Text = "Vault code strength: Good ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â add more length/symbols for stronger protection";
+                vaultCodeStrengthLabel.Text = "Vault code strength: Good ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â add more length/symbols for stronger protection";
                 vaultCodeStrengthLabel.ForeColor = Color.FromArgb(255, 190, 90);
                 vaultCodeStrengthFill.BackColor = Color.FromArgb(255, 190, 90);
             }
@@ -3127,8 +3127,8 @@ namespace exam_test
                 Environment.NewLine,
                 visibleDevices.Select(device =>
                     "- " + device.DeviceName +
-                    " ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â last seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
-                    " ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â " + (device.IsTrusted ? "trusted" : "UNTRUSTED") +
+                    " ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â last seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
+                    " ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â " + (device.IsTrusted ? "trusted" : "UNTRUSTED") +
                     (device.DeviceId == localDeviceId ? " (this device)" : "")
                 )
             );
@@ -3150,8 +3150,8 @@ namespace exam_test
                     .Take(8)
                     .Select(item =>
                         "- " + item.EventAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
-                        " ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â " + item.Action +
-                        " ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â " + item.DeviceName
+                        " ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â " + item.Action +
+                        " ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â " + item.DeviceName
                     )
             );
         }
@@ -3289,10 +3289,10 @@ namespace exam_test
                 "This device: " + localDeviceName + Environment.NewLine +
                 Environment.NewLine +
                 "Good:" + Environment.NewLine +
-                (good.Count == 0 ? "- None yet" : "ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ " + string.Join(Environment.NewLine + "ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ", good)) +
+                (good.Count == 0 ? "- None yet" : "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ " + string.Join(Environment.NewLine + "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ ", good)) +
                 Environment.NewLine + Environment.NewLine +
                 "Warnings:" + Environment.NewLine +
-                (warnings.Count == 0 ? "- No warnings" : "ÃƒÂ¢Ã…Â¡Ã‚Â  " + string.Join(Environment.NewLine + "ÃƒÂ¢Ã…Â¡Ã‚Â  ", warnings)) +
+                (warnings.Count == 0 ? "- No warnings" : "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â  " + string.Join(Environment.NewLine + "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â  ", warnings)) +
                 Environment.NewLine + Environment.NewLine +
                 "Known devices:" + Environment.NewLine +
                 BuildKnownDevicesText() +
@@ -6674,7 +6674,7 @@ if (currentDriveService == null)
                 titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
 
                 Label subtitleLabel = new Label();
-                subtitleLabel.Text = "New password ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â not saved yet.";
+                subtitleLabel.Text = "New password ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â not saved yet.";
                 subtitleLabel.Left = 20;
                 subtitleLabel.Top = 50;
                 subtitleLabel.Width = 360;
@@ -6773,7 +6773,7 @@ if (currentDriveService == null)
                     string type = typeComboBox.SelectedItem?.ToString() ?? "Strong";
                     currentPassword = GenerateUniquePassword(type);
                     passwordBox.Text = currentPassword;
-                    statusLabel.Text = "New password ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â not saved yet.";
+                    statusLabel.Text = "New password ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â not saved yet.";
                 }
 
                 generateAgainButton.Click += (s, e) =>
@@ -7022,7 +7022,7 @@ if (currentDriveService == null)
 
             PasswordStrengthResult result = CheckPasswordStrength(password, platform);
 
-            passwordStrengthLabel.Text = "Strength: " + result.Title + " ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â " + result.Hint;
+            passwordStrengthLabel.Text = "Strength: " + result.Title + " ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â " + result.Hint;
             passwordStrengthLabel.ForeColor = result.Color;
             passwordStrengthFill.BackColor = result.Color;
 
@@ -7843,12 +7843,12 @@ if (currentDriveService == null)
 
             public override string ToString()
             {
-                string prefix = Entry.IsFavorite ? "ÃƒÂ¢Ã‚Â­Ã‚Â " : "";
+                string prefix = Entry.IsFavorite ? "ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚Â­Ãƒâ€šÃ‚Â " : "";
 
                 if (!string.IsNullOrWhiteSpace(Entry.Platform) &&
                     !string.IsNullOrWhiteSpace(Entry.Username))
                 {
-                    return prefix + Entry.Platform + "  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  " + Entry.Username;
+                    return prefix + Entry.Platform + "  ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢  " + Entry.Username;
                 }
 
                 return prefix + Entry.GetDisplayName();
