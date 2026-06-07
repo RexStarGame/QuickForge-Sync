@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -2238,6 +2238,29 @@ namespace exam_test
             else
             {
                 syncStatusLabel.ForeColor = softTextColor;
+            }
+        }
+        private bool IsDeleteSyncReason(string reason)
+        {
+            return reason.Contains("Deleted locally", StringComparison.OrdinalIgnoreCase) ||
+                   reason.Contains("Delete", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void UpdateManualSyncButtonState()
+        {
+            if (hasUnsyncedLocalChanges)
+            {
+                manualSyncButton.Text = "Sync pending";
+                manualSyncButton.Width = 95;
+                manualSyncButton.BackColor = Color.FromArgb(120, 85, 35);
+                manualSyncButton.FlatAppearance.BorderColor = Color.FromArgb(255, 190, 90);
+            }
+            else
+            {
+                manualSyncButton.Text = "Sync";
+                manualSyncButton.Width = 65;
+                manualSyncButton.BackColor = Color.FromArgb(45, 90, 160);
+                manualSyncButton.FlatAppearance.BorderColor = borderColor;
             }
         }
         private bool IsCloudConflictException(Exception ex)
