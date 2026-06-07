@@ -464,7 +464,7 @@ namespace exam_test
             betaWarningLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             betaWarningLabel.AutoSize = true;
             betaWarningLabel.Left = 22;
-            betaWarningLabel.Top = 178;
+            betawarningLabel.Top = 470;
             betaWarningLabel.Cursor = Cursors.Hand;
             betaWarningLabel.Click += GoogleLoginCard_Click;
 
@@ -4430,9 +4430,9 @@ if (currentDriveService == null)
                 Label warningLabel = new Label();
                 warningLabel.Text = "This action cannot be undone after sync.";
                 warningLabel.Left = 20;
-                warningLabel.Top = 90;
+                warningLabel.Top = 470;
                 warningLabel.Width = 360;
-                warningLabel.Height = 30;
+                warningLabel.Height = 55;
                 warningLabel.ForeColor = dangerColor;
                 warningLabel.BackColor = Color.Transparent;
 
@@ -4888,7 +4888,7 @@ if (currentDriveService == null)
 
                 Label warningLabel = new Label();
                 warningLabel.Left = 20;
-                warningLabel.Top = 120;
+                warningLabel.Top = 470;
                 warningLabel.Width = 460;
                 warningLabel.Height = 55;
                 warningLabel.Text =
@@ -5015,9 +5015,9 @@ if (currentDriveService == null)
 
                 Label warningLabel = new Label();
                 warningLabel.Left = 20;
-                warningLabel.Top = 95;
+                warningLabel.Top = 470;
                 warningLabel.Width = 460;
-                warningLabel.Height = 65;
+                warningLabel.Height = 55;
                 warningLabel.Text =
                     "For safety, QuickForge will not download this as a plain text file.\n" +
                     "Copy it and store it somewhere safe. After rotation, the old recovery key will stop working.";
@@ -5182,9 +5182,9 @@ if (currentDriveService == null)
                 warningLabel.Text =
                     "Backup files are encrypted. You still need your vault code or recovery key to open them.";
                 warningLabel.Left = 20;
-                warningLabel.Top = 95;
+                warningLabel.Top = 470;
                 warningLabel.Width = 430;
-                warningLabel.Height = 45;
+                warningLabel.Height = 55;
                 warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
                 warningLabel.BackColor = Color.Transparent;
 
@@ -5217,7 +5217,7 @@ if (currentDriveService == null)
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
                 closeButton.Left = 360;
-                closeButton.Top = 210;
+                closeButton.Top = 425;
                 closeButton.Width = 95;
                 closeButton.Height = 32;
                 StyleActionButton(closeButton);
@@ -5709,9 +5709,9 @@ if (currentDriveService == null)
                     Environment.NewLine +
                     "Cancel now if this is not the backup you expected.";
                 warningLabel.Left = 22;
-                warningLabel.Top = 190;
+                warningLabel.Top = 470;
                 warningLabel.Width = 540;
-                warningLabel.Height = 80;
+                warningLabel.Height = 55;
                 warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
                 warningLabel.BackColor = Color.Transparent;
                 warningLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
@@ -6165,7 +6165,7 @@ if (currentDriveService == null)
                 Button deviceTrustButton = new Button();
                 deviceTrustButton.Text = "Device Trust";
                 deviceTrustButton.Left = 185;
-                deviceTrustButton.Top = 600;
+                devicetrustButton.Top = 425;
                 deviceTrustButton.Width = 130;
                 deviceTrustButton.Height = 34;
                 StyleActionButton(deviceTrustButton);
@@ -6184,7 +6184,7 @@ if (currentDriveService == null)
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
                 closeButton.Left = 480;
-                closeButton.Top = 600;
+                closeButton.Top = 425;
                 closeButton.Width = 100;
                 closeButton.Height = 34;
                 StyleActionButton(closeButton, true);
@@ -6333,10 +6333,14 @@ if (currentDriveService == null)
                     {
                         string trustText = device.IsTrusted ? "TRUSTED" : "UNTRUSTED";
                         string currentText = device.DeviceId == localDeviceId ? " | THIS DEVICE" : "";
+                        string shortListId = device.DeviceId.Length <= 10
+                            ? device.DeviceId
+                            : device.DeviceId.Substring(0, 10);
 
                         deviceList.Items.Add(
                             trustText.PadRight(10) +
-                            " | " + device.DeviceName.PadRight(22) +
+                            " | " + device.DeviceName.PadRight(20) +
+                            " | Device ID " + shortListId.PadRight(10) +
                             " | last seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
                             currentText
                         );
@@ -6383,13 +6387,13 @@ if (currentDriveService == null)
                         : selected.DeviceId.Substring(0, 10);
 
                     detailLabel.Text =
-                        "Device: " + selected.DeviceName + Environment.NewLine +
+                        "Device name: " + selected.DeviceName + Environment.NewLine +
                         "Status: " + (selected.IsTrusted ? "Trusted" : "Untrusted") + Environment.NewLine +
-                        "First seen: " + selected.FirstSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
-                        " | Last seen: " + selected.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + Environment.NewLine +
+                        "Device ID: " + shortId + Environment.NewLine +
+                        "First seen: " + selected.FirstSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + Environment.NewLine +
+                        "Last seen: " + selected.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + Environment.NewLine +
                         "Sync count: " + selected.SyncCount +
-                        " | ID: " + shortId +
-                        (selected.DeviceId == localDeviceId ? " | This device" : "");
+                        (selected.DeviceId == localDeviceId ? Environment.NewLine + "This is your current device." : "");
                 }
 
                 deviceList.SelectedIndexChanged += (s, e) => UpdateDetail();
