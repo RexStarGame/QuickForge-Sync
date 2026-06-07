@@ -5859,7 +5859,7 @@ if (currentDriveService == null)
             {
                 deviceTrustDetail = "New device detected: " + newDeviceDetectedName + ". Open Device Trust to review it.";
             }
-            else if (deviceNeedsAttention)
+            else if (!deviceTrusted)
             {
                 deviceTrustDetail = "This device is untrusted. Sensitive actions are restricted.";
             }
@@ -5921,7 +5921,7 @@ if (currentDriveService == null)
             }
             else if (weakPasswords > 0)
             {
-                nextAction = "Generate stronger passwords for weak entries: " + BuildIssueListText(weakPasswordIssueEntries) + ".";
+                nextAction = "Generate stronger passwords for weak entries. Affected entries: " + BuildIssueListText(weakPasswordIssueEntries) + ".";
             }
             else if (missingWebsiteLinks > 0)
             {
@@ -6068,9 +6068,9 @@ if (currentDriveService == null)
 
                 overviewTab.Controls.Add(CreateCard(
                     "DEVICE TRUST",
-                    deviceTrusted ? "Trusted" : "Untrusted",
-                    deviceTrusted ? "Sensitive actions are allowed." : "Sensitive actions are restricted.",
-                    deviceTrusted ? successColor : dangerColor,
+                    deviceTrustStatus,
+                    deviceTrustDetail,
+                    deviceTrustColor,
                     478,
                     18,
                     210,
@@ -6091,7 +6091,7 @@ if (currentDriveService == null)
                 overviewTab.Controls.Add(CreateCard(
                     "PASSWORD HEALTH",
                     weakPasswords == 0 && reusedPasswordEntries == 0 ? "Good" : "Review",
-                    "Weak: " + weakPasswords + " | Reused: " + reusedPasswordEntries + " | Missing links: " + missingWebsiteLinks,
+                    "Weak: " + weakPasswords + " | Reused: " + reusedPasswordEntries + " | Names shown below.",
                     weakPasswords == 0 && reusedPasswordEntries == 0 ? successColor : Color.FromArgb(255, 190, 90),
                     248,
                     148,
