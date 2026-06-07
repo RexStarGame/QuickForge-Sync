@@ -3927,17 +3927,32 @@ if (currentDriveService == null)
                 editingEntryIndex = -1;
             }
 
+            bool restricted = IsRestrictedModeActive();
+
             saveEntryButton.Visible = !isEditing;
             clearButton.Visible = !isEditing;
 
             saveChangesButton.Visible = isEditing;
             cancelEditButton.Visible = isEditing;
 
-            editEntryButton.Enabled = !isEditing;
-            deleteEntryButton.Enabled = !isEditing;
-            favoriteButton.Enabled = !isEditing;
-            openSiteButton.Enabled = !isEditing;
-            openAndFillButton.Enabled = !isEditing;
+            saveEntryButton.Enabled = !isEditing && !restricted;
+            clearButton.Enabled = !isEditing;
+
+            saveChangesButton.Enabled = isEditing && !restricted;
+            cancelEditButton.Enabled = isEditing;
+
+            editEntryButton.Enabled = !isEditing && !restricted;
+            deleteEntryButton.Enabled = !isEditing && !restricted;
+            favoriteButton.Enabled = !isEditing && !restricted;
+            openSiteButton.Enabled = !isEditing && !restricted;
+            openAndFillButton.Enabled = !isEditing && !restricted;
+
+            if (isEditing && restricted)
+            {
+                selectedPreviewLabel.Text =
+                    "Restricted Mode is active." + Environment.NewLine +
+                    "Save changes is disabled until this device is trusted.";
+            }
         }
         private void ClearButton_Click(object? sender, EventArgs e)
         {
