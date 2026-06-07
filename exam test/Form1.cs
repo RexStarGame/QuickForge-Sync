@@ -5632,6 +5632,8 @@ if (currentDriveService == null)
 
                 Label warningLabel = new Label();
                 warningLabel.Text =
+                    "Only import encrypted QuickForge backup files you trust." +
+                    Environment.NewLine +
                     "Importing this backup will replace your current cloud vault after upload." +
                     Environment.NewLine +
                     "Cancel now if this is not the backup you expected.";
@@ -5774,6 +5776,8 @@ if (currentDriveService == null)
                     Environment.NewLine + Environment.NewLine +
                     "Vault: " + (isVaultUnlocked ? "Unlocked" : "Locked") + Environment.NewLine +
                     "Google sync: " + (currentDriveService != null ? "Connected" : "Not connected") + Environment.NewLine +
+                    "Cloud vault storage: App-managed Google Drive appDataFolder" + Environment.NewLine +
+                    "Cloud vault status: " + (cloudVaultExists ? "Detected" : "Cloud vault missing. Restore from encrypted backup or create a new vault.") + Environment.NewLine +
                     "Auto-lock: " + autoLockText + Environment.NewLine +
                     "Clipboard cleanup: Active" + Environment.NewLine +
                     Environment.NewLine +
@@ -5785,12 +5789,14 @@ if (currentDriveService == null)
                     "Recovery key reminder: " + recoveryReminderText + Environment.NewLine +
                     Environment.NewLine +
                     "Real-data status: Controlled personal beta use supported" + Environment.NewLine +
+                    "Vault files: Not meant to be opened directly. Use QuickForge to unlock, export, import, or restore." + Environment.NewLine +
                     Environment.NewLine +
                     "Completed:" + Environment.NewLine +
                     "- Strong vault code policy" + Environment.NewLine +
                     "- Recovery key" + Environment.NewLine +
                     "- Encrypted backup" + Environment.NewLine +
                     "- Cloud conflict protection" + Environment.NewLine +
+                    "- App-managed Google Drive vault storage" + Environment.NewLine +
                     "- Manual Sync and Refresh" + Environment.NewLine +
                     Environment.NewLine +
                     "Still required:" + Environment.NewLine +
