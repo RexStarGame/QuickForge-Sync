@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -5798,6 +5798,82 @@ if (currentDriveService == null)
             bool syncConnected = currentDriveService != null;
             bool pendingSync = HasPendingBackgroundVaultSync();
 
+            string BuildEntryIssueName(VaultEntry entry)
+            {
+                string displayName = string.IsNullOrWhiteSpace(entry.Platform)
+                    ? entry.GetDisplayName()
+                    : entry.Platform.Trim();
+
+                if (string.IsNullOrWhiteSpace(displayName))
+                {
+                    displayName = "Unnamed entry";
+                }
+
+                if (!string.IsNullOrWhiteSpace(entry.Username))
+                {
+                    return displayName + " (" + entry.Username.Trim() + ")";
+                }
+
+                return displayName;
+            }
+
+            string BuildIssueListText(List<VaultEntry> entries)
+            {
+                if (entries.Count == 0)
+                {
+                    return "None";
+                }
+
+                return string.Join(", ", entries.Select(BuildEntryIssueName));
+            }
+
+            List<VaultEntry> weakPasswordIssueEntries = vaultEntries
+                .Where(entry =>
+                    !string.IsNullOrWhiteSpace(entry.Secret) &&
+                    IsWeakPasswordForSecurityCenter(entry.Secret, entry.Platform)
+                )
+                .Take(4)
+                .ToList();
+
+            List<VaultEntry> reusedPasswordIssueEntries = vaultEntries
+                .Where(entry => !string.IsNullOrWhiteSpace(entry.Secret))
+                .GroupBy(entry => entry.Secret)
+                .Where(group => group.Count() > 1)
+                .SelectMany(group => group.Take(3))
+                .Take(4)
+                .ToList();
+
+            int untrustedDeviceCount = currentVaultSettings.KnownDevices
+                .Count(device => !device.IsHiddenFromTrustList && !device.IsTrusted);
+
+            bool deviceNeedsAttention =
+                !deviceTrusted ||
+                newDeviceDetectedThisSession ||
+                untrustedDeviceCount > 0;
+
+            string deviceTrustStatus = deviceNeedsAttention ? "Attention" : "Trusted";
+
+            string deviceTrustDetail;
+
+            if (newDeviceDetectedThisSession)
+            {
+                deviceTrustDetail = "New device detected: " + newDeviceDetectedName + ". Open Device Trust to review it.";
+            }
+            else if (deviceNeedsAttention)
+            {
+                deviceTrustDetail = "This device is untrusted. Sensitive actions are restricted.";
+            }
+            else if (untrustedDeviceCount > 0)
+            {
+                deviceTrustDetail = "Untrusted device(s): " + untrustedDeviceCount + ". Open Device Trust to review.";
+            }
+            else
+            {
+                deviceTrustDetail = "Sensitive actions are allowed.";
+            }
+
+            Color deviceTrustColor = deviceNeedsAttention ? dangerColor : successColor;
+
             Color scoreColor = safetyScore >= 80
                 ? successColor
                 : safetyScore >= 60 ? Color.FromArgb(255, 190, 90) : dangerColor;
@@ -5808,7 +5884,7 @@ if (currentDriveService == null)
             {
                 headline = "Cloud vault needs attention.";
             }
-            else if (!deviceTrusted)
+            else if (deviceNeedsAttention)
             {
                 headline = "This device is not trusted yet.";
             }
@@ -5831,9 +5907,9 @@ if (currentDriveService == null)
             {
                 nextAction = "Restore from encrypted backup or create a new vault for this Google account.";
             }
-            else if (!deviceTrusted)
+            else if (deviceNeedsAttention)
             {
-                nextAction = "Open Device Trust from a trusted PC and trust this device if it is yours.";
+                nextAction = deviceTrustDetail;
             }
             else if (!backupRecent)
             {
@@ -5841,11 +5917,11 @@ if (currentDriveService == null)
             }
             else if (reusedPasswordEntries > 0)
             {
-                nextAction = "Replace reused passwords first. Reused passwords create the biggest risk.";
+                nextAction = "Replace reused passwords first. Affected entries: " + BuildIssueListText(reusedPasswordIssueEntries) + ".";
             }
             else if (weakPasswords > 0)
             {
-                nextAction = "Generate stronger passwords for weak entries.";
+                nextAction = "Generate stronger passwords for weak entries: " + BuildIssueListText(weakPasswordIssueEntries) + ".";
             }
             else if (missingWebsiteLinks > 0)
             {
@@ -6038,7 +6114,7 @@ if (currentDriveService == null)
                 nextActionPanel.Left = 18;
                 nextActionPanel.Top = 285;
                 nextActionPanel.Width = 670;
-                nextActionPanel.Height = 115;
+                nextActionPanel.Height = 135;
                 nextActionPanel.BackColor = Color.FromArgb(20, 25, 42);
                 nextActionPanel.BorderStyle = BorderStyle.FixedSingle;
 
@@ -6057,7 +6133,7 @@ if (currentDriveService == null)
                 nextActionText.Left = 14;
                 nextActionText.Top = 40;
                 nextActionText.Width = 635;
-                nextActionText.Height = 60;
+                nextActionText.Height = 88;
                 nextActionText.ForeColor = softTextColor;
                 nextActionText.BackColor = Color.Transparent;
                 nextActionText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
