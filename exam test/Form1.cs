@@ -5768,6 +5768,7 @@ if (currentDriveService == null)
                 deviceList.SelectedIndexChanged += (s, e) => UpdateDetail();
 
                 Button trustButton = new Button();
+                Button untrustButton = new Button();
                 trustButton.Text = "Trust";
                 trustButton.Left = 20;
                 trustButton.Top = 395;
@@ -5811,7 +5812,6 @@ if (currentDriveService == null)
                     UpdateDeviceTrustActionButtons();
                 };
 
-                Button untrustButton = new Button();
                 untrustButton.Text = "Untrust";
                 untrustButton.Left = 145;
                 untrustButton.Top = 395;
