@@ -5540,16 +5540,8 @@ if (currentDriveService == null)
                 deviceTrustButton.Width = 130;
                 deviceTrustButton.Height = 32;
                 StyleActionButton(deviceTrustButton);
-                deviceTrustButton.Enabled = !IsRestrictedModeActive();
-                deviceTrustButton.Click += (s, e) =>
-                {
-                    if (!RequireTrustedDeviceForSensitiveAction("Manage Device Trust"))
-                    {
-                        return;
-                    }
-
-                    ShowDeviceTrustDialog();
-                };
+                deviceTrustButton.Enabled = true;
+                deviceTrustButton.Click += (s, e) => ShowDeviceTrustDialog();
 
                 Button selfCheckButton = new Button();
                 selfCheckButton.Text = "Vault self-check";
@@ -7815,6 +7807,7 @@ if (currentDriveService == null)
         }
     }
 }
+
 
 
 
