@@ -210,9 +210,9 @@ namespace exam_test
         public Form1()
         {
             InitializeComponent();
-            ClientSize = new Size(800, 720);
+            ClientSize = new Size(800, 790);
             Text = AppDisplayName + " " + AppVersion;
-            MinimumSize = new Size(800, 720);
+            MinimumSize = new Size(800, 790);
             DoubleBuffered = true;
             BackColor = backgroundColor;
 
@@ -674,7 +674,7 @@ namespace exam_test
             vaultPanel.Left = 70;
             vaultPanel.Top = 120;
             vaultPanel.Width = 660;
-            vaultPanel.Height = 560;
+            vaultPanel.Height = 620;
             vaultPanel.BackColor = Color.FromArgb(16, 20, 34);
 
             vaultTitleLabel.Text = "Encrypted Vault";
@@ -1054,7 +1054,7 @@ namespace exam_test
 
             securityCenterButton.Text = "Security check";
             securityCenterButton.Left = 315;
-            securityCenterButton.Top = 515;
+            securityCenterButton.Top = 570;
             securityCenterButton.Width = 105;
             securityCenterButton.Height = 30;
             securityCenterButton.FlatStyle = FlatStyle.Flat;
@@ -1065,7 +1065,7 @@ namespace exam_test
 
             backupButton.Text = "Backup";
             backupButton.Left = 430;
-            backupButton.Top = 515;
+            backupButton.Top = 570;
             backupButton.Width = 70;
             backupButton.Height = 30;
             backupButton.FlatStyle = FlatStyle.Flat;
@@ -1084,7 +1084,7 @@ namespace exam_test
 
             refreshCloudButton.Text = "Refresh";
             refreshCloudButton.Left = 505;
-            refreshCloudButton.Top = 515;
+            refreshCloudButton.Top = 570;
             refreshCloudButton.Width = 75;
             refreshCloudButton.Height = 30;
             refreshCloudButton.FlatStyle = FlatStyle.Flat;
@@ -1095,7 +1095,7 @@ namespace exam_test
 
             manualSyncButton.Text = "Sync";
             manualSyncButton.Left = 585;
-            manualSyncButton.Top = 515;
+            manualSyncButton.Top = 570;
             manualSyncButton.Width = 65;
             manualSyncButton.Height = 30;
             manualSyncButton.FlatStyle = FlatStyle.Flat;
@@ -1203,17 +1203,17 @@ namespace exam_test
             };
 
             autoRefreshLabel.Text = "Auto-refresh:";
-            autoRefreshLabel.Left = 240;
-            autoRefreshLabel.Top = 510;
-            autoRefreshLabel.Width = 90;
+            autoRefreshLabel.Left = 20;
+            autoRefreshLabel.Top = 545;
+            autoRefreshLabel.Width = 100;
             autoRefreshLabel.Height = 24;
             autoRefreshLabel.ForeColor = softTextColor;
             autoRefreshLabel.BackColor = Color.Transparent;
             autoRefreshLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
 
-            autoRefreshComboBox.Left = 330;
-            autoRefreshComboBox.Top = 507;
-            autoRefreshComboBox.Width = 155;
+            autoRefreshComboBox.Left = 125;
+            autoRefreshComboBox.Top = 542;
+            autoRefreshComboBox.Width = 165;
             autoRefreshComboBox.Height = 28;
             autoRefreshComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
             autoRefreshComboBox.Items.Add("Never");
