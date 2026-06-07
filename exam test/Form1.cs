@@ -4893,7 +4893,7 @@ if (currentDriveService == null)
             using (Form dialog = new Form())
             {
                 dialog.Width = 660;
-                dialog.Height = 520;
+                dialog.Height = 570;
                 dialog.Text = "Save Recovery Key";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -5088,7 +5088,7 @@ if (currentDriveService == null)
             using (Form dialog = new Form())
             {
                 dialog.Width = 660;
-                dialog.Height = 540;
+                dialog.Height = 590;
                 dialog.Text = "Rotate Recovery Key";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -5328,7 +5328,7 @@ if (currentDriveService == null)
             using (Form dialog = new Form())
             {
                 dialog.Width = 720;
-                dialog.Height = 520;
+                dialog.Height = 570;
                 dialog.Text = "Backup Center";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -5943,7 +5943,7 @@ if (currentDriveService == null)
             using (Form dialog = new Form())
             {
                 dialog.Width = 680;
-                dialog.Height = 520;
+                dialog.Height = 570;
                 dialog.Text = "Restore encrypted backup";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
