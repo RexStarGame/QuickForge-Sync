@@ -7188,7 +7188,7 @@ if (currentDriveService == null)
                 SetSyncStatus(cloudLooksSame ? "Auto-refresh OK" : "Auto-refresh updated", success: true);
 
                 selectedPreviewLabel.Text =
-                    "Auto-refresh completed." + Environment.NewLine +
+                    (cloudLooksSame ? "Auto-refresh check completed." : "Auto-refresh completed.") + Environment.NewLine +
                     "Latest encrypted vault and Device Trust status loaded from Google Drive.";
             }
             catch (Exception ex)
