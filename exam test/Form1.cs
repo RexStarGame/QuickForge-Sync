@@ -1574,36 +1574,52 @@ namespace exam_test
         {
             unlockStatusTimer.Stop();
 
+            vaultAccessPanel.Height = 560;
+
             vaultAccessTitleLabel.Text = "Set up or restore vault";
+            vaultAccessTitleLabel.Top = 20;
+
             vaultAccessSubtitleLabel.Text =
                 "No encrypted cloud vault was found for " + GetConnectedGoogleEmailDisplay() + "." + Environment.NewLine +
                 "Create a new vault, or restore an encrypted backup if you already have one.";
+            vaultAccessSubtitleLabel.Top = 58;
+
             vaultCodeLabel.Text = "Create vault code";
+            vaultCodeLabel.Top = 190;
+
             vaultCodeTextBox.PlaceholderText = "Create a vault code";
+            vaultCodeTextBox.Top = 212;
+
+            vaultCodeStrengthLabel.Top = 244;
+            vaultCodeStrengthTrack.Top = 274;
 
             confirmVaultCodeLabel.Visible = true;
+            confirmVaultCodeLabel.Top = 300;
+
             confirmVaultCodeTextBox.Visible = true;
+            confirmVaultCodeTextBox.Top = 322;
 
             if (vaultCodeVisibilityButton != null)
             {
                 vaultCodeVisibilityButton.Visible = true;
+                vaultCodeVisibilityButton.Top = vaultCodeTextBox.Top;
             }
 
             if (confirmVaultCodeVisibilityButton != null)
             {
                 confirmVaultCodeVisibilityButton.Visible = true;
+                confirmVaultCodeVisibilityButton.Top = confirmVaultCodeTextBox.Top;
             }
 
             vaultUnlockStatusLabel.Visible = true;
+            vaultUnlockStatusLabel.Top = 370;
+            vaultUnlockStatusLabel.Height = 70;
             vaultUnlockStatusLabel.Text =
-                "This can happen if:" + Environment.NewLine +
-                "- this is your first time using QuickForge" + Environment.NewLine +
-                "- you signed in with the wrong Google account" + Environment.NewLine +
-                "- the cloud vault was deleted or app access was reset" + Environment.NewLine +
-                "- you need to restore from an encrypted backup";
+                "No cloud vault was found." + Environment.NewLine +
+                "Create a new vault, or restore an encrypted backup if you already have one.";
             vaultUnlockStatusLabel.ForeColor = Color.FromArgb(255, 190, 90);
 
-            SetVaultAccessButtonRowTop(430);
+            SetVaultAccessButtonRowTop(465);
             createVaultButton.Text = "Create vault";
 
             vaultCodeTextBox.Clear();
@@ -1615,25 +1631,45 @@ namespace exam_test
         }
         private void ConfigureVaultAccessForUnlock()
         {
+            vaultAccessPanel.Height = 505;
+
             vaultAccessTitleLabel.Text = "Unlock your vault";
+            vaultAccessTitleLabel.Top = 22;
+
             vaultAccessSubtitleLabel.Text =
                 "Vault for " + GetConnectedGoogleEmailDisplay() + "." + Environment.NewLine +
                 "Enter your vault code or recovery key to continue.";
+            vaultAccessSubtitleLabel.Top = 60;
+
             vaultCodeLabel.Text = "Vault code / recovery key";
+            vaultCodeLabel.Top = 202;
+
             vaultCodeTextBox.PlaceholderText = "Enter vault code or recovery key";
+            vaultCodeTextBox.Top = 224;
+
+            vaultCodeStrengthLabel.Top = 256;
+            vaultCodeStrengthTrack.Top = 284;
 
             confirmVaultCodeLabel.Visible = false;
+            confirmVaultCodeLabel.Top = 300;
+
             confirmVaultCodeTextBox.Visible = false;
+            confirmVaultCodeTextBox.Top = 322;
 
             if (vaultCodeVisibilityButton != null)
             {
                 vaultCodeVisibilityButton.Visible = true;
+                vaultCodeVisibilityButton.Top = vaultCodeTextBox.Top;
             }
 
             if (confirmVaultCodeVisibilityButton != null)
             {
                 confirmVaultCodeVisibilityButton.Visible = false;
+                confirmVaultCodeVisibilityButton.Top = confirmVaultCodeTextBox.Top;
             }
+
+            vaultUnlockStatusLabel.Top = 300;
+            vaultUnlockStatusLabel.Height = 105;
 
             SetVaultAccessButtonRowTop(430);
             UpdateVaultUnlockStatusLabel();
