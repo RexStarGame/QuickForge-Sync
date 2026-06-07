@@ -4839,8 +4839,8 @@ if (currentDriveService == null)
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 520;
-                dialog.Height = 330;
+                dialog.Width = 560;
+                dialog.Height = 390;
                 dialog.Text = "Save Recovery Key";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -4975,8 +4975,8 @@ if (currentDriveService == null)
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 520;
-                dialog.Height = 320;
+                dialog.Width = 560;
+                dialog.Height = 370;
                 dialog.Text = "Rotate Recovery Key";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -5596,8 +5596,8 @@ if (currentDriveService == null)
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 560;
-                dialog.Height = 365;
+                dialog.Width = 600;
+                dialog.Height = 430;
                 dialog.Text = "Import encrypted backup";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -5639,16 +5639,16 @@ if (currentDriveService == null)
                     "Cancel now if this is not the backup you expected.";
                 warningLabel.Left = 22;
                 warningLabel.Top = 190;
-                warningLabel.Width = 500;
-                warningLabel.Height = 55;
+                warningLabel.Width = 540;
+                warningLabel.Height = 80;
                 warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
                 warningLabel.BackColor = Color.Transparent;
                 warningLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
 
                 Button cancelButton = new Button();
                 cancelButton.Text = "Cancel";
-                cancelButton.Left = 285;
-                cancelButton.Top = 275;
+                cancelButton.Left = 315;
+                cancelButton.Top = 320;
                 cancelButton.Width = 95;
                 cancelButton.Height = 34;
                 cancelButton.DialogResult = DialogResult.Cancel;
@@ -5656,9 +5656,9 @@ if (currentDriveService == null)
 
                 Button importButton = new Button();
                 importButton.Text = "Import and replace vault";
-                importButton.Left = 395;
-                importButton.Top = 275;
-                importButton.Width = 135;
+                importButton.Left = 425;
+                importButton.Top = 320;
+                importButton.Width = 145;
                 importButton.Height = 34;
                 StyleActionButton(importButton, true);
 
@@ -5725,8 +5725,8 @@ if (currentDriveService == null)
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 520;
-                dialog.Height = 520;
+                dialog.Width = 560;
+                dialog.Height = 600;
                 dialog.Text = "Security Center";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -5760,8 +5760,8 @@ if (currentDriveService == null)
                 TextBox statusBox = new TextBox();
                 statusBox.Left = 20;
                 statusBox.Top = 90;
-                statusBox.Width = 460;
-                statusBox.Height = 300;
+                statusBox.Width = 500;
+                statusBox.Height = 345;
                 statusBox.Multiline = true;
                 statusBox.ReadOnly = true;
                 statusBox.WordWrap = true;
@@ -5807,7 +5807,7 @@ if (currentDriveService == null)
 
                 Label adviceLabel = new Label();
                 adviceLabel.Left = 20;
-                adviceLabel.Top = 400;
+                adviceLabel.Top = 450;
                 adviceLabel.Width = 460;
                 adviceLabel.Height = 40;
                 adviceLabel.ForeColor = softTextColor;
@@ -5838,7 +5838,7 @@ if (currentDriveService == null)
                 Button deviceTrustButton = new Button();
                 deviceTrustButton.Text = "Device Trust";
                 deviceTrustButton.Left = 90;
-                deviceTrustButton.Top = 445;
+                deviceTrustButton.Top = 500;
                 deviceTrustButton.Width = 130;
                 deviceTrustButton.Height = 32;
                 StyleActionButton(deviceTrustButton);
@@ -5848,7 +5848,7 @@ if (currentDriveService == null)
                 Button selfCheckButton = new Button();
                 selfCheckButton.Text = "Vault self-check";
                 selfCheckButton.Left = 235;
-                selfCheckButton.Top = 445;
+                selfCheckButton.Top = 500;
                 selfCheckButton.Width = 130;
                 selfCheckButton.Height = 32;
                 StyleActionButton(selfCheckButton);
@@ -5857,7 +5857,7 @@ if (currentDriveService == null)
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
                 closeButton.Left = 380;
-                closeButton.Top = 445;
+                closeButton.Top = 500;
                 closeButton.Width = 100;
                 closeButton.Height = 32;
                 StyleActionButton(closeButton, true);
@@ -5946,7 +5946,7 @@ if (currentDriveService == null)
             using (Form dialog = new Form())
             {
                 dialog.Width = 720;
-                dialog.Height = 520;
+                dialog.Height = 570;
                 dialog.Text = "Device Trust";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -6761,8 +6761,8 @@ if (currentDriveService == null)
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 460;
-                dialog.Height = 330;
+                dialog.Width = 480;
+                dialog.Height = 365;
                 dialog.Text = "Generate password";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
