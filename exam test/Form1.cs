@@ -1002,7 +1002,7 @@ namespace exam_test
             changeVaultCodeButton.Click += ChangeVaultCodeButton_Click;
 
           
-            favoriteButton.Text = "â˜† Favorite";
+            favoriteButton.Text = "\u2606 Favorite";
             favoriteButton.Left = 555;
             favoriteButton.Top = 408;
             favoriteButton.Width = 100;
@@ -4252,7 +4252,11 @@ if (currentDriveService == null)
         }
         private void FavoriteButton_Click(object? sender, EventArgs e)
         {
-            if (!RequireTrustedDeviceForSensitiveAction("Change favorite status"))             {                 return;             } 
+            if (!RequireTrustedDeviceForSensitiveAction("Change favorite status"))
+            {
+                return;
+            }
+
             VaultEntry? entry = GetSelectedEntry();
 
             if (entry == null)
@@ -4264,13 +4268,15 @@ if (currentDriveService == null)
             entry.IsFavorite = !entry.IsFavorite;
             entry.UpdatedAt = DateTime.UtcNow;
 
-            int selectedIndex = vaultListBox.SelectedIndex;
+            VaultEntry changedEntry = entry;
 
             RefreshVaultList();
 
-            if (selectedIndex >= 0 && selectedIndex < vaultListBox.Items.Count)
+            int visibleIndex = visibleVaultEntries.IndexOf(changedEntry);
+
+            if (visibleIndex >= 0 && visibleIndex < vaultListBox.Items.Count)
             {
-                vaultListBox.SelectedIndex = selectedIndex;
+                vaultListBox.SelectedIndex = visibleIndex;
             }
 
             UpdateFavoriteButtonText();
@@ -4294,19 +4300,19 @@ if (currentDriveService == null)
 
             if (entry == null)
             {
-                favoriteButton.Text = "â˜† Favorite";
+                favoriteButton.Text = "\u2606 Favorite";
                 favoriteButton.BackColor = Color.FromArgb(35, 40, 60);
                 return;
             }
 
             if (entry.IsFavorite)
             {
-                favoriteButton.Text = "â˜… Favorited";
+                favoriteButton.Text = "\u2605 Favorited";
                 favoriteButton.BackColor = Color.FromArgb(120, 85, 35);
             }
             else
             {
-                favoriteButton.Text = "â˜† Favorite";
+                favoriteButton.Text = "\u2606 Favorite";
                 favoriteButton.BackColor = Color.FromArgb(35, 40, 60);
             }
         }
@@ -6258,57 +6264,58 @@ if (currentDriveService == null)
 
         private void RefreshVaultList()
         {
-            VaultEntry? selectedBeforeRefresh = GetSelectedEntry();
+            VaultEntry? previouslySelectedEntry = GetSelectedEntry();
+            string searchText = vaultSearchTextBox.Text.Trim();
 
-            vaultListBox.Items.Clear();
-            visibleVaultEntries.Clear();
+            IEnumerable<VaultEntry> entriesToShow = vaultEntries;
 
-            string cleanFilter = vaultSearchTextBox.Text.Trim().ToLowerInvariant();
-
-            IEnumerable<VaultEntry> filteredEntries = vaultEntries;
-
-            if (!string.IsNullOrWhiteSpace(cleanFilter))
+            if (!string.IsNullOrWhiteSpace(searchText))
             {
-                filteredEntries = filteredEntries.Where(entry =>
+                entriesToShow = entriesToShow.Where(entry =>
+                    entry.GetDisplayName().Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    (entry.Platform ?? "").Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    (entry.Username ?? "").Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    (entry.Website ?? "").Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    (entry.Note ?? "").Contains(searchText, StringComparison.OrdinalIgnoreCase)
+                );
+            }
+
+            List<VaultEntry> sortedEntries = entriesToShow
+                .OrderByDescending(entry => entry.IsFavorite)
+                .ThenBy(entry => entry.GetDisplayName(), StringComparer.CurrentCultureIgnoreCase)
+                .ThenByDescending(entry => entry.UpdatedAt)
+                .ToList();
+
+            vaultListBox.BeginUpdate();
+
+            try
+            {
+                vaultListBox.Items.Clear();
+                visibleVaultEntries.Clear();
+
+                foreach (VaultEntry entry in sortedEntries)
                 {
-                    string searchable =
-                        (entry.Platform + " " +
-                         entry.Username + " " +
-                         entry.Website + " " +
-                         entry.Note)
-                        .ToLowerInvariant();
+                    visibleVaultEntries.Add(entry);
 
-                    return searchable.Contains(cleanFilter);
-                });
+                    string listText = entry.IsFavorite
+                        ? "\u2605 " + entry.GetDisplayName()
+                        : "  " + entry.GetDisplayName();
+
+                    vaultListBox.Items.Add(listText);
+                }
+            }
+            finally
+            {
+                vaultListBox.EndUpdate();
             }
 
-            foreach (VaultEntry entry in filteredEntries)
+            if (previouslySelectedEntry != null)
             {
-                visibleVaultEntries.Add(entry);
+                int selectedIndex = visibleVaultEntries.IndexOf(previouslySelectedEntry);
 
-                string prefix = entry.IsFavorite ? "â­ " : "";
-                vaultListBox.Items.Add(prefix + entry.GetDisplayName());
-            }
-
-            if (vaultEntries.Count == 0)
-            {
-                selectedPreviewLabel.Text =
-                    "No saved logins yet." + Environment.NewLine +
-                    "Add your first login on the left.";
-            }
-            else if (visibleVaultEntries.Count == 0)
-            {
-                selectedPreviewLabel.Text =
-                    "No matching entries found." + Environment.NewLine +
-                    "Try another search.";
-            }
-            else if (selectedBeforeRefresh != null)
-            {
-                int newIndex = visibleVaultEntries.IndexOf(selectedBeforeRefresh);
-
-                if (newIndex >= 0 && newIndex < vaultListBox.Items.Count)
+                if (selectedIndex >= 0 && selectedIndex < vaultListBox.Items.Count)
                 {
-                    vaultListBox.SelectedIndex = newIndex;
+                    vaultListBox.SelectedIndex = selectedIndex;
                 }
             }
 
@@ -6816,6 +6823,8 @@ if (currentDriveService == null)
         {
             const int buttonWidth = 34;
             const int gap = 6;
+            const string showIcon = "\U0001F441";
+            const string hideIcon = "\U0001F648";
 
             targetTextBox.UseSystemPasswordChar = true;
 
@@ -6825,7 +6834,7 @@ if (currentDriveService == null)
             }
 
             Button toggleButton = new Button();
-            toggleButton.Text = "ðŸ‘";
+            toggleButton.Text = showIcon;
             toggleButton.Left = targetTextBox.Right + gap;
             toggleButton.Top = targetTextBox.Top;
             toggleButton.Width = buttonWidth;
@@ -6848,7 +6857,7 @@ if (currentDriveService == null)
             {
                 isVisible = !isVisible;
                 targetTextBox.UseSystemPasswordChar = !isVisible;
-                toggleButton.Text = isVisible ? "ðŸ™ˆ" : "ðŸ‘";
+                toggleButton.Text = isVisible ? hideIcon : showIcon;
 
                 targetTextBox.Focus();
                 targetTextBox.SelectionStart = targetTextBox.Text.Length;
