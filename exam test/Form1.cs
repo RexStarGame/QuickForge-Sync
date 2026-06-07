@@ -393,7 +393,7 @@ namespace exam_test
         {
             MessageBox.Show(
                 AppDisplayName + " " + AppVersion + Environment.NewLine + Environment.NewLine +
-                "Encrypted Windows vault with Google Drive appdata sync." + Environment.NewLine + Environment.NewLine +
+                "Encrypted Windows vault with Google Drive appDataFolder sync." + Environment.NewLine + Environment.NewLine +
                 "Status: Beta Preview" + Environment.NewLine +
                 "QuickForge encrypts vault data before syncing. Keep your vault code and recovery key safe." + Environment.NewLine + Environment.NewLine +
                 "Tested:" + Environment.NewLine +

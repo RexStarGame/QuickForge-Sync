@@ -1,4 +1,4 @@
-﻿# QuickForge Sync Test Checklist
+# QuickForge Sync Test Checklist
 
 
 
@@ -274,7 +274,7 @@ Expected result:
 
 
 
-## Current Alpha Verdict
+## Current Beta Testing Verdict
 
 
 
@@ -286,8 +286,8 @@ Only share with testers if:
 
 - All checklist items pass
 
-- Testers use fake data only
+- External testers use fake data only unless a controlled personal beta test was explicitly planned
 
-- No real passwords are stored
+- No critical or only-copy real passwords are stored during beta testing
 
 

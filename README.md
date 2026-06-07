@@ -1,4 +1,4 @@
-﻿# QuickForge Sync Beta Preview
+# QuickForge Sync Beta Preview
 
 [![QuickForge Tests](https://github.com/RexStarGame/QuickForge-Sync/actions/workflows/dotnet-tests.yml/badge.svg?branch=main)](https://github.com/RexStarGame/QuickForge-Sync/actions/workflows/dotnet-tests.yml)
 
@@ -27,7 +27,7 @@ Do not clone/build the source code unless you are testing as a developer.
 
 ## Main Features
 
-- Encrypted vault stored in Google Drive app data
+- Encrypted vault stored in Google Drive appDataFolder
 - Vault code and recovery key unlock support
 - QuickFill with Ctrl + Alt + Q
 - Password generator with copy and fill options
@@ -81,9 +81,9 @@ Favorite entries appear first.
 
 QuickForge Sync supports manual encrypted backup files.
 
-Default backup filename:
+Example backup filename:
 
-QuickForge-Backup.qfvault
+QuickForge-Encrypted-Backup-07-June-2026_at_23h36.qfvault
 
 These backups are still encrypted. They require your vault code or recovery key before import.
 
@@ -127,6 +127,7 @@ Current focus:
 - Better security feedback
 - Better backup/recovery flow
 - Cleaner release build
+- Current automated test suite: 30/30 passing locally
 
 ## Disclaimer
 
@@ -148,7 +149,7 @@ QuickForge Sync is a learning and prototype project. Do not rely on it as your o
 
 
 
-## Current beta status: v0.1.7-beta-preview
+## Current development status: v0.2.0-vault-hardening
 
 QuickForge Sync now supports controlled personal real-data beta use.
 
