@@ -7167,18 +7167,15 @@ if (currentDriveService == null)
                     return;
                 }
 
-                if (!string.IsNullOrWhiteSpace(lastKnownCloudFingerprint) &&
+                bool cloudLooksSame =
+                    !string.IsNullOrWhiteSpace(lastKnownCloudFingerprint) &&
                     string.Equals(
                         cloudMetadata.Fingerprint,
                         lastKnownCloudFingerprint,
                         StringComparison.Ordinal
-                    ))
-                {
-                    SetSyncStatus("Auto-check OK", success: true);
-                    return;
-                }
+                    );
 
-                SetSyncStatus("Auto-refreshing...");
+                SetSyncStatus(cloudLooksSame ? "Auto-refresh checking..." : "Auto-refreshing...");
 
                 await LoadVaultFromCloudAsync();
 
@@ -7187,6 +7184,8 @@ if (currentDriveService == null)
                 ApplyPerformanceSettingsToUi();
                 ApplyDeviceTrustRestrictionsToUi();
                 ShowRestrictedModeWarningIfNeeded();
+
+                SetSyncStatus(cloudLooksSame ? "Auto-refresh OK" : "Auto-refresh updated", success: true);
 
                 selectedPreviewLabel.Text =
                     "Auto-refresh completed." + Environment.NewLine +
