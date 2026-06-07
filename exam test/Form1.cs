@@ -5293,7 +5293,7 @@ if (currentDriveService == null)
 
         private string CreateDefaultEncryptedBackupFileName()
         {
-            return "QuickForge-Encrypted-Backup-" + DateTime.Now.ToString("dd-MMMM-yyyy_HH-mm-ss", System.Globalization.CultureInfo.InvariantCulture) + ".qfvault";
+            return "QuickForge-Encrypted-Backup-" + DateTime.Now.ToString("dd-MMMM-yyyy_'at'_HH'h'mm", System.Globalization.CultureInfo.InvariantCulture) + ".qfvault";
         }
 
         private void OpenFolderInExplorer(string folderPath)
