@@ -6271,7 +6271,7 @@ if (currentDriveService == null)
             using (Form dialog = new Form())
             {
                 dialog.Width = 960;
-                dialog.Height = 640;
+                dialog.Height = 700;
                 dialog.Text = "Device Trust";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -6315,7 +6315,7 @@ if (currentDriveService == null)
                 detailLabel.Left = 20;
                 detailLabel.Top = 318;
                 detailLabel.Width = 900;
-                detailLabel.Height = 128;
+                detailLabel.Height = 160;
                 detailLabel.ForeColor = softTextColor;
                 detailLabel.BackColor = Color.Transparent;
                 detailLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
@@ -6411,7 +6411,7 @@ if (currentDriveService == null)
                 Button untrustButton = new Button();
                 trustButton.Text = "Trust";
                 trustButton.Left = 20;
-                trustButton.Top = 470;
+                trustButton.Top = 515;
                 trustButton.Width = 110;
                 trustButton.Height = 34;
                 StyleActionButton(trustButton, true);
@@ -6454,7 +6454,7 @@ if (currentDriveService == null)
 
                 untrustButton.Text = "Untrust";
                 untrustButton.Left = 145;
-                untrustButton.Top = 470;
+                untrustButton.Top = 515;
                 untrustButton.Width = 110;
                 untrustButton.Height = 34;
                 StyleActionButton(untrustButton);
@@ -6508,7 +6508,7 @@ if (currentDriveService == null)
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
                 closeButton.Left = 820;
-                closeButton.Top = 470;
+                closeButton.Top = 515;
                 closeButton.Width = 110;
                 closeButton.Height = 34;
                 StyleActionButton(closeButton, true);
@@ -6516,9 +6516,9 @@ if (currentDriveService == null)
 
                 Label warningLabel = new Label();
                 warningLabel.Left = 20;
-                warningLabel.Top = 515;
+                warningLabel.Top = 565;
                 warningLabel.Width = 900;
-                warningLabel.Height = 70;
+                warningLabel.Height = 80;
                 warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
                 warningLabel.BackColor = Color.Transparent;
                 warningLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
