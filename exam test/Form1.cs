@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -2673,13 +2673,15 @@ namespace exam_test
 
             string message =
                 "This device is marked as UNTRUSTED for this vault." + Environment.NewLine + Environment.NewLine +
-                "Sensitive actions are disabled on this device:" + Environment.NewLine +
+                "QuickForge has disabled sensitive actions on this device:" + Environment.NewLine +
                 "- Reveal/copy passwords" + Environment.NewLine +
                 "- Open + Fill" + Environment.NewLine +
                 "- Add/edit/delete entries" + Environment.NewLine +
                 "- Backup/import" + Environment.NewLine +
-                "- Change vault code or recovery key" + Environment.NewLine + Environment.NewLine +
-                "Use another trusted device to trust this device again.";
+                "- Change vault code or recovery key" + Environment.NewLine +
+                "- Manage Device Trust" + Environment.NewLine + Environment.NewLine +
+                "To regain full access, open QuickForge on a trusted device, go to Security Center > Device Trust, select this device, and click Trust." + Environment.NewLine + Environment.NewLine +
+                "If you do not recognize this device, check your Google Account security, remove unknown signed-in devices, change your Google password, enable 2-step verification, then rotate your QuickForge vault code and recovery key from a trusted device.";
 
             MessageBox.Show(
                 message,
@@ -2705,7 +2707,8 @@ namespace exam_test
                 "This device is UNTRUSTED, so QuickForge blocked this action:" +
                 Environment.NewLine + Environment.NewLine +
                 actionName + Environment.NewLine + Environment.NewLine +
-                "Use another trusted device to trust this device again.";
+                "To regain full access, open QuickForge on a trusted device, go to Security Center > Device Trust, select this device, and click Trust." + Environment.NewLine + Environment.NewLine +
+                "If you do not recognize this device, check your Google Account security, remove unknown signed-in devices, change your Google password, enable 2-step verification, then rotate your QuickForge vault code and recovery key from a trusted device.";
 
             SetPreviewText(
                 "UNTRUSTED DEVICE MODE",
@@ -5665,7 +5668,7 @@ if (currentDriveService == null)
                 Label introLabel = new Label();
                 introLabel.Text =
                     "Review devices that have opened or synced this vault." + Environment.NewLine +
-                    "Trusted devices can manage the vault. Untrusted devices are limited to read-only safety access.";
+                    "First device is trusted automatically. New devices start untrusted until approved from a trusted device.";
                 introLabel.Left = 20;
                 introLabel.Top = 52;
                 introLabel.Width = 660;
@@ -5883,8 +5886,8 @@ if (currentDriveService == null)
                 warningLabel.BackColor = Color.Transparent;
                 warningLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
                 warningLabel.Text = IsRestrictedModeActive()
-                    ? "Device Trust is read-only on this untrusted device. Use another trusted device to trust this device again."
-                    : "Trust gives full vault access. Untrust enables Restricted Mode: no reveal, copy, edit, backup, vault-code change, recovery-key rotation, or Device Trust management.";
+                    ? "Device Trust is read-only on this untrusted device. To regain full access, approve this device from another trusted device. If this device is suspicious, check your Google Account security first."
+                    : "Trusted devices have full vault access and can approve other devices. Only trust devices you own and control. If you see an unknown device, untrust it, check your Google Account security, then rotate your QuickForge vault code and recovery key.";
 
                 dialog.Controls.Add(titleLabel);
                 dialog.Controls.Add(introLabel);
