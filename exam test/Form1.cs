@@ -400,7 +400,7 @@ namespace exam_test
                 "- Public release ZIP works" + Environment.NewLine +
                 "- Google login works on separate accounts" + Environment.NewLine +
                 "- Vault data is isolated per Google account" + Environment.NewLine +
-                "- 19 automated crypto/backup tests pass",
+                "- 30 automated crypto/backup/restore tests pass",
                 "About QuickForge Sync",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information
