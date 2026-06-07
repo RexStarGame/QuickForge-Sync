@@ -3753,6 +3753,7 @@ namespace exam_test
             bool confirmed = false;
             string currentCode = "";
             string newCode = "";
+            string copiedNewCode = "";
 
             int CalculateVaultCodeScore(string code)
             {
@@ -3776,8 +3777,8 @@ namespace exam_test
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 680;
-                dialog.Height = 610;
+                dialog.Width = 720;
+                dialog.Height = 675;
                 dialog.Text = "Change vault code";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -3789,7 +3790,7 @@ namespace exam_test
                 titleLabel.Text = "Change vault code";
                 titleLabel.Left = 24;
                 titleLabel.Top = 20;
-                titleLabel.Width = 600;
+                titleLabel.Width = 640;
                 titleLabel.Height = 34;
                 titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
@@ -3799,7 +3800,7 @@ namespace exam_test
                 subtitleLabel.Text = "Choose a stronger vault code. Your encrypted vault will be saved to Google Drive after the change.";
                 subtitleLabel.Left = 24;
                 subtitleLabel.Top = 58;
-                subtitleLabel.Width = 610;
+                subtitleLabel.Width = 650;
                 subtitleLabel.Height = 42;
                 subtitleLabel.ForeColor = softTextColor;
                 subtitleLabel.BackColor = Color.Transparent;
@@ -3808,16 +3809,40 @@ namespace exam_test
                 Panel inputPanel = new Panel();
                 inputPanel.Left = 24;
                 inputPanel.Top = 115;
-                inputPanel.Width = 610;
+                inputPanel.Width = 660;
                 inputPanel.Height = 245;
                 inputPanel.BackColor = Color.FromArgb(24, 28, 44);
                 inputPanel.BorderStyle = BorderStyle.FixedSingle;
+                Button CreateEyeButton(TextBox targetTextBox, int left, int top, string tooltip)
+                {
+                    Button eyeButton = new Button();
+                    eyeButton.Text = "👁";
+                    eyeButton.Left = left;
+                    eyeButton.Top = top;
+                    eyeButton.Width = 34;
+                    eyeButton.Height = 28;
+                    eyeButton.FlatStyle = FlatStyle.Flat;
+                    eyeButton.ForeColor = Color.White;
+                    eyeButton.BackColor = Color.FromArgb(35, 40, 60);
+                    eyeButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
+                    eyeButton.TabStop = false;
+
+                    vaultToolTip.SetToolTip(eyeButton, tooltip);
+
+                    eyeButton.Click += (s, e) =>
+                    {
+                        targetTextBox.UseSystemPasswordChar = !targetTextBox.UseSystemPasswordChar;
+                        eyeButton.Text = targetTextBox.UseSystemPasswordChar ? "👁" : "🙈";
+                    };
+
+                    return eyeButton;
+                }
 
                 Label currentCodeLabel = new Label();
                 currentCodeLabel.Text = "Current vault code or recovery key";
                 currentCodeLabel.Left = 16;
                 currentCodeLabel.Top = 14;
-                currentCodeLabel.Width = 560;
+                currentCodeLabel.Width = 600;
                 currentCodeLabel.Height = 22;
                 currentCodeLabel.ForeColor = Color.White;
                 currentCodeLabel.BackColor = Color.Transparent;
@@ -3826,16 +3851,23 @@ namespace exam_test
                 TextBox currentCodeTextBox = new TextBox();
                 currentCodeTextBox.Left = 16;
                 currentCodeTextBox.Top = 38;
-                currentCodeTextBox.Width = 560;
+                currentCodeTextBox.Width = 585;
                 currentCodeTextBox.Height = 28;
                 currentCodeTextBox.UseSystemPasswordChar = true;
                 currentCodeTextBox.PlaceholderText = "Enter current vault code or recovery key";
+
+                Button currentEyeButton = CreateEyeButton(
+                    currentCodeTextBox,
+                    610,
+                    currentCodeTextBox.Top,
+                    "Show or hide the current vault code/recovery key."
+                );
 
                 Label newCodeLabel = new Label();
                 newCodeLabel.Text = "New vault code";
                 newCodeLabel.Left = 16;
                 newCodeLabel.Top = 82;
-                newCodeLabel.Width = 560;
+                newCodeLabel.Width = 600;
                 newCodeLabel.Height = 22;
                 newCodeLabel.ForeColor = Color.White;
                 newCodeLabel.BackColor = Color.Transparent;
@@ -3844,16 +3876,23 @@ namespace exam_test
                 TextBox newCodeTextBox = new TextBox();
                 newCodeTextBox.Left = 16;
                 newCodeTextBox.Top = 106;
-                newCodeTextBox.Width = 560;
+                newCodeTextBox.Width = 585;
                 newCodeTextBox.Height = 28;
                 newCodeTextBox.UseSystemPasswordChar = true;
                 newCodeTextBox.PlaceholderText = "Example style: River-Forge-72#Moon";
+
+                Button newEyeButton = CreateEyeButton(
+                    newCodeTextBox,
+                    610,
+                    newCodeTextBox.Top,
+                    "Show or hide the new vault code."
+                );
 
                 Label strengthLabel = new Label();
                 strengthLabel.Text = "Strength: Not checked yet";
                 strengthLabel.Left = 16;
                 strengthLabel.Top = 138;
-                strengthLabel.Width = 560;
+                strengthLabel.Width = 620;
                 strengthLabel.Height = 22;
                 strengthLabel.ForeColor = softTextColor;
                 strengthLabel.BackColor = Color.Transparent;
@@ -3862,7 +3901,7 @@ namespace exam_test
                 Panel strengthTrack = new Panel();
                 strengthTrack.Left = 16;
                 strengthTrack.Top = 162;
-                strengthTrack.Width = 560;
+                strengthTrack.Width = 620;
                 strengthTrack.Height = 7;
                 strengthTrack.BackColor = Color.FromArgb(35, 40, 60);
 
@@ -3879,7 +3918,7 @@ namespace exam_test
                 confirmCodeLabel.Text = "Confirm new vault code";
                 confirmCodeLabel.Left = 16;
                 confirmCodeLabel.Top = 180;
-                confirmCodeLabel.Width = 560;
+                confirmCodeLabel.Width = 600;
                 confirmCodeLabel.Height = 22;
                 confirmCodeLabel.ForeColor = Color.White;
                 confirmCodeLabel.BackColor = Color.Transparent;
@@ -3888,24 +3927,34 @@ namespace exam_test
                 TextBox confirmCodeTextBox = new TextBox();
                 confirmCodeTextBox.Left = 16;
                 confirmCodeTextBox.Top = 204;
-                confirmCodeTextBox.Width = 560;
+                confirmCodeTextBox.Width = 585;
                 confirmCodeTextBox.Height = 28;
                 confirmCodeTextBox.UseSystemPasswordChar = true;
                 confirmCodeTextBox.PlaceholderText = "Repeat new vault code";
 
+                Button confirmEyeButton = CreateEyeButton(
+                    confirmCodeTextBox,
+                    610,
+                    confirmCodeTextBox.Top,
+                    "Show or hide the repeated new vault code."
+                );
+
                 inputPanel.Controls.Add(currentCodeLabel);
                 inputPanel.Controls.Add(currentCodeTextBox);
+                inputPanel.Controls.Add(currentEyeButton);
                 inputPanel.Controls.Add(newCodeLabel);
                 inputPanel.Controls.Add(newCodeTextBox);
+                inputPanel.Controls.Add(newEyeButton);
                 inputPanel.Controls.Add(strengthLabel);
                 inputPanel.Controls.Add(strengthTrack);
                 inputPanel.Controls.Add(confirmCodeLabel);
                 inputPanel.Controls.Add(confirmCodeTextBox);
+                inputPanel.Controls.Add(confirmEyeButton);
 
                 Panel warningPanel = new Panel();
                 warningPanel.Left = 24;
                 warningPanel.Top = 380;
-                warningPanel.Width = 610;
+                warningPanel.Width = 660;
                 warningPanel.Height = 92;
                 warningPanel.BackColor = Color.FromArgb(36, 30, 30);
                 warningPanel.BorderStyle = BorderStyle.FixedSingle;
@@ -3914,7 +3963,7 @@ namespace exam_test
                 warningTitle.Text = "Before you change it";
                 warningTitle.Left = 14;
                 warningTitle.Top = 10;
-                warningTitle.Width = 560;
+                warningTitle.Width = 620;
                 warningTitle.Height = 22;
                 warningTitle.ForeColor = Color.FromArgb(255, 190, 90);
                 warningTitle.BackColor = Color.Transparent;
@@ -3923,10 +3972,10 @@ namespace exam_test
                 Label warningText = new Label();
                 warningText.Text =
                     "After this, your old vault code will stop working." + Environment.NewLine +
-                    "Your recovery key still matters. Keep it safe and create an encrypted backup.";
+                    "Copy the new vault code first, then store it safely with your recovery key.";
                 warningText.Left = 14;
                 warningText.Top = 36;
-                warningText.Width = 560;
+                warningText.Width = 620;
                 warningText.Height = 45;
                 warningText.ForeColor = softTextColor;
                 warningText.BackColor = Color.Transparent;
@@ -3934,31 +3983,30 @@ namespace exam_test
 
                 warningPanel.Controls.Add(warningTitle);
                 warningPanel.Controls.Add(warningText);
-
-                CheckBox showCodesCheckBox = new CheckBox();
-                showCodesCheckBox.Text = "Show typed codes";
-                showCodesCheckBox.Left = 24;
-                showCodesCheckBox.Top = 490;
-                showCodesCheckBox.Width = 170;
-                showCodesCheckBox.Height = 28;
-                showCodesCheckBox.ForeColor = softTextColor;
-                showCodesCheckBox.BackColor = Color.Transparent;
-                showCodesCheckBox.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+                Button copyNewCodeButton = new Button();
+                copyNewCodeButton.Text = "Copy new code";
+                copyNewCodeButton.Left = 24;
+                copyNewCodeButton.Top = 495;
+                copyNewCodeButton.Width = 135;
+                copyNewCodeButton.Height = 34;
+                copyNewCodeButton.Enabled = false;
+                StyleActionButton(copyNewCodeButton, true);
+                vaultToolTip.SetToolTip(copyNewCodeButton, "Copy the new vault code before changing it. Clipboard clears after 60 seconds.");
 
                 Label statusLabel = new Label();
                 statusLabel.Text = "Enter your current code and choose a strong new vault code.";
-                statusLabel.Left = 205;
-                statusLabel.Top = 490;
-                statusLabel.Width = 430;
-                statusLabel.Height = 28;
+                statusLabel.Left = 175;
+                statusLabel.Top = 492;
+                statusLabel.Width = 505;
+                statusLabel.Height = 42;
                 statusLabel.ForeColor = softTextColor;
                 statusLabel.BackColor = Color.Transparent;
                 statusLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
 
                 Button cancelButton = new Button();
                 cancelButton.Text = "Cancel";
-                cancelButton.Left = 410;
-                cancelButton.Top = 535;
+                cancelButton.Left = 455;
+                cancelButton.Top = 575;
                 cancelButton.Width = 100;
                 cancelButton.Height = 34;
                 cancelButton.DialogResult = DialogResult.Cancel;
@@ -3966,8 +4014,8 @@ namespace exam_test
 
                 Button confirmButton = new Button();
                 confirmButton.Text = "Change code";
-                confirmButton.Left = 525;
-                confirmButton.Top = 535;
+                confirmButton.Left = 570;
+                confirmButton.Top = 575;
                 confirmButton.Width = 110;
                 confirmButton.Height = 34;
                 confirmButton.Enabled = false;
@@ -3983,6 +4031,14 @@ namespace exam_test
                     strengthFill.Width = (int)(strengthTrack.Width * (score / 100.0));
 
                     bool strong = VaultCodePolicy.IsStrongEnough(next, out string warning);
+                    bool matches = !string.IsNullOrWhiteSpace(next) && next == confirm;
+                    bool copiedCurrentCode = copiedNewCode == next;
+
+                    if (!copiedCurrentCode && !string.IsNullOrWhiteSpace(copiedNewCode))
+                    {
+                        copiedNewCode = "";
+                        copyNewCodeButton.Text = "Copy new code";
+                    }
 
                     if (string.IsNullOrWhiteSpace(next))
                     {
@@ -4009,6 +4065,8 @@ namespace exam_test
                         strengthFill.BackColor = Color.FromArgb(255, 190, 90);
                     }
 
+                    copyNewCodeButton.Enabled = strong && matches;
+
                     if (string.IsNullOrWhiteSpace(current))
                     {
                         statusLabel.Text = "Enter your current vault code or recovery key.";
@@ -4025,9 +4083,17 @@ namespace exam_test
                         return;
                     }
 
-                    if (next != confirm)
+                    if (!matches)
                     {
                         statusLabel.Text = "New vault codes do not match yet.";
+                        statusLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                        confirmButton.Enabled = false;
+                        return;
+                    }
+
+                    if (!copiedCurrentCode)
+                    {
+                        statusLabel.Text = "Copy the new vault code before changing it.";
                         statusLabel.ForeColor = Color.FromArgb(255, 190, 90);
                         confirmButton.Enabled = false;
                         return;
@@ -4042,16 +4108,44 @@ namespace exam_test
                 newCodeTextBox.TextChanged += (s, e) => UpdateState();
                 confirmCodeTextBox.TextChanged += (s, e) => UpdateState();
 
-                showCodesCheckBox.CheckedChanged += (s, e) =>
+                
+                copyNewCodeButton.Click += (s, e) =>
                 {
-                    bool hide = !showCodesCheckBox.Checked;
-                    currentCodeTextBox.UseSystemPasswordChar = hide;
-                    newCodeTextBox.UseSystemPasswordChar = hide;
-                    confirmCodeTextBox.UseSystemPasswordChar = hide;
-                };
+                    string next = newCodeTextBox.Text.Trim();
+                    string confirm = confirmCodeTextBox.Text.Trim();
 
+                    if (!VaultCodePolicy.IsStrongEnough(next, out string warning))
+                    {
+                        statusLabel.Text = "New vault code is too weak: " + warning;
+                        statusLabel.ForeColor = dangerColor;
+                        return;
+                    }
+
+                    if (next != confirm)
+                    {
+                        statusLabel.Text = "New vault codes do not match yet.";
+                        statusLabel.ForeColor = dangerColor;
+                        return;
+                    }
+
+                    Clipboard.SetText(next);
+                    copiedNewCode = next;
+                    copyNewCodeButton.Text = "Copied";
+                    statusLabel.Text = "Copied. Store it safely. Clipboard clears in 60 seconds.";
+                    statusLabel.ForeColor = successColor;
+                    _ = ClearClipboardLaterAsync(next, 60000);
+                    UpdateState();
+                };
                 confirmButton.Click += (s, e) =>
                 {
+                    string next = newCodeTextBox.Text.Trim();
+
+                    if (copiedNewCode != next)
+                    {
+                        statusLabel.Text = "Copy the new vault code before changing it.";
+                        statusLabel.ForeColor = dangerColor;
+                        return;
+                    }
                     if (!VaultCodePolicy.IsStrongEnough(newCodeTextBox.Text.Trim(), out string warning))
                     {
                         statusLabel.Text = "New vault code is too weak: " + warning;
@@ -4076,7 +4170,7 @@ namespace exam_test
 
                     confirmed = true;
                     currentCode = currentCodeTextBox.Text.Trim();
-                    newCode = newCodeTextBox.Text.Trim();
+                    newCode = next;
 
                     currentCodeTextBox.Clear();
                     newCodeTextBox.Clear();
@@ -4102,7 +4196,7 @@ namespace exam_test
                 dialog.Controls.Add(subtitleLabel);
                 dialog.Controls.Add(inputPanel);
                 dialog.Controls.Add(warningPanel);
-                dialog.Controls.Add(showCodesCheckBox);
+                dialog.Controls.Add(copyNewCodeButton);
                 dialog.Controls.Add(statusLabel);
                 dialog.Controls.Add(cancelButton);
                 dialog.Controls.Add(confirmButton);
