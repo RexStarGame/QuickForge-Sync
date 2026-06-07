@@ -4892,8 +4892,8 @@ if (currentDriveService == null)
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 560;
-                dialog.Height = 390;
+                dialog.Width = 660;
+                dialog.Height = 520;
                 dialog.Text = "Save Recovery Key";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -4902,78 +4902,135 @@ if (currentDriveService == null)
                 dialog.BackColor = Color.FromArgb(16, 20, 34);
 
                 Label titleLabel = new Label();
-                titleLabel.Text = "Your recovery key";
-                titleLabel.Left = 20;
-                titleLabel.Top = 18;
-                titleLabel.Width = 460;
-                titleLabel.Height = 24;
+                titleLabel.Text = "Save your recovery key";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 580;
+                titleLabel.Height = 34;
                 titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
-                titleLabel.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
 
-                Label infoLabel = new Label();
-                infoLabel.Text = "Save this key somewhere safe. It can unlock your vault if you forget your vault code.";
-                infoLabel.Left = 20;
-                infoLabel.Top = 45;
-                infoLabel.Width = 460;
-                infoLabel.Height = 35;
-                infoLabel.ForeColor = softTextColor;
-                infoLabel.BackColor = Color.Transparent;
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "This key can unlock your vault if you forget your vault code. Copy it and store it somewhere safe.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 590;
+                subtitleLabel.Height = 45;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+
+                Panel keyPanel = new Panel();
+                keyPanel.Left = 24;
+                keyPanel.Top = 115;
+                keyPanel.Width = 590;
+                keyPanel.Height = 105;
+                keyPanel.BackColor = Color.FromArgb(24, 28, 44);
+                keyPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label keyLabel = new Label();
+                keyLabel.Text = "Recovery key";
+                keyLabel.Left = 14;
+                keyLabel.Top = 12;
+                keyLabel.Width = 540;
+                keyLabel.Height = 22;
+                keyLabel.ForeColor = Color.White;
+                keyLabel.BackColor = Color.Transparent;
+                keyLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
 
                 TextBox keyTextBox = new TextBox();
-                keyTextBox.Left = 20;
-                keyTextBox.Top = 85;
-                keyTextBox.Width = 460;
-                keyTextBox.Height = 26;
+                keyTextBox.Left = 14;
+                keyTextBox.Top = 44;
+                keyTextBox.Width = 555;
+                keyTextBox.Height = 28;
                 keyTextBox.ReadOnly = true;
                 keyTextBox.Text = recoveryKey;
-                keyTextBox.BackColor = Color.FromArgb(24, 28, 44);
+                keyTextBox.BackColor = Color.FromArgb(16, 20, 34);
                 keyTextBox.ForeColor = Color.White;
                 keyTextBox.BorderStyle = BorderStyle.FixedSingle;
+                keyTextBox.Font = new Font("Consolas", 10, FontStyle.Regular);
 
-                Label warningLabel = new Label();
-                warningLabel.Left = 20;
-                warningLabel.Top = 470;
-                warningLabel.Width = 460;
-                warningLabel.Height = 55;
-                warningLabel.Text =
-                    "For safety, QuickForge will not download this as a plain text file.\n" +
-                    "Copy it and store it somewhere safe outside this app.";
-                warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
-                warningLabel.BackColor = Color.Transparent;
+                Label copyStatusLabel = new Label();
+                copyStatusLabel.Text = "Not copied yet.";
+                copyStatusLabel.Left = 14;
+                copyStatusLabel.Top = 76;
+                copyStatusLabel.Width = 555;
+                copyStatusLabel.Height = 20;
+                copyStatusLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                copyStatusLabel.BackColor = Color.Transparent;
+                copyStatusLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+                keyPanel.Controls.Add(keyLabel);
+                keyPanel.Controls.Add(keyTextBox);
+                keyPanel.Controls.Add(copyStatusLabel);
+
+                Panel warningPanel = new Panel();
+                warningPanel.Left = 24;
+                warningPanel.Top = 240;
+                warningPanel.Width = 590;
+                warningPanel.Height = 95;
+                warningPanel.BackColor = Color.FromArgb(36, 30, 30);
+                warningPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label warningTitle = new Label();
+                warningTitle.Text = "Important";
+                warningTitle.Left = 14;
+                warningTitle.Top = 10;
+                warningTitle.Width = 540;
+                warningTitle.Height = 22;
+                warningTitle.ForeColor = Color.FromArgb(255, 190, 90);
+                warningTitle.BackColor = Color.Transparent;
+                warningTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label warningText = new Label();
+                warningText.Text =
+                    "QuickForge will not save this as a plain text file." + Environment.NewLine +
+                    "Keep your recovery key separate from your encrypted backup file.";
+                warningText.Left = 14;
+                warningText.Top = 36;
+                warningText.Width = 540;
+                warningText.Height = 45;
+                warningText.ForeColor = softTextColor;
+                warningText.BackColor = Color.Transparent;
+                warningText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                warningPanel.Controls.Add(warningTitle);
+                warningPanel.Controls.Add(warningText);
 
                 Button copyButton = new Button();
                 copyButton.Text = "Copy recovery key";
-                copyButton.Left = 20;
-                copyButton.Top = 185;
+                copyButton.Left = 24;
+                copyButton.Top = 360;
                 copyButton.Width = 160;
-                copyButton.Height = 32;
+                copyButton.Height = 36;
                 StyleActionButton(copyButton, true);
 
                 CheckBox savedCheckBox = new CheckBox();
-                savedCheckBox.Text = "I have saved this recovery key safely";
-                savedCheckBox.Left = 20;
-                savedCheckBox.Top = 230;
-                savedCheckBox.Width = 330;
+                savedCheckBox.Text = "I have saved this recovery key somewhere safe";
+                savedCheckBox.Left = 24;
+                savedCheckBox.Top = 410;
+                savedCheckBox.Width = 380;
                 savedCheckBox.Height = 28;
                 savedCheckBox.ForeColor = softTextColor;
                 savedCheckBox.BackColor = Color.Transparent;
+                savedCheckBox.Font = new Font("Segoe UI", 9, FontStyle.Regular);
 
                 Button cancelButton = new Button();
                 cancelButton.Text = "Cancel setup";
-                cancelButton.Left = 230;
-                cancelButton.Top = 270;
-                cancelButton.Width = 110;
-                cancelButton.Height = 32;
+                cancelButton.Left = 375;
+                cancelButton.Top = 450;
+                cancelButton.Width = 115;
+                cancelButton.Height = 34;
                 cancelButton.DialogResult = DialogResult.Cancel;
                 StyleActionButton(cancelButton);
 
                 Button continueButton = new Button();
                 continueButton.Text = "Continue";
-                continueButton.Left = 355;
-                continueButton.Top = 270;
-                continueButton.Width = 125;
-                continueButton.Height = 32;
+                continueButton.Left = 505;
+                continueButton.Top = 450;
+                continueButton.Width = 110;
+                continueButton.Height = 34;
                 continueButton.Enabled = false;
                 StyleActionButton(continueButton, true);
 
@@ -4987,6 +5044,8 @@ if (currentDriveService == null)
                     Clipboard.SetText(recoveryKey);
                     copied = true;
                     copyButton.Text = "Copied";
+                    copyStatusLabel.Text = "Copied. Store it somewhere safe outside QuickForge.";
+                    copyStatusLabel.ForeColor = successColor;
                     _ = ClearClipboardLaterAsync(recoveryKey, 60000);
                     UpdateContinueState();
                 };
@@ -5005,9 +5064,9 @@ if (currentDriveService == null)
                 };
 
                 dialog.Controls.Add(titleLabel);
-                dialog.Controls.Add(infoLabel);
-                dialog.Controls.Add(keyTextBox);
-                dialog.Controls.Add(warningLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(keyPanel);
+                dialog.Controls.Add(warningPanel);
                 dialog.Controls.Add(copyButton);
                 dialog.Controls.Add(savedCheckBox);
                 dialog.Controls.Add(cancelButton);
@@ -5028,8 +5087,8 @@ if (currentDriveService == null)
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 560;
-                dialog.Height = 370;
+                dialog.Width = 660;
+                dialog.Height = 540;
                 dialog.Text = "Rotate Recovery Key";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -5039,68 +5098,135 @@ if (currentDriveService == null)
 
                 Label titleLabel = new Label();
                 titleLabel.Text = "New recovery key";
-                titleLabel.Left = 20;
-                titleLabel.Top = 18;
-                titleLabel.Width = 460;
-                titleLabel.Height = 24;
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 580;
+                titleLabel.Height = 34;
                 titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
-                titleLabel.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "Copy this new key and store it safely. After rotation, your old recovery key will stop working.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 590;
+                subtitleLabel.Height = 45;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+
+                Panel keyPanel = new Panel();
+                keyPanel.Left = 24;
+                keyPanel.Top = 115;
+                keyPanel.Width = 590;
+                keyPanel.Height = 105;
+                keyPanel.BackColor = Color.FromArgb(24, 28, 44);
+                keyPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label keyLabel = new Label();
+                keyLabel.Text = "New recovery key";
+                keyLabel.Left = 14;
+                keyLabel.Top = 12;
+                keyLabel.Width = 540;
+                keyLabel.Height = 22;
+                keyLabel.ForeColor = Color.White;
+                keyLabel.BackColor = Color.Transparent;
+                keyLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
 
                 TextBox keyTextBox = new TextBox();
-                keyTextBox.Left = 20;
-                keyTextBox.Top = 55;
-                keyTextBox.Width = 460;
-                keyTextBox.Height = 26;
+                keyTextBox.Left = 14;
+                keyTextBox.Top = 44;
+                keyTextBox.Width = 555;
+                keyTextBox.Height = 28;
                 keyTextBox.ReadOnly = true;
                 keyTextBox.Text = newRecoveryKey;
-                keyTextBox.BackColor = Color.FromArgb(24, 28, 44);
+                keyTextBox.BackColor = Color.FromArgb(16, 20, 34);
                 keyTextBox.ForeColor = Color.White;
                 keyTextBox.BorderStyle = BorderStyle.FixedSingle;
+                keyTextBox.Font = new Font("Consolas", 10, FontStyle.Regular);
 
-                Label warningLabel = new Label();
-                warningLabel.Left = 20;
-                warningLabel.Top = 470;
-                warningLabel.Width = 460;
-                warningLabel.Height = 55;
-                warningLabel.Text =
-                    "For safety, QuickForge will not download this as a plain text file.\n" +
-                    "Copy it and store it somewhere safe. After rotation, the old recovery key will stop working.";
-                warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
-                warningLabel.BackColor = Color.Transparent;
+                Label copyStatusLabel = new Label();
+                copyStatusLabel.Text = "Not copied yet.";
+                copyStatusLabel.Left = 14;
+                copyStatusLabel.Top = 76;
+                copyStatusLabel.Width = 555;
+                copyStatusLabel.Height = 20;
+                copyStatusLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                copyStatusLabel.BackColor = Color.Transparent;
+                copyStatusLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+                keyPanel.Controls.Add(keyLabel);
+                keyPanel.Controls.Add(keyTextBox);
+                keyPanel.Controls.Add(copyStatusLabel);
+
+                Panel warningPanel = new Panel();
+                warningPanel.Left = 24;
+                warningPanel.Top = 240;
+                warningPanel.Width = 590;
+                warningPanel.Height = 115;
+                warningPanel.BackColor = Color.FromArgb(36, 30, 30);
+                warningPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label warningTitle = new Label();
+                warningTitle.Text = "Before you confirm";
+                warningTitle.Left = 14;
+                warningTitle.Top = 10;
+                warningTitle.Width = 540;
+                warningTitle.Height = 22;
+                warningTitle.ForeColor = Color.FromArgb(255, 190, 90);
+                warningTitle.BackColor = Color.Transparent;
+                warningTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label warningText = new Label();
+                warningText.Text =
+                    "Save the new key before continuing." + Environment.NewLine +
+                    "After rotation, the old recovery key will no longer unlock this vault." + Environment.NewLine +
+                    "Keep your recovery key separate from your encrypted backup file.";
+                warningText.Left = 14;
+                warningText.Top = 36;
+                warningText.Width = 540;
+                warningText.Height = 65;
+                warningText.ForeColor = softTextColor;
+                warningText.BackColor = Color.Transparent;
+                warningText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                warningPanel.Controls.Add(warningTitle);
+                warningPanel.Controls.Add(warningText);
 
                 Button copyButton = new Button();
                 copyButton.Text = "Copy recovery key";
-                copyButton.Left = 20;
-                copyButton.Top = 170;
+                copyButton.Left = 24;
+                copyButton.Top = 380;
                 copyButton.Width = 160;
-                copyButton.Height = 32;
+                copyButton.Height = 36;
                 StyleActionButton(copyButton, true);
 
                 CheckBox savedCheckBox = new CheckBox();
-                savedCheckBox.Text = "I have saved this recovery key safely";
-                savedCheckBox.Left = 20;
-                savedCheckBox.Top = 215;
-                savedCheckBox.Width = 330;
+                savedCheckBox.Text = "I have saved this new recovery key safely";
+                savedCheckBox.Left = 24;
+                savedCheckBox.Top = 430;
+                savedCheckBox.Width = 380;
                 savedCheckBox.Height = 28;
                 savedCheckBox.ForeColor = softTextColor;
                 savedCheckBox.BackColor = Color.Transparent;
+                savedCheckBox.Font = new Font("Segoe UI", 9, FontStyle.Regular);
 
                 Button cancelButton = new Button();
                 cancelButton.Text = "Cancel";
-                cancelButton.Left = 230;
-                cancelButton.Top = 255;
-                cancelButton.Width = 95;
-                cancelButton.Height = 32;
+                cancelButton.Left = 370;
+                cancelButton.Top = 470;
+                cancelButton.Width = 110;
+                cancelButton.Height = 34;
                 cancelButton.DialogResult = DialogResult.Cancel;
                 StyleActionButton(cancelButton);
 
                 Button confirmButton = new Button();
                 confirmButton.Text = "Confirm rotation";
-                confirmButton.Left = 340;
-                confirmButton.Top = 255;
-                confirmButton.Width = 140;
-                confirmButton.Height = 32;
+                confirmButton.Left = 495;
+                confirmButton.Top = 470;
+                confirmButton.Width = 120;
+                confirmButton.Height = 34;
                 confirmButton.Enabled = false;
                 StyleActionButton(confirmButton, true);
 
@@ -5114,6 +5240,8 @@ if (currentDriveService == null)
                     Clipboard.SetText(newRecoveryKey);
                     copied = true;
                     copyButton.Text = "Copied";
+                    copyStatusLabel.Text = "Copied. Save it before confirming rotation.";
+                    copyStatusLabel.ForeColor = successColor;
                     _ = ClearClipboardLaterAsync(newRecoveryKey, 60000);
                     UpdateConfirmState();
                 };
@@ -5132,8 +5260,9 @@ if (currentDriveService == null)
                 };
 
                 dialog.Controls.Add(titleLabel);
-                dialog.Controls.Add(keyTextBox);
-                dialog.Controls.Add(warningLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(keyPanel);
+                dialog.Controls.Add(warningPanel);
                 dialog.Controls.Add(copyButton);
                 dialog.Controls.Add(savedCheckBox);
                 dialog.Controls.Add(confirmButton);
@@ -8843,7 +8972,6 @@ if (currentDriveService == null)
         }
     }
 }
-
 
 
 
