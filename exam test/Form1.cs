@@ -533,7 +533,7 @@ namespace exam_test
             vaultAccessPanel.Left = 140;
             vaultAccessPanel.Top = 130;
             vaultAccessPanel.Width = 520;
-            vaultAccessPanel.Height = 505;
+            vaultAccessPanel.Height = 560;
             vaultAccessPanel.BackColor = Color.FromArgb(16, 20, 34);
             vaultAccessPanel.BorderStyle = BorderStyle.FixedSingle;
 
@@ -653,9 +653,9 @@ namespace exam_test
 
             vaultUnlockStatusLabel.Text = "";
             vaultUnlockStatusLabel.Left = 24;
-            vaultUnlockStatusLabel.Top = 300;
+            vaultUnlockStatusLabel.Top = 370;
             vaultUnlockStatusLabel.Width = 470;
-            vaultUnlockStatusLabel.Height = 105;
+            vaultUnlockStatusLabel.Height = 70;
             vaultUnlockStatusLabel.ForeColor = softTextColor;
             vaultUnlockStatusLabel.BackColor = Color.FromArgb(20, 25, 42);
             vaultUnlockStatusLabel.BorderStyle = BorderStyle.FixedSingle;
@@ -1638,7 +1638,7 @@ namespace exam_test
             SetVaultAccessButtonRowTop(430);
             UpdateVaultUnlockStatusLabel();
             unlockStatusTimer.Start();
-            createVaultButton.Text = "Unlock Vault";
+            createVaultButton.Text = "Unlock vault";
 
             vaultCodeTextBox.Clear();
             confirmVaultCodeTextBox.Clear();
