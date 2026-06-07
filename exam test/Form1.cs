@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -7513,6 +7513,7 @@ if (currentDriveService == null)
             {
                 quickFillTargetWindow = activeWindow;
             }
+
             if (currentDriveService == null)
             {
                 ShowMainWindow();
@@ -7524,6 +7525,13 @@ if (currentDriveService == null)
             {
                 ShowMainWindow();
                 MessageBox.Show("Unlock your vault first.");
+                return;
+            }
+
+            if (IsRestrictedModeActive())
+            {
+                ShowMainWindow();
+                RequireTrustedDeviceForSensitiveAction("QuickFill");
                 return;
             }
 
@@ -7792,6 +7800,13 @@ if (currentDriveService == null)
 
         private void QuickFillCopyUsername()
         {
+            if (!RequireTrustedDeviceForSensitiveAction("QuickFill copy username"))
+            {
+                SetQuickFillStatus("Blocked: this device is untrusted.");
+                quickFillForm?.Hide();
+                return;
+            }
+
             VaultEntry? entry = GetSelectedQuickFillEntry();
 
             if (entry == null)
@@ -7812,6 +7827,13 @@ if (currentDriveService == null)
 
         private void QuickFillCopyPassword()
         {
+            if (!RequireTrustedDeviceForSensitiveAction("QuickFill copy password"))
+            {
+                SetQuickFillStatus("Blocked: this device is untrusted.");
+                quickFillForm?.Hide();
+                return;
+            }
+
             VaultEntry? entry = GetSelectedQuickFillEntry();
 
             if (entry == null)
@@ -7839,6 +7861,13 @@ if (currentDriveService == null)
 
         private async Task QuickFillAutoFillAsync()
         {
+            if (!RequireTrustedDeviceForSensitiveAction("QuickFill auto-fill"))
+            {
+                SetQuickFillStatus("Blocked: this device is untrusted.");
+                quickFillForm?.Hide();
+                return;
+            }
+
             VaultEntry? entry = GetSelectedQuickFillEntry();
 
             if (entry == null)
