@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -5293,7 +5293,7 @@ if (currentDriveService == null)
 
         private string CreateDefaultEncryptedBackupFileName()
         {
-            return "QuickForge-Encrypted-Backup-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".qfvault";
+            return "QuickForge-Encrypted-Backup-" + DateTime.Now.ToString("dd-MMMM-yyyy_HH-mm-ss", System.Globalization.CultureInfo.InvariantCulture) + ".qfvault";
         }
 
         private void OpenFolderInExplorer(string folderPath)
