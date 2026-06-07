@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -17,7 +17,7 @@ namespace exam_test
     {
         private const string AppName = "QuickForge Sync";
         private const string AppStatus = "Beta Preview";
-        private const string AppVersion = "v0.1.9-beta-preview";
+        private const string AppVersion = "v0.2.0-beta-preview";
         private const string AppDisplayName = AppName + " " + AppStatus;
 
 
