@@ -3384,7 +3384,12 @@ namespace exam_test
         }
         private async void ChangeVaultCodeButton_Click(object? sender, EventArgs e)
         {
-            if (currentDriveService == null)
+            
+            if (!RequireTrustedDeviceForSensitiveAction("Change vault code"))
+            {
+                return;
+            }
+if (currentDriveService == null)
             {
                 MessageBox.Show("Google Drive is not connected.");
                 return;
@@ -5160,7 +5165,13 @@ namespace exam_test
         }
         private async Task ImportEncryptedBackupAsync()
         {
-            if (currentDriveService == null)
+            
+            if (isVaultUnlocked &&
+                !RequireTrustedDeviceForSensitiveAction("Import encrypted backup"))
+            {
+                return;
+            }
+if (currentDriveService == null)
             {
                 MessageBox.Show(
                     "Connect Google first, then import the backup." + Environment.NewLine + Environment.NewLine +
@@ -7804,6 +7815,7 @@ namespace exam_test
         }
     }
 }
+
 
 
 
