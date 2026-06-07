@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -248,6 +248,8 @@ namespace exam_test
             autoLockTimer.Interval = 30000;
             autoLockTimer.Tick += AutoLockTimer_Tick;
             autoLockTimer.Start();
+
+            autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
         }
 
 
@@ -328,7 +330,7 @@ namespace exam_test
             appTitleLabel.Left = 18;
             appTitleLabel.Top = 13;
 
-            appSubtitleLabel.Text = AppStatus + " " + AppVersion + " — encrypted cloud vault for controlled personal beta use.";
+            appSubtitleLabel.Text = AppStatus + " " + AppVersion + " â€” encrypted cloud vault for controlled personal beta use.";
             appSubtitleLabel.ForeColor = softTextColor;
             appSubtitleLabel.BackColor = Color.Transparent;
             appSubtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
@@ -436,10 +438,10 @@ namespace exam_test
 
             Label bulletLabel = new Label();
             bulletLabel.Text =
-                "• Your vault is encrypted before sync" + Environment.NewLine +
-                "• Each Google account has its own isolated vault" + Environment.NewLine +
-                "• Controlled personal beta use is now supported" + Environment.NewLine +
-                "• Save your recovery key safely";
+                "â€¢ Your vault is encrypted before sync" + Environment.NewLine +
+                "â€¢ Each Google account has its own isolated vault" + Environment.NewLine +
+                "â€¢ Controlled personal beta use is now supported" + Environment.NewLine +
+                "â€¢ Save your recovery key safely";
             bulletLabel.ForeColor = softTextColor;
             bulletLabel.BackColor = Color.Transparent;
             bulletLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
@@ -1000,7 +1002,7 @@ namespace exam_test
             changeVaultCodeButton.Click += ChangeVaultCodeButton_Click;
 
           
-            favoriteButton.Text = "☆ Favorite";
+            favoriteButton.Text = "â˜† Favorite";
             favoriteButton.Left = 555;
             favoriteButton.Top = 408;
             favoriteButton.Width = 100;
@@ -1596,7 +1598,7 @@ namespace exam_test
 
             if (!VaultCodePolicy.IsStrongEnough(code, out string warning))
             {
-                vaultCodeStrengthLabel.Text = "Vault code strength: Weak — " + warning;
+                vaultCodeStrengthLabel.Text = "Vault code strength: Weak â€” " + warning;
                 vaultCodeStrengthLabel.ForeColor = dangerColor;
                 vaultCodeStrengthFill.BackColor = dangerColor;
                 return;
@@ -1610,7 +1612,7 @@ namespace exam_test
             }
             else
             {
-                vaultCodeStrengthLabel.Text = "Vault code strength: Good — add more length/symbols for stronger protection";
+                vaultCodeStrengthLabel.Text = "Vault code strength: Good â€” add more length/symbols for stronger protection";
                 vaultCodeStrengthLabel.ForeColor = Color.FromArgb(255, 190, 90);
                 vaultCodeStrengthFill.BackColor = Color.FromArgb(255, 190, 90);
             }
@@ -3008,8 +3010,8 @@ namespace exam_test
                 Environment.NewLine,
                 visibleDevices.Select(device =>
                     "- " + device.DeviceName +
-                    " — last seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
-                    " — " + (device.IsTrusted ? "trusted" : "UNTRUSTED") +
+                    " â€” last seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
+                    " â€” " + (device.IsTrusted ? "trusted" : "UNTRUSTED") +
                     (device.DeviceId == localDeviceId ? " (this device)" : "")
                 )
             );
@@ -3031,8 +3033,8 @@ namespace exam_test
                     .Take(8)
                     .Select(item =>
                         "- " + item.EventAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
-                        " — " + item.Action +
-                        " — " + item.DeviceName
+                        " â€” " + item.Action +
+                        " â€” " + item.DeviceName
                     )
             );
         }
@@ -3170,10 +3172,10 @@ namespace exam_test
                 "This device: " + localDeviceName + Environment.NewLine +
                 Environment.NewLine +
                 "Good:" + Environment.NewLine +
-                (good.Count == 0 ? "- None yet" : "✓ " + string.Join(Environment.NewLine + "✓ ", good)) +
+                (good.Count == 0 ? "- None yet" : "âœ“ " + string.Join(Environment.NewLine + "âœ“ ", good)) +
                 Environment.NewLine + Environment.NewLine +
                 "Warnings:" + Environment.NewLine +
-                (warnings.Count == 0 ? "- No warnings" : "⚠ " + string.Join(Environment.NewLine + "⚠ ", warnings)) +
+                (warnings.Count == 0 ? "- No warnings" : "âš  " + string.Join(Environment.NewLine + "âš  ", warnings)) +
                 Environment.NewLine + Environment.NewLine +
                 "Known devices:" + Environment.NewLine +
                 BuildKnownDevicesText() +
@@ -4292,19 +4294,19 @@ if (currentDriveService == null)
 
             if (entry == null)
             {
-                favoriteButton.Text = "☆ Favorite";
+                favoriteButton.Text = "â˜† Favorite";
                 favoriteButton.BackColor = Color.FromArgb(35, 40, 60);
                 return;
             }
 
             if (entry.IsFavorite)
             {
-                favoriteButton.Text = "★ Favorited";
+                favoriteButton.Text = "â˜… Favorited";
                 favoriteButton.BackColor = Color.FromArgb(120, 85, 35);
             }
             else
             {
-                favoriteButton.Text = "☆ Favorite";
+                favoriteButton.Text = "â˜† Favorite";
                 favoriteButton.BackColor = Color.FromArgb(35, 40, 60);
             }
         }
@@ -6284,7 +6286,7 @@ if (currentDriveService == null)
             {
                 visibleVaultEntries.Add(entry);
 
-                string prefix = entry.IsFavorite ? "⭐ " : "";
+                string prefix = entry.IsFavorite ? "â­ " : "";
                 vaultListBox.Items.Add(prefix + entry.GetDisplayName());
             }
 
@@ -6533,7 +6535,7 @@ if (currentDriveService == null)
                 titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
 
                 Label subtitleLabel = new Label();
-                subtitleLabel.Text = "New password — not saved yet.";
+                subtitleLabel.Text = "New password â€” not saved yet.";
                 subtitleLabel.Left = 20;
                 subtitleLabel.Top = 50;
                 subtitleLabel.Width = 360;
@@ -6632,7 +6634,7 @@ if (currentDriveService == null)
                     string type = typeComboBox.SelectedItem?.ToString() ?? "Strong";
                     currentPassword = GenerateUniquePassword(type);
                     passwordBox.Text = currentPassword;
-                    statusLabel.Text = "New password — not saved yet.";
+                    statusLabel.Text = "New password â€” not saved yet.";
                 }
 
                 generateAgainButton.Click += (s, e) =>
@@ -6823,7 +6825,7 @@ if (currentDriveService == null)
             }
 
             Button toggleButton = new Button();
-            toggleButton.Text = "👁";
+            toggleButton.Text = "ðŸ‘";
             toggleButton.Left = targetTextBox.Right + gap;
             toggleButton.Top = targetTextBox.Top;
             toggleButton.Width = buttonWidth;
@@ -6846,7 +6848,7 @@ if (currentDriveService == null)
             {
                 isVisible = !isVisible;
                 targetTextBox.UseSystemPasswordChar = !isVisible;
-                toggleButton.Text = isVisible ? "🙈" : "👁";
+                toggleButton.Text = isVisible ? "ðŸ™ˆ" : "ðŸ‘";
 
                 targetTextBox.Focus();
                 targetTextBox.SelectionStart = targetTextBox.Text.Length;
@@ -6879,7 +6881,7 @@ if (currentDriveService == null)
 
             PasswordStrengthResult result = CheckPasswordStrength(password, platform);
 
-            passwordStrengthLabel.Text = "Strength: " + result.Title + " — " + result.Hint;
+            passwordStrengthLabel.Text = "Strength: " + result.Title + " â€” " + result.Hint;
             passwordStrengthLabel.ForeColor = result.Color;
             passwordStrengthFill.BackColor = result.Color;
 
@@ -7700,12 +7702,12 @@ if (currentDriveService == null)
 
             public override string ToString()
             {
-                string prefix = Entry.IsFavorite ? "⭐ " : "";
+                string prefix = Entry.IsFavorite ? "â­ " : "";
 
                 if (!string.IsNullOrWhiteSpace(Entry.Platform) &&
                     !string.IsNullOrWhiteSpace(Entry.Username))
                 {
-                    return prefix + Entry.Platform + "  •  " + Entry.Username;
+                    return prefix + Entry.Platform + "  â€¢  " + Entry.Username;
                 }
 
                 return prefix + Entry.GetDisplayName();
