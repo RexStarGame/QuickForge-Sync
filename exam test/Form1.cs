@@ -2690,7 +2690,7 @@ namespace exam_test
 
             ShowLocalSecurityNotification(
                 "QuickForge: Untrusted device",
-                "Sensitive actions are disabled on this device."
+                "Sensitive actions are disabled. Trust this device from another trusted device, or check Google security."
             );
         }
 
@@ -7758,6 +7758,7 @@ if (currentDriveService == null)
         }
     }
 }
+
 
 
 
