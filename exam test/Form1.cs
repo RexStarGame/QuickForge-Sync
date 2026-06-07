@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -17,7 +17,7 @@ namespace exam_test
     {
         private const string AppName = "QuickForge Sync";
         private const string AppStatus = "Beta Preview";
-        private const string AppVersion = "v0.1.8-beta-preview";
+        private const string AppVersion = "v0.1.9-beta-preview";
         private const string AppDisplayName = AppName + " " + AppStatus;
 
 
@@ -127,6 +127,10 @@ namespace exam_test
         private bool hasUnsyncedLocalChanges = false;
         private bool autoRefreshRunning = false;
 
+        private const int MaxBackgroundSyncRetries = 5;
+        private const int BackgroundSyncRetryDelaySeconds = 10;
+        private int backgroundVaultSyncRetryCount = 0;
+
         private string localDeviceId = "";
         private string localDeviceName = "";
         private bool newDeviceDetectedThisSession = false;
@@ -135,6 +139,7 @@ namespace exam_test
         private string untrustedDeviceDetectedName = "";
         private bool restrictedModeWarningShownThisSession = false;
         private const int MaxSafetyTimelineEvents = 25;
+        private const int MaxDeletedEntryTombstones = 250;
 
         private readonly Label platformLabel = new Label();
         private readonly TextBox platformTextBox = new TextBox();
@@ -330,7 +335,7 @@ namespace exam_test
             appTitleLabel.Left = 18;
             appTitleLabel.Top = 13;
 
-            appSubtitleLabel.Text = AppStatus + " " + AppVersion + " â€” encrypted cloud vault for controlled personal beta use.";
+            appSubtitleLabel.Text = AppStatus + " " + AppVersion + " ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â encrypted cloud vault for controlled personal beta use.";
             appSubtitleLabel.ForeColor = softTextColor;
             appSubtitleLabel.BackColor = Color.Transparent;
             appSubtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
@@ -438,10 +443,10 @@ namespace exam_test
 
             Label bulletLabel = new Label();
             bulletLabel.Text =
-                "â€¢ Your vault is encrypted before sync" + Environment.NewLine +
-                "â€¢ Each Google account has its own isolated vault" + Environment.NewLine +
-                "â€¢ Controlled personal beta use is now supported" + Environment.NewLine +
-                "â€¢ Save your recovery key safely";
+                "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Your vault is encrypted before sync" + Environment.NewLine +
+                "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Each Google account has its own isolated vault" + Environment.NewLine +
+                "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Controlled personal beta use is now supported" + Environment.NewLine +
+                "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Save your recovery key safely";
             bulletLabel.ForeColor = softTextColor;
             bulletLabel.BackColor = Color.Transparent;
             bulletLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
@@ -1598,7 +1603,7 @@ namespace exam_test
 
             if (!VaultCodePolicy.IsStrongEnough(code, out string warning))
             {
-                vaultCodeStrengthLabel.Text = "Vault code strength: Weak â€” " + warning;
+                vaultCodeStrengthLabel.Text = "Vault code strength: Weak ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â " + warning;
                 vaultCodeStrengthLabel.ForeColor = dangerColor;
                 vaultCodeStrengthFill.BackColor = dangerColor;
                 return;
@@ -1612,7 +1617,7 @@ namespace exam_test
             }
             else
             {
-                vaultCodeStrengthLabel.Text = "Vault code strength: Good â€” add more length/symbols for stronger protection";
+                vaultCodeStrengthLabel.Text = "Vault code strength: Good ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â add more length/symbols for stronger protection";
                 vaultCodeStrengthLabel.ForeColor = Color.FromArgb(255, 190, 90);
                 vaultCodeStrengthFill.BackColor = Color.FromArgb(255, 190, 90);
             }
@@ -2344,6 +2349,117 @@ namespace exam_test
             }
         }
 
+        private void PruneDeletedEntryTombstones()
+        {
+            EnsureVaultSafetyCollections();
+
+            currentVaultSettings.DeletedEntries = currentVaultSettings.DeletedEntries
+                .Where(item => item != null && !string.IsNullOrWhiteSpace(item.EntryId))
+                .GroupBy(item => item.EntryId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.OrderByDescending(item => item.DeletedAtUtc).First())
+                .OrderByDescending(item => item.DeletedAtUtc)
+                .Take(MaxDeletedEntryTombstones)
+                .ToList();
+        }
+
+        private void AddDeletedEntryTombstone(VaultEntry entry, string displayName)
+        {
+            NormalizeVaultEntryForSync(entry);
+            EnsureLocalDeviceIdentity();
+            EnsureVaultSafetyCollections();
+
+            DateTime deletedAtUtc = DateTime.UtcNow;
+
+            VaultDeletedEntry? existing = currentVaultSettings.DeletedEntries
+                .FirstOrDefault(item => string.Equals(item.EntryId, entry.Id, StringComparison.OrdinalIgnoreCase));
+
+            if (existing == null)
+            {
+                currentVaultSettings.DeletedEntries.Add(new VaultDeletedEntry
+                {
+                    EntryId = entry.Id,
+                    DisplayName = displayName,
+                    DeletedAtUtc = deletedAtUtc,
+                    DeletedByDeviceId = localDeviceId,
+                    DeletedByDeviceName = localDeviceName
+                });
+            }
+            else if (deletedAtUtc >= existing.DeletedAtUtc)
+            {
+                existing.DisplayName = displayName;
+                existing.DeletedAtUtc = deletedAtUtc;
+                existing.DeletedByDeviceId = localDeviceId;
+                existing.DeletedByDeviceName = localDeviceName;
+            }
+
+            PruneDeletedEntryTombstones();
+        }
+
+        private void MergeDeletedEntryTombstonesFromCloud(VaultSettings cloudSettings)
+        {
+            EnsureVaultSafetyCollections();
+            cloudSettings.DeletedEntries ??= new List<VaultDeletedEntry>();
+
+            foreach (VaultDeletedEntry incoming in cloudSettings.DeletedEntries)
+            {
+                if (incoming == null || string.IsNullOrWhiteSpace(incoming.EntryId))
+                {
+                    continue;
+                }
+
+                VaultDeletedEntry? existing = currentVaultSettings.DeletedEntries
+                    .FirstOrDefault(item => string.Equals(item.EntryId, incoming.EntryId, StringComparison.OrdinalIgnoreCase));
+
+                if (existing == null)
+                {
+                    currentVaultSettings.DeletedEntries.Add(new VaultDeletedEntry
+                    {
+                        EntryId = incoming.EntryId,
+                        DisplayName = incoming.DisplayName,
+                        DeletedAtUtc = incoming.DeletedAtUtc,
+                        DeletedByDeviceId = incoming.DeletedByDeviceId,
+                        DeletedByDeviceName = incoming.DeletedByDeviceName
+                    });
+                }
+                else if (incoming.DeletedAtUtc >= existing.DeletedAtUtc)
+                {
+                    existing.DisplayName = incoming.DisplayName;
+                    existing.DeletedAtUtc = incoming.DeletedAtUtc;
+                    existing.DeletedByDeviceId = incoming.DeletedByDeviceId;
+                    existing.DeletedByDeviceName = incoming.DeletedByDeviceName;
+                }
+            }
+
+            PruneDeletedEntryTombstones();
+        }
+
+        private void ApplyDeletedEntryTombstonesToEntries(List<VaultEntry> entries)
+        {
+            EnsureVaultSafetyCollections();
+
+            foreach (VaultEntry entry in entries)
+            {
+                NormalizeVaultEntryForSync(entry);
+            }
+
+            entries.RemoveAll(entry =>
+            {
+                VaultDeletedEntry? tombstone = currentVaultSettings.DeletedEntries
+                    .FirstOrDefault(item => string.Equals(item.EntryId, entry.Id, StringComparison.OrdinalIgnoreCase));
+
+                if (tombstone == null)
+                {
+                    return false;
+                }
+
+                DateTime entryUpdatedAtUtc = entry.UpdatedAt == DateTime.MinValue
+                    ? DateTime.MinValue
+                    : entry.UpdatedAt.ToUniversalTime();
+
+                return tombstone.DeletedAtUtc >= entryUpdatedAtUtc;
+            });
+        }
+
         private void AddOrReplaceMergedEntry(List<VaultEntry> mergedEntries, VaultEntry entry)
         {
             NormalizeVaultEntryForSync(entry);
@@ -2673,6 +2789,7 @@ namespace exam_test
         {
             currentVaultSettings.KnownDevices ??= new List<KnownVaultDevice>();
             currentVaultSettings.SafetyTimeline ??= new List<VaultSafetyEvent>();
+            currentVaultSettings.DeletedEntries ??= new List<VaultDeletedEntry>();
         }
 
 
@@ -3010,8 +3127,8 @@ namespace exam_test
                 Environment.NewLine,
                 visibleDevices.Select(device =>
                     "- " + device.DeviceName +
-                    " â€” last seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
-                    " â€” " + (device.IsTrusted ? "trusted" : "UNTRUSTED") +
+                    " ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â last seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
+                    " ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â " + (device.IsTrusted ? "trusted" : "UNTRUSTED") +
                     (device.DeviceId == localDeviceId ? " (this device)" : "")
                 )
             );
@@ -3033,8 +3150,8 @@ namespace exam_test
                     .Take(8)
                     .Select(item =>
                         "- " + item.EventAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
-                        " â€” " + item.Action +
-                        " â€” " + item.DeviceName
+                        " ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â " + item.Action +
+                        " ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â " + item.DeviceName
                     )
             );
         }
@@ -3172,10 +3289,10 @@ namespace exam_test
                 "This device: " + localDeviceName + Environment.NewLine +
                 Environment.NewLine +
                 "Good:" + Environment.NewLine +
-                (good.Count == 0 ? "- None yet" : "âœ“ " + string.Join(Environment.NewLine + "âœ“ ", good)) +
+                (good.Count == 0 ? "- None yet" : "ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ " + string.Join(Environment.NewLine + "ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ", good)) +
                 Environment.NewLine + Environment.NewLine +
                 "Warnings:" + Environment.NewLine +
-                (warnings.Count == 0 ? "- No warnings" : "âš  " + string.Join(Environment.NewLine + "âš  ", warnings)) +
+                (warnings.Count == 0 ? "- No warnings" : "ÃƒÂ¢Ã…Â¡Ã‚Â  " + string.Join(Environment.NewLine + "ÃƒÂ¢Ã…Â¡Ã‚Â  ", warnings)) +
                 Environment.NewLine + Environment.NewLine +
                 "Known devices:" + Environment.NewLine +
                 BuildKnownDevicesText() +
@@ -6557,7 +6674,7 @@ if (currentDriveService == null)
                 titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
 
                 Label subtitleLabel = new Label();
-                subtitleLabel.Text = "New password â€” not saved yet.";
+                subtitleLabel.Text = "New password ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â not saved yet.";
                 subtitleLabel.Left = 20;
                 subtitleLabel.Top = 50;
                 subtitleLabel.Width = 360;
@@ -6656,7 +6773,7 @@ if (currentDriveService == null)
                     string type = typeComboBox.SelectedItem?.ToString() ?? "Strong";
                     currentPassword = GenerateUniquePassword(type);
                     passwordBox.Text = currentPassword;
-                    statusLabel.Text = "New password â€” not saved yet.";
+                    statusLabel.Text = "New password ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â not saved yet.";
                 }
 
                 generateAgainButton.Click += (s, e) =>
@@ -6905,7 +7022,7 @@ if (currentDriveService == null)
 
             PasswordStrengthResult result = CheckPasswordStrength(password, platform);
 
-            passwordStrengthLabel.Text = "Strength: " + result.Title + " â€” " + result.Hint;
+            passwordStrengthLabel.Text = "Strength: " + result.Title + " ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â " + result.Hint;
             passwordStrengthLabel.ForeColor = result.Color;
             passwordStrengthFill.BackColor = result.Color;
 
@@ -7726,12 +7843,12 @@ if (currentDriveService == null)
 
             public override string ToString()
             {
-                string prefix = Entry.IsFavorite ? "â­ " : "";
+                string prefix = Entry.IsFavorite ? "ÃƒÂ¢Ã‚Â­Ã‚Â " : "";
 
                 if (!string.IsNullOrWhiteSpace(Entry.Platform) &&
                     !string.IsNullOrWhiteSpace(Entry.Username))
                 {
-                    return prefix + Entry.Platform + "  â€¢  " + Entry.Username;
+                    return prefix + Entry.Platform + "  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  " + Entry.Username;
                 }
 
                 return prefix + Entry.GetDisplayName();
@@ -7991,7 +8108,6 @@ if (currentDriveService == null)
         }
     }
 }
-
 
 
 

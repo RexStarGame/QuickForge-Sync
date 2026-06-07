@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace exam_test
@@ -21,6 +21,7 @@ namespace exam_test
 
         public List<KnownVaultDevice> KnownDevices { get; set; } = new List<KnownVaultDevice>();
         public List<VaultSafetyEvent> SafetyTimeline { get; set; } = new List<VaultSafetyEvent>();
+        public List<VaultDeletedEntry> DeletedEntries { get; set; } = new List<VaultDeletedEntry>();
 
         public string LastChangedByDeviceId { get; set; } = "";
         public string LastChangedByDeviceName { get; set; } = "";
@@ -50,6 +51,15 @@ namespace exam_test
         public string DeviceName { get; set; } = "";
         public string Action { get; set; } = "";
         public string Detail { get; set; } = "";
+    }
+
+    public class VaultDeletedEntry
+    {
+        public string EntryId { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public DateTime DeletedAtUtc { get; set; } = DateTime.UtcNow;
+        public string DeletedByDeviceId { get; set; } = "";
+        public string DeletedByDeviceName { get; set; } = "";
     }
 
     public class EncryptedVaultFile
