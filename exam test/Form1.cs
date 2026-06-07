@@ -1498,10 +1498,10 @@ namespace exam_test
         {
             unlockStatusTimer.Stop();
 
-            vaultAccessTitleLabel.Text = "Create Vault Code";
+            vaultAccessTitleLabel.Text = "Cloud vault missing";
             vaultAccessSubtitleLabel.Text =
-                "First-time setup for " + GetConnectedGoogleEmailDisplay() + "." + Environment.NewLine +
-                "This vault is tied to this Google account.";
+                "QuickForge could not find an encrypted cloud vault for " + GetConnectedGoogleEmailDisplay() + "." + Environment.NewLine +
+                "Create a new vault, or import an encrypted backup if you expected existing data.";
             vaultCodeLabel.Text = "Create vault code";
             vaultCodeTextBox.PlaceholderText = "Create a vault code";
 
@@ -1518,9 +1518,17 @@ namespace exam_test
                 confirmVaultCodeVisibilityButton.Visible = true;
             }
 
-            vaultUnlockStatusLabel.Visible = false;
-            SetVaultAccessButtonRowTop(255);
-            createVaultButton.Text = "Create Vault";
+            vaultUnlockStatusLabel.Visible = true;
+            vaultUnlockStatusLabel.Text =
+                "This can happen if:" + Environment.NewLine +
+                "- this is your first time using QuickForge" + Environment.NewLine +
+                "- you signed in with the wrong Google account" + Environment.NewLine +
+                "- the cloud vault was deleted or app access was reset" + Environment.NewLine +
+                "- you need to restore from an encrypted backup";
+            vaultUnlockStatusLabel.ForeColor = Color.FromArgb(255, 190, 90);
+
+            SetVaultAccessButtonRowTop(390);
+            createVaultButton.Text = "Create New Vault";
 
             vaultCodeTextBox.Clear();
             confirmVaultCodeTextBox.Clear();
@@ -1996,7 +2004,7 @@ namespace exam_test
 
             if (string.IsNullOrWhiteSpace(encryptedJson))
             {
-                throw new InvalidOperationException("No encrypted vault was found.");
+                throw new InvalidOperationException("Cloud vault missing. Restore from encrypted backup or create a new vault.");
             }
 
             VaultUnlockAttemptState attemptState =
@@ -3451,7 +3459,7 @@ namespace exam_test
 
             if (string.IsNullOrWhiteSpace(encryptedJson))
             {
-                throw new InvalidOperationException("No encrypted vault was found.");
+                throw new InvalidOperationException("Cloud vault missing. Restore from encrypted backup or create a new vault.");
             }
 
             VaultData vaultData;
@@ -8372,7 +8380,6 @@ if (currentDriveService == null)
         }
     }
 }
-
 
 
 
