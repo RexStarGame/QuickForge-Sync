@@ -6270,8 +6270,8 @@ if (currentDriveService == null)
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 920;
-                dialog.Height = 590;
+                dialog.Width = 960;
+                dialog.Height = 640;
                 dialog.Text = "Device Trust";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -6284,10 +6284,10 @@ if (currentDriveService == null)
                 titleLabel.Left = 20;
                 titleLabel.Top = 18;
                 titleLabel.Width = 650;
-                titleLabel.Height = 28;
+                titleLabel.Height = 34;
                 titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
-                titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
 
                 Label introLabel = new Label();
                 introLabel.Text =
@@ -6295,30 +6295,30 @@ if (currentDriveService == null)
                     "First device is trusted automatically. New devices start untrusted until approved from a trusted device.";
                 introLabel.Left = 20;
                 introLabel.Top = 52;
-                introLabel.Width = 860;
-                introLabel.Height = 42;
+                introLabel.Width = 900;
+                introLabel.Height = 50;
                 introLabel.ForeColor = softTextColor;
                 introLabel.BackColor = Color.Transparent;
-                introLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+                introLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
 
                 ListBox deviceList = new ListBox();
                 deviceList.Left = 20;
-                deviceList.Top = 105;
-                deviceList.Width = 860;
-                deviceList.Height = 175;
+                deviceList.Top = 115;
+                deviceList.Width = 900;
+                deviceList.Height = 190;
                 deviceList.BackColor = Color.FromArgb(24, 28, 44);
                 deviceList.ForeColor = Color.White;
                 deviceList.BorderStyle = BorderStyle.FixedSingle;
-                deviceList.Font = new Font("Consolas", 8, FontStyle.Regular);
+                deviceList.Font = new Font("Consolas", 9, FontStyle.Regular);
 
                 Label detailLabel = new Label();
                 detailLabel.Left = 20;
-                detailLabel.Top = 292;
-                detailLabel.Width = 860;
-                detailLabel.Height = 120;
+                detailLabel.Top = 318;
+                detailLabel.Width = 900;
+                detailLabel.Height = 128;
                 detailLabel.ForeColor = softTextColor;
                 detailLabel.BackColor = Color.Transparent;
-                detailLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+                detailLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
 
                 void RefreshDeviceList()
                 {
@@ -6411,7 +6411,7 @@ if (currentDriveService == null)
                 Button untrustButton = new Button();
                 trustButton.Text = "Trust";
                 trustButton.Left = 20;
-                trustButton.Top = 425;
+                trustButton.Top = 470;
                 trustButton.Width = 110;
                 trustButton.Height = 34;
                 StyleActionButton(trustButton, true);
@@ -6454,7 +6454,7 @@ if (currentDriveService == null)
 
                 untrustButton.Text = "Untrust";
                 untrustButton.Left = 145;
-                untrustButton.Top = 425;
+                untrustButton.Top = 470;
                 untrustButton.Width = 110;
                 untrustButton.Height = 34;
                 StyleActionButton(untrustButton);
@@ -6507,8 +6507,8 @@ if (currentDriveService == null)
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 790;
-                closeButton.Top = 425;
+                closeButton.Left = 820;
+                closeButton.Top = 470;
                 closeButton.Width = 110;
                 closeButton.Height = 34;
                 StyleActionButton(closeButton, true);
@@ -6516,12 +6516,12 @@ if (currentDriveService == null)
 
                 Label warningLabel = new Label();
                 warningLabel.Left = 20;
-                warningLabel.Top = 468;
-                warningLabel.Width = 860;
-                warningLabel.Height = 60;
+                warningLabel.Top = 515;
+                warningLabel.Width = 900;
+                warningLabel.Height = 70;
                 warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
                 warningLabel.BackColor = Color.Transparent;
-                warningLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+                warningLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
                 warningLabel.Text = IsRestrictedModeActive()
                     ? "Device Trust is read-only on this untrusted device. To regain full access, approve this device from another trusted device. If this device is suspicious, check your Google Account security first."
                     : "Only trust devices you own and control. If you see a device name or Device ID you do not recognize, untrust it, check your Google Account security, then rotate your QuickForge vault code and recovery key.";
