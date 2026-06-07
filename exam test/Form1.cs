@@ -25,6 +25,7 @@ namespace exam_test
         private readonly System.Windows.Forms.Timer hideRevealTimer = new System.Windows.Forms.Timer();
         private readonly System.Windows.Forms.Timer autoLockTimer = new System.Windows.Forms.Timer();
         private readonly System.Windows.Forms.Timer unlockStatusTimer = new System.Windows.Forms.Timer();
+        private readonly System.Windows.Forms.Timer autoRefreshTimer = new System.Windows.Forms.Timer();
 
         private float time = 0f;
 
@@ -124,6 +125,7 @@ namespace exam_test
         private bool backgroundVaultSyncRequested = false;
         private string backgroundVaultSyncReason = "";
         private bool hasUnsyncedLocalChanges = false;
+        private bool autoRefreshRunning = false;
 
         private string localDeviceId = "";
         private string localDeviceName = "";
@@ -191,6 +193,8 @@ namespace exam_test
         private readonly CheckBox animationEnabledCheckBox = new CheckBox();
         private readonly Label autoLockLabel = new Label();
         private readonly ComboBox autoLockComboBox = new ComboBox();
+        private readonly Label autoRefreshLabel = new Label();
+        private readonly ComboBox autoRefreshComboBox = new ComboBox();
 
         private DateTime lastVaultActivityUtc = DateTime.UtcNow;
         // Colors
@@ -1198,10 +1202,57 @@ namespace exam_test
                 }
             };
 
+            autoRefreshLabel.Text = "Auto-refresh:";
+            autoRefreshLabel.Left = 240;
+            autoRefreshLabel.Top = 510;
+            autoRefreshLabel.Width = 90;
+            autoRefreshLabel.Height = 24;
+            autoRefreshLabel.ForeColor = softTextColor;
+            autoRefreshLabel.BackColor = Color.Transparent;
+            autoRefreshLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+
+            autoRefreshComboBox.Left = 330;
+            autoRefreshComboBox.Top = 507;
+            autoRefreshComboBox.Width = 155;
+            autoRefreshComboBox.Height = 28;
+            autoRefreshComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            autoRefreshComboBox.Items.Add("Never");
+            autoRefreshComboBox.Items.Add("Every 1 minute");
+            autoRefreshComboBox.Items.Add("Every 5 minutes");
+            autoRefreshComboBox.Items.Add("Every 15 minutes");
+            autoRefreshComboBox.Items.Add("Every 30 minutes");
+            autoRefreshComboBox.SelectedIndex = 2;
+            autoRefreshComboBox.SelectionChangeCommitted += async (s, e) =>
+            {
+                if (!RequireTrustedDeviceForSensitiveAction("Change auto-refresh setting"))
+                {
+                    ApplyPerformanceSettingsToUi();
+                    return;
+                }
+
+                currentVaultSettings.AutoRefreshMinutes = GetAutoRefreshMinutesFromSelection();
+                ConfigureAutoRefreshTimer();
+                MarkVaultActivity();
+
+                if (isVaultUnlocked)
+                {
+                    try
+                    {
+                        await SaveCurrentVaultToCloudAsync();
+                        selectedPreviewLabel.Text = "Auto-refresh setting saved.";
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Could not save auto-refresh setting: " + ex.Message);
+                    }
+                }
+            };
             vaultPanel.Controls.Add(performanceSettingsLabel);
             vaultPanel.Controls.Add(animationEnabledCheckBox);
             vaultPanel.Controls.Add(autoLockLabel);
             vaultPanel.Controls.Add(autoLockComboBox);
+            vaultPanel.Controls.Add(autoRefreshLabel);
+            vaultPanel.Controls.Add(autoRefreshComboBox);
 
             openSiteButton.Text = "Open site";
             openSiteButton.Left = 315;
@@ -2773,6 +2824,7 @@ namespace exam_test
             backupButton.Enabled = !restricted;
             rotateRecoveryKeyButton.Enabled = !restricted;
             recoveryReminderComboBox.Enabled = !restricted;
+            autoRefreshComboBox.Enabled = !restricted;
 
             if (secretVisibilityButton != null)
             {
@@ -7000,6 +7052,135 @@ if (currentDriveService == null)
             UpdateAnimationState();
         }
 
+
+        private int GetAutoRefreshMinutesFromSelection()
+        {
+            if (autoRefreshComboBox.SelectedIndex == 1)
+            {
+                return 1;
+            }
+
+            if (autoRefreshComboBox.SelectedIndex == 2)
+            {
+                return 5;
+            }
+
+            if (autoRefreshComboBox.SelectedIndex == 3)
+            {
+                return 15;
+            }
+
+            if (autoRefreshComboBox.SelectedIndex == 4)
+            {
+                return 30;
+            }
+
+            return 0;
+        }
+
+        private void ConfigureAutoRefreshTimer()
+        {
+            autoRefreshTimer.Stop();
+
+            if (!isVaultUnlocked)
+            {
+                return;
+            }
+
+            int minutes = currentVaultSettings.AutoRefreshMinutes;
+
+            if (minutes <= 0)
+            {
+                return;
+            }
+
+            autoRefreshTimer.Interval = Math.Max(1, minutes) * 60 * 1000;
+            autoRefreshTimer.Start();
+        }
+
+        private async void AutoRefreshTimer_Tick(object? sender, EventArgs e)
+        {
+            autoRefreshTimer.Stop();
+
+            try
+            {
+                await RunAutoRefreshAsync();
+            }
+            finally
+            {
+                ConfigureAutoRefreshTimer();
+            }
+        }
+
+        private async Task RunAutoRefreshAsync()
+        {
+            if (!isVaultUnlocked ||
+                currentDriveService == null ||
+                currentDataKey == null ||
+                currentEncryptedVaultFile == null)
+            {
+                return;
+            }
+
+            if (autoRefreshRunning ||
+                backgroundVaultSyncRunning ||
+                backgroundVaultSyncRequested ||
+                hasUnsyncedLocalChanges ||
+                editingEntry != null)
+            {
+                return;
+            }
+
+            autoRefreshRunning = true;
+
+            try
+            {
+                GoogleDriveVaultMetadata? cloudMetadata =
+                    await GoogleDriveVaultService.GetVaultMetadataAsync(currentDriveService);
+
+                if (cloudMetadata == null ||
+                    string.IsNullOrWhiteSpace(cloudMetadata.Fingerprint))
+                {
+                    return;
+                }
+
+                if (!string.IsNullOrWhiteSpace(lastKnownCloudFingerprint) &&
+                    string.Equals(
+                        cloudMetadata.Fingerprint,
+                        lastKnownCloudFingerprint,
+                        StringComparison.Ordinal
+                    ))
+                {
+                    return;
+                }
+
+                SetSyncStatus("Auto-refreshing...");
+
+                await LoadVaultFromCloudAsync();
+
+                RegisterCurrentDeviceForVault(false);
+                ApplyRecoverySettingsToUi();
+                ApplyPerformanceSettingsToUi();
+                ApplyDeviceTrustRestrictionsToUi();
+                ShowRestrictedModeWarningIfNeeded();
+
+                selectedPreviewLabel.Text =
+                    "Auto-refresh completed." + Environment.NewLine +
+                    "Latest encrypted vault and Device Trust status loaded from Google Drive.";
+            }
+            catch (Exception ex)
+            {
+                SetSyncStatus("Auto-refresh failed", error: true);
+                selectedPreviewLabel.Text =
+                    "Auto-refresh failed." + Environment.NewLine +
+                    "Manual Refresh is still available." + Environment.NewLine +
+                    "Error: " + ex.Message;
+            }
+            finally
+            {
+                autoRefreshRunning = false;
+            }
+        }
         private void UpdateAnimationState()
         {
             bool shouldAnimate =
