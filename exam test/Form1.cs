@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -335,7 +335,7 @@ namespace exam_test
             appTitleLabel.Left = 18;
             appTitleLabel.Top = 13;
 
-            appSubtitleLabel.Text = AppStatus + " " + AppVersion + " ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â encrypted cloud vault for controlled personal beta use.";
+            appSubtitleLabel.Text = AppStatus + " " + AppVersion + " ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â encrypted cloud vault for controlled personal beta use.";
             appSubtitleLabel.ForeColor = softTextColor;
             appSubtitleLabel.BackColor = Color.Transparent;
             appSubtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
@@ -443,10 +443,10 @@ namespace exam_test
 
             Label bulletLabel = new Label();
             bulletLabel.Text =
-                "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ Your vault is encrypted before sync" + Environment.NewLine +
-                "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ Each Google account has its own isolated vault" + Environment.NewLine +
-                "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ Controlled personal beta use is now supported" + Environment.NewLine +
-                "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ Save your recovery key safely";
+                "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Your vault is encrypted before sync" + Environment.NewLine +
+                "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Each Google account has its own isolated vault" + Environment.NewLine +
+                "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Controlled personal beta use is now supported" + Environment.NewLine +
+                "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Save your recovery key safely";
             bulletLabel.ForeColor = softTextColor;
             bulletLabel.BackColor = Color.Transparent;
             bulletLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
@@ -1603,7 +1603,7 @@ namespace exam_test
 
             if (!VaultCodePolicy.IsStrongEnough(code, out string warning))
             {
-                vaultCodeStrengthLabel.Text = "Vault code strength: Weak ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â " + warning;
+                vaultCodeStrengthLabel.Text = "Vault code strength: Weak ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â " + warning;
                 vaultCodeStrengthLabel.ForeColor = dangerColor;
                 vaultCodeStrengthFill.BackColor = dangerColor;
                 return;
@@ -1617,7 +1617,7 @@ namespace exam_test
             }
             else
             {
-                vaultCodeStrengthLabel.Text = "Vault code strength: Good ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â add more length/symbols for stronger protection";
+                vaultCodeStrengthLabel.Text = "Vault code strength: Good ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â add more length/symbols for stronger protection";
                 vaultCodeStrengthLabel.ForeColor = Color.FromArgb(255, 190, 90);
                 vaultCodeStrengthFill.BackColor = Color.FromArgb(255, 190, 90);
             }
@@ -2562,6 +2562,9 @@ namespace exam_test
 
             cloudSettings.KnownDevices ??= new List<KnownVaultDevice>();
             cloudSettings.SafetyTimeline ??= new List<VaultSafetyEvent>();
+            cloudSettings.DeletedEntries ??= new List<VaultDeletedEntry>();
+
+            MergeDeletedEntryTombstonesFromCloud(cloudSettings);
 
             foreach (KnownVaultDevice cloudDevice in cloudSettings.KnownDevices)
             {
@@ -2585,14 +2588,14 @@ namespace exam_test
 
             if (cloudSettings.LastBackupAtUtc.HasValue &&
                 (!currentVaultSettings.LastBackupAtUtc.HasValue ||
-                 cloudSettings.LastBackupAtUtc.Value > currentVaultSettings.LastBackupAtUtc.Value))
+                cloudSettings.LastBackupAtUtc.Value > currentVaultSettings.LastBackupAtUtc.Value))
             {
                 currentVaultSettings.LastBackupAtUtc = cloudSettings.LastBackupAtUtc;
             }
 
             if (cloudSettings.LastChangedAtUtc.HasValue &&
                 (!currentVaultSettings.LastChangedAtUtc.HasValue ||
-                 cloudSettings.LastChangedAtUtc.Value > currentVaultSettings.LastChangedAtUtc.Value))
+                cloudSettings.LastChangedAtUtc.Value > currentVaultSettings.LastChangedAtUtc.Value))
             {
                 currentVaultSettings.LastChangedAtUtc = cloudSettings.LastChangedAtUtc;
                 currentVaultSettings.LastChangedByDeviceId = cloudSettings.LastChangedByDeviceId;
@@ -2648,6 +2651,8 @@ namespace exam_test
             {
                 AddOrReplaceMergedEntry(mergedEntries, localEntry);
             }
+
+            ApplyDeletedEntryTombstonesToEntries(mergedEntries);
 
             vaultEntries.Clear();
             vaultEntries.AddRange(mergedEntries);
@@ -3127,8 +3132,8 @@ namespace exam_test
                 Environment.NewLine,
                 visibleDevices.Select(device =>
                     "- " + device.DeviceName +
-                    " ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â last seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
-                    " ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â " + (device.IsTrusted ? "trusted" : "UNTRUSTED") +
+                    " ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â last seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
+                    " ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â " + (device.IsTrusted ? "trusted" : "UNTRUSTED") +
                     (device.DeviceId == localDeviceId ? " (this device)" : "")
                 )
             );
@@ -3150,8 +3155,8 @@ namespace exam_test
                     .Take(8)
                     .Select(item =>
                         "- " + item.EventAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
-                        " ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â " + item.Action +
-                        " ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â " + item.DeviceName
+                        " ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â " + item.Action +
+                        " ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â " + item.DeviceName
                     )
             );
         }
@@ -3289,10 +3294,10 @@ namespace exam_test
                 "This device: " + localDeviceName + Environment.NewLine +
                 Environment.NewLine +
                 "Good:" + Environment.NewLine +
-                (good.Count == 0 ? "- None yet" : "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ " + string.Join(Environment.NewLine + "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ ", good)) +
+                (good.Count == 0 ? "- None yet" : "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ " + string.Join(Environment.NewLine + "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ ", good)) +
                 Environment.NewLine + Environment.NewLine +
                 "Warnings:" + Environment.NewLine +
-                (warnings.Count == 0 ? "- No warnings" : "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â  " + string.Join(Environment.NewLine + "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â  ", warnings)) +
+                (warnings.Count == 0 ? "- No warnings" : "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  " + string.Join(Environment.NewLine + "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  ", warnings)) +
                 Environment.NewLine + Environment.NewLine +
                 "Known devices:" + Environment.NewLine +
                 BuildKnownDevicesText() +
@@ -4450,7 +4455,11 @@ if (currentDriveService == null)
         }
         private void DeleteEntryButton_Click(object? sender, EventArgs e)
         {
-            if (!RequireTrustedDeviceForSensitiveAction("Delete entry"))             {                 return;             } 
+            if (!RequireTrustedDeviceForSensitiveAction("Delete entry"))
+            {
+                return;
+            }
+
             VaultEntry? entry = GetSelectedEntry();
 
             if (entry == null)
@@ -4467,6 +4476,9 @@ if (currentDriveService == null)
 
             string deletedName = entry.GetDisplayName();
 
+            NormalizeVaultEntryForSync(entry);
+            AddDeletedEntryTombstone(entry, deletedName);
+
             vaultEntries.Remove(entry);
 
             if (editingEntry == entry)
@@ -4479,10 +4491,11 @@ if (currentDriveService == null)
 
             selectedPreviewLabel.Text =
                 "Deleted locally: " + deletedName + Environment.NewLine +
-                "Cloud sync is running in the background.";
+                "Cloud sync is running in the background." + Environment.NewLine +
+                "If sync fails, QuickForge will retry automatically.";
 
             ShowEmptyVaultOnboardingIfNeeded();
-            SetSyncStatus("Queued background sync");
+            SetSyncStatus("Delete queued for sync");
 
             QueueBackgroundVaultSync("Deleted locally: " + deletedName);
         }
@@ -6674,7 +6687,7 @@ if (currentDriveService == null)
                 titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
 
                 Label subtitleLabel = new Label();
-                subtitleLabel.Text = "New password ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â not saved yet.";
+                subtitleLabel.Text = "New password ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â not saved yet.";
                 subtitleLabel.Left = 20;
                 subtitleLabel.Top = 50;
                 subtitleLabel.Width = 360;
@@ -6773,7 +6786,7 @@ if (currentDriveService == null)
                     string type = typeComboBox.SelectedItem?.ToString() ?? "Strong";
                     currentPassword = GenerateUniquePassword(type);
                     passwordBox.Text = currentPassword;
-                    statusLabel.Text = "New password ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â not saved yet.";
+                    statusLabel.Text = "New password ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â not saved yet.";
                 }
 
                 generateAgainButton.Click += (s, e) =>
@@ -7022,7 +7035,7 @@ if (currentDriveService == null)
 
             PasswordStrengthResult result = CheckPasswordStrength(password, platform);
 
-            passwordStrengthLabel.Text = "Strength: " + result.Title + " ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â " + result.Hint;
+            passwordStrengthLabel.Text = "Strength: " + result.Title + " ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â " + result.Hint;
             passwordStrengthLabel.ForeColor = result.Color;
             passwordStrengthFill.BackColor = result.Color;
 
@@ -7843,12 +7856,12 @@ if (currentDriveService == null)
 
             public override string ToString()
             {
-                string prefix = Entry.IsFavorite ? "ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚Â­Ãƒâ€šÃ‚Â " : "";
+                string prefix = Entry.IsFavorite ? "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â " : "";
 
                 if (!string.IsNullOrWhiteSpace(Entry.Platform) &&
                     !string.IsNullOrWhiteSpace(Entry.Username))
                 {
-                    return prefix + Entry.Platform + "  ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢  " + Entry.Username;
+                    return prefix + Entry.Platform + "  ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢  " + Entry.Username;
                 }
 
                 return prefix + Entry.GetDisplayName();
