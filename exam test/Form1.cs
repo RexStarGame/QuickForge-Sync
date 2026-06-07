@@ -464,7 +464,7 @@ namespace exam_test
             betaWarningLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             betaWarningLabel.AutoSize = true;
             betaWarningLabel.Left = 22;
-            betawarningLabel.Top = 470;
+            betaWarningLabel.Top = 182;
             betaWarningLabel.Cursor = Cursors.Hand;
             betaWarningLabel.Click += GoogleLoginCard_Click;
 
@@ -6165,7 +6165,7 @@ if (currentDriveService == null)
                 Button deviceTrustButton = new Button();
                 deviceTrustButton.Text = "Device Trust";
                 deviceTrustButton.Left = 185;
-                devicetrustButton.Top = 425;
+                deviceTrustButton.Top = 600;
                 deviceTrustButton.Width = 130;
                 deviceTrustButton.Height = 34;
                 StyleActionButton(deviceTrustButton);
