@@ -3748,56 +3748,426 @@ namespace exam_test
         {
             LockVaultForSafety("Vault locked.");
         }
+        private (bool Confirmed, string CurrentCode, string NewCode) ShowChangeVaultCodeDialog()
+        {
+            bool confirmed = false;
+            string currentCode = "";
+            string newCode = "";
+
+            int CalculateVaultCodeScore(string code)
+            {
+                if (string.IsNullOrWhiteSpace(code))
+                {
+                    return 0;
+                }
+
+                int score = 0;
+
+                if (code.Length >= 12) score += 25;
+                if (code.Length >= 16) score += 10;
+                if (code.Any(char.IsLower)) score += 10;
+                if (code.Any(char.IsUpper)) score += 15;
+                if (code.Any(char.IsDigit)) score += 15;
+                if (code.Any(ch => !char.IsLetterOrDigit(ch))) score += 20;
+                if (code.Distinct().Count() >= Math.Min(8, code.Length)) score += 5;
+
+                return Math.Max(0, Math.Min(100, score));
+            }
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 680;
+                dialog.Height = 610;
+                dialog.Text = "Change vault code";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Change vault code";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 600;
+                titleLabel.Height = 34;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "Choose a stronger vault code. Your encrypted vault will be saved to Google Drive after the change.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 610;
+                subtitleLabel.Height = 42;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+
+                Panel inputPanel = new Panel();
+                inputPanel.Left = 24;
+                inputPanel.Top = 115;
+                inputPanel.Width = 610;
+                inputPanel.Height = 245;
+                inputPanel.BackColor = Color.FromArgb(24, 28, 44);
+                inputPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label currentCodeLabel = new Label();
+                currentCodeLabel.Text = "Current vault code or recovery key";
+                currentCodeLabel.Left = 16;
+                currentCodeLabel.Top = 14;
+                currentCodeLabel.Width = 560;
+                currentCodeLabel.Height = 22;
+                currentCodeLabel.ForeColor = Color.White;
+                currentCodeLabel.BackColor = Color.Transparent;
+                currentCodeLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                TextBox currentCodeTextBox = new TextBox();
+                currentCodeTextBox.Left = 16;
+                currentCodeTextBox.Top = 38;
+                currentCodeTextBox.Width = 560;
+                currentCodeTextBox.Height = 28;
+                currentCodeTextBox.UseSystemPasswordChar = true;
+                currentCodeTextBox.PlaceholderText = "Enter current vault code or recovery key";
+
+                Label newCodeLabel = new Label();
+                newCodeLabel.Text = "New vault code";
+                newCodeLabel.Left = 16;
+                newCodeLabel.Top = 82;
+                newCodeLabel.Width = 560;
+                newCodeLabel.Height = 22;
+                newCodeLabel.ForeColor = Color.White;
+                newCodeLabel.BackColor = Color.Transparent;
+                newCodeLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                TextBox newCodeTextBox = new TextBox();
+                newCodeTextBox.Left = 16;
+                newCodeTextBox.Top = 106;
+                newCodeTextBox.Width = 560;
+                newCodeTextBox.Height = 28;
+                newCodeTextBox.UseSystemPasswordChar = true;
+                newCodeTextBox.PlaceholderText = "Example style: River-Forge-72#Moon";
+
+                Label strengthLabel = new Label();
+                strengthLabel.Text = "Strength: Not checked yet";
+                strengthLabel.Left = 16;
+                strengthLabel.Top = 138;
+                strengthLabel.Width = 560;
+                strengthLabel.Height = 22;
+                strengthLabel.ForeColor = softTextColor;
+                strengthLabel.BackColor = Color.Transparent;
+                strengthLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+                Panel strengthTrack = new Panel();
+                strengthTrack.Left = 16;
+                strengthTrack.Top = 162;
+                strengthTrack.Width = 560;
+                strengthTrack.Height = 7;
+                strengthTrack.BackColor = Color.FromArgb(35, 40, 60);
+
+                Panel strengthFill = new Panel();
+                strengthFill.Left = 0;
+                strengthFill.Top = 0;
+                strengthFill.Width = 0;
+                strengthFill.Height = 7;
+                strengthFill.BackColor = softTextColor;
+
+                strengthTrack.Controls.Add(strengthFill);
+
+                Label confirmCodeLabel = new Label();
+                confirmCodeLabel.Text = "Confirm new vault code";
+                confirmCodeLabel.Left = 16;
+                confirmCodeLabel.Top = 180;
+                confirmCodeLabel.Width = 560;
+                confirmCodeLabel.Height = 22;
+                confirmCodeLabel.ForeColor = Color.White;
+                confirmCodeLabel.BackColor = Color.Transparent;
+                confirmCodeLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                TextBox confirmCodeTextBox = new TextBox();
+                confirmCodeTextBox.Left = 16;
+                confirmCodeTextBox.Top = 204;
+                confirmCodeTextBox.Width = 560;
+                confirmCodeTextBox.Height = 28;
+                confirmCodeTextBox.UseSystemPasswordChar = true;
+                confirmCodeTextBox.PlaceholderText = "Repeat new vault code";
+
+                inputPanel.Controls.Add(currentCodeLabel);
+                inputPanel.Controls.Add(currentCodeTextBox);
+                inputPanel.Controls.Add(newCodeLabel);
+                inputPanel.Controls.Add(newCodeTextBox);
+                inputPanel.Controls.Add(strengthLabel);
+                inputPanel.Controls.Add(strengthTrack);
+                inputPanel.Controls.Add(confirmCodeLabel);
+                inputPanel.Controls.Add(confirmCodeTextBox);
+
+                Panel warningPanel = new Panel();
+                warningPanel.Left = 24;
+                warningPanel.Top = 380;
+                warningPanel.Width = 610;
+                warningPanel.Height = 92;
+                warningPanel.BackColor = Color.FromArgb(36, 30, 30);
+                warningPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label warningTitle = new Label();
+                warningTitle.Text = "Before you change it";
+                warningTitle.Left = 14;
+                warningTitle.Top = 10;
+                warningTitle.Width = 560;
+                warningTitle.Height = 22;
+                warningTitle.ForeColor = Color.FromArgb(255, 190, 90);
+                warningTitle.BackColor = Color.Transparent;
+                warningTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label warningText = new Label();
+                warningText.Text =
+                    "After this, your old vault code will stop working." + Environment.NewLine +
+                    "Your recovery key still matters. Keep it safe and create an encrypted backup.";
+                warningText.Left = 14;
+                warningText.Top = 36;
+                warningText.Width = 560;
+                warningText.Height = 45;
+                warningText.ForeColor = softTextColor;
+                warningText.BackColor = Color.Transparent;
+                warningText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                warningPanel.Controls.Add(warningTitle);
+                warningPanel.Controls.Add(warningText);
+
+                CheckBox showCodesCheckBox = new CheckBox();
+                showCodesCheckBox.Text = "Show typed codes";
+                showCodesCheckBox.Left = 24;
+                showCodesCheckBox.Top = 490;
+                showCodesCheckBox.Width = 170;
+                showCodesCheckBox.Height = 28;
+                showCodesCheckBox.ForeColor = softTextColor;
+                showCodesCheckBox.BackColor = Color.Transparent;
+                showCodesCheckBox.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "Enter your current code and choose a strong new vault code.";
+                statusLabel.Left = 205;
+                statusLabel.Top = 490;
+                statusLabel.Width = 430;
+                statusLabel.Height = 28;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+                statusLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 410;
+                cancelButton.Top = 535;
+                cancelButton.Width = 100;
+                cancelButton.Height = 34;
+                cancelButton.DialogResult = DialogResult.Cancel;
+                StyleActionButton(cancelButton);
+
+                Button confirmButton = new Button();
+                confirmButton.Text = "Change code";
+                confirmButton.Left = 525;
+                confirmButton.Top = 535;
+                confirmButton.Width = 110;
+                confirmButton.Height = 34;
+                confirmButton.Enabled = false;
+                StyleActionButton(confirmButton, true);
+
+                void UpdateState()
+                {
+                    string current = currentCodeTextBox.Text.Trim();
+                    string next = newCodeTextBox.Text.Trim();
+                    string confirm = confirmCodeTextBox.Text.Trim();
+
+                    int score = CalculateVaultCodeScore(next);
+                    strengthFill.Width = (int)(strengthTrack.Width * (score / 100.0));
+
+                    bool strong = VaultCodePolicy.IsStrongEnough(next, out string warning);
+
+                    if (string.IsNullOrWhiteSpace(next))
+                    {
+                        strengthLabel.Text = "Strength: Not checked yet";
+                        strengthLabel.ForeColor = softTextColor;
+                        strengthFill.BackColor = softTextColor;
+                    }
+                    else if (!strong)
+                    {
+                        strengthLabel.Text = "Strength: Weak - " + warning;
+                        strengthLabel.ForeColor = dangerColor;
+                        strengthFill.BackColor = dangerColor;
+                    }
+                    else if (score >= 85)
+                    {
+                        strengthLabel.Text = "Strength: Strong";
+                        strengthLabel.ForeColor = successColor;
+                        strengthFill.BackColor = successColor;
+                    }
+                    else
+                    {
+                        strengthLabel.Text = "Strength: Good - longer is safer";
+                        strengthLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                        strengthFill.BackColor = Color.FromArgb(255, 190, 90);
+                    }
+
+                    if (string.IsNullOrWhiteSpace(current))
+                    {
+                        statusLabel.Text = "Enter your current vault code or recovery key.";
+                        statusLabel.ForeColor = softTextColor;
+                        confirmButton.Enabled = false;
+                        return;
+                    }
+
+                    if (!strong)
+                    {
+                        statusLabel.Text = "Choose a stronger new vault code.";
+                        statusLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                        confirmButton.Enabled = false;
+                        return;
+                    }
+
+                    if (next != confirm)
+                    {
+                        statusLabel.Text = "New vault codes do not match yet.";
+                        statusLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                        confirmButton.Enabled = false;
+                        return;
+                    }
+
+                    statusLabel.Text = "Ready. QuickForge will sync the new vault code after confirmation.";
+                    statusLabel.ForeColor = successColor;
+                    confirmButton.Enabled = true;
+                }
+
+                currentCodeTextBox.TextChanged += (s, e) => UpdateState();
+                newCodeTextBox.TextChanged += (s, e) => UpdateState();
+                confirmCodeTextBox.TextChanged += (s, e) => UpdateState();
+
+                showCodesCheckBox.CheckedChanged += (s, e) =>
+                {
+                    bool hide = !showCodesCheckBox.Checked;
+                    currentCodeTextBox.UseSystemPasswordChar = hide;
+                    newCodeTextBox.UseSystemPasswordChar = hide;
+                    confirmCodeTextBox.UseSystemPasswordChar = hide;
+                };
+
+                confirmButton.Click += (s, e) =>
+                {
+                    if (!VaultCodePolicy.IsStrongEnough(newCodeTextBox.Text.Trim(), out string warning))
+                    {
+                        statusLabel.Text = "New vault code is too weak: " + warning;
+                        statusLabel.ForeColor = dangerColor;
+                        return;
+                    }
+
+                    if (newCodeTextBox.Text.Trim() != confirmCodeTextBox.Text.Trim())
+                    {
+                        statusLabel.Text = "New vault codes do not match.";
+                        statusLabel.ForeColor = dangerColor;
+                        return;
+                    }
+
+                    if (currentEncryptedVaultFile == null ||
+                        !VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, currentCodeTextBox.Text.Trim()))
+                    {
+                        statusLabel.Text = "Current vault code or recovery key is wrong.";
+                        statusLabel.ForeColor = dangerColor;
+                        return;
+                    }
+
+                    confirmed = true;
+                    currentCode = currentCodeTextBox.Text.Trim();
+                    newCode = newCodeTextBox.Text.Trim();
+
+                    currentCodeTextBox.Clear();
+                    newCodeTextBox.Clear();
+                    confirmCodeTextBox.Clear();
+
+                    dialog.DialogResult = DialogResult.OK;
+                    dialog.Close();
+                };
+
+                cancelButton.Click += (s, e) =>
+                {
+                    confirmed = false;
+
+                    currentCodeTextBox.Clear();
+                    newCodeTextBox.Clear();
+                    confirmCodeTextBox.Clear();
+
+                    dialog.DialogResult = DialogResult.Cancel;
+                    dialog.Close();
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(inputPanel);
+                dialog.Controls.Add(warningPanel);
+                dialog.Controls.Add(showCodesCheckBox);
+                dialog.Controls.Add(statusLabel);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(confirmButton);
+
+                dialog.AcceptButton = confirmButton;
+                dialog.CancelButton = cancelButton;
+
+                UpdateState();
+                dialog.ShowDialog(this);
+            }
+
+            return (confirmed, currentCode, newCode);
+        }
+
         private async void ChangeVaultCodeButton_Click(object? sender, EventArgs e)
         {
-            
             if (!RequireTrustedDeviceForSensitiveAction("Change vault code"))
             {
                 return;
             }
-if (currentDriveService == null)
+
+            if (currentDriveService == null)
             {
-                MessageBox.Show("Google Drive is not connected.");
+                MessageBox.Show(
+                    "Google Drive is not connected. Log in with Google before changing your vault code.",
+                    "Google Drive not connected",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
                 return;
             }
 
             if (currentDataKey == null || currentEncryptedVaultFile == null)
             {
-                MessageBox.Show("Unlock the vault first.");
+                MessageBox.Show(
+                    "Unlock your vault before changing the vault code.",
+                    "Vault locked",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
                 return;
             }
 
-            string? oldCode = ShowPasswordPrompt("Change Vault Code","Enter your current vault code or recovery key:");
+            var changeRequest = ShowChangeVaultCodeDialog();
 
-            if (
-                oldCode == null ||
-                currentEncryptedVaultFile == null ||
-                !VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, oldCode)
-            )
+            if (!changeRequest.Confirmed)
             {
-                MessageBox.Show("Wrong vault code or recovery key.");
+                selectedPreviewLabel.Text = "Vault code change cancelled.";
                 return;
             }
 
-            string? newCode = ShowPasswordPrompt("Change Vault Code", "Enter new vault code:");
-
-            if (string.IsNullOrWhiteSpace(newCode))
+            if (!VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, changeRequest.CurrentCode))
             {
-                MessageBox.Show("New vault code cannot be empty.");
+                MessageBox.Show(
+                    "Current vault code or recovery key is wrong.",
+                    "Change vault code blocked",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
                 return;
             }
 
-            if (!VaultCodePolicy.IsStrongEnough(newCode, out string vaultCodeWarning))
+            if (!VaultCodePolicy.IsStrongEnough(changeRequest.NewCode, out string vaultCodeWarning))
             {
                 ShowVaultCodeStrengthMessage(vaultCodeWarning);
-                return;
-            }
-
-            string? confirmNewCode = ShowPasswordPrompt("Change Vault Code", "Confirm new vault code:");
-
-            if (newCode != confirmNewCode)
-            {
-                MessageBox.Show("New vault codes do not match.");
                 return;
             }
 
@@ -3806,19 +4176,33 @@ if (currentDriveService == null)
                 VaultCryptoService.ChangeVaultCode(
                     currentEncryptedVaultFile,
                     currentDataKey,
-                    newCode
+                    changeRequest.NewCode
                 );
 
-                vaultCode = newCode;
+                vaultCode = changeRequest.NewCode;
 
                 await SaveCurrentVaultToCloudAsync();
 
-                selectedPreviewLabel.Text = "Vault code changed and synced.";
-                MessageBox.Show("Vault code changed successfully.");
+                selectedPreviewLabel.Text =
+                    "Vault code changed and synced." + Environment.NewLine +
+                    "Your old vault code will no longer unlock this vault.";
+
+                MessageBox.Show(
+                    "Vault code changed successfully." + Environment.NewLine + Environment.NewLine +
+                    "Use the new vault code next time you unlock QuickForge.",
+                    "Vault code changed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Could not change vault code: " + ex.Message);
+                MessageBox.Show(
+                    "Could not change vault code: " + ex.Message,
+                    "Change vault code failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
             }
         }
 
