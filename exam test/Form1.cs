@@ -6270,8 +6270,8 @@ if (currentDriveService == null)
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 720;
-                dialog.Height = 570;
+                dialog.Width = 920;
+                dialog.Height = 590;
                 dialog.Text = "Device Trust";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -6295,7 +6295,7 @@ if (currentDriveService == null)
                     "First device is trusted automatically. New devices start untrusted until approved from a trusted device.";
                 introLabel.Left = 20;
                 introLabel.Top = 52;
-                introLabel.Width = 660;
+                introLabel.Width = 860;
                 introLabel.Height = 42;
                 introLabel.ForeColor = softTextColor;
                 introLabel.BackColor = Color.Transparent;
@@ -6304,17 +6304,17 @@ if (currentDriveService == null)
                 ListBox deviceList = new ListBox();
                 deviceList.Left = 20;
                 deviceList.Top = 105;
-                deviceList.Width = 660;
+                deviceList.Width = 860;
                 deviceList.Height = 175;
                 deviceList.BackColor = Color.FromArgb(24, 28, 44);
                 deviceList.ForeColor = Color.White;
                 deviceList.BorderStyle = BorderStyle.FixedSingle;
-                deviceList.Font = new Font("Consolas", 9, FontStyle.Regular);
+                deviceList.Font = new Font("Consolas", 8, FontStyle.Regular);
 
                 Label detailLabel = new Label();
                 detailLabel.Left = 20;
                 detailLabel.Top = 292;
-                detailLabel.Width = 660;
+                detailLabel.Width = 860;
                 detailLabel.Height = 120;
                 detailLabel.ForeColor = softTextColor;
                 detailLabel.BackColor = Color.Transparent;
@@ -6333,15 +6333,24 @@ if (currentDriveService == null)
                     {
                         string trustText = device.IsTrusted ? "TRUSTED" : "UNTRUSTED";
                         string currentText = device.DeviceId == localDeviceId ? " | THIS DEVICE" : "";
-                        string shortListId = device.DeviceId.Length <= 10
+                        string shortListId = device.DeviceId.Length <= 14
                             ? device.DeviceId
-                            : device.DeviceId.Substring(0, 10);
+                            : device.DeviceId.Substring(0, 14);
+
+                        string listDeviceName = string.IsNullOrWhiteSpace(device.DeviceName)
+                            ? "Unknown device"
+                            : device.DeviceName.Trim();
+
+                        if (listDeviceName.Length > 18)
+                        {
+                            listDeviceName = listDeviceName.Substring(0, 15) + "...";
+                        }
 
                         deviceList.Items.Add(
                             trustText.PadRight(10) +
-                            " | " + device.DeviceName.PadRight(20) +
-                            " | Device ID " + shortListId.PadRight(10) +
-                            " | last seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
+                            " | Device ID " + shortListId.PadRight(14) +
+                            " | " + listDeviceName.PadRight(18) +
+                            " | seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
                             currentText
                         );
                     }
@@ -6382,9 +6391,9 @@ if (currentDriveService == null)
                         return;
                     }
 
-                    string shortId = selected.DeviceId.Length <= 10
+                    string shortId = selected.DeviceId.Length <= 14
                         ? selected.DeviceId
-                        : selected.DeviceId.Substring(0, 10);
+                        : selected.DeviceId.Substring(0, 14);
 
                     detailLabel.Text =
                         "Device name: " + selected.DeviceName + Environment.NewLine +
@@ -6498,7 +6507,7 @@ if (currentDriveService == null)
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 570;
+                closeButton.Left = 790;
                 closeButton.Top = 425;
                 closeButton.Width = 110;
                 closeButton.Height = 34;
@@ -6507,9 +6516,9 @@ if (currentDriveService == null)
 
                 Label warningLabel = new Label();
                 warningLabel.Left = 20;
-                warningLabel.Top = 470;
-                warningLabel.Width = 660;
-                warningLabel.Height = 55;
+                warningLabel.Top = 468;
+                warningLabel.Width = 860;
+                warningLabel.Height = 60;
                 warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
                 warningLabel.BackColor = Color.Transparent;
                 warningLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
