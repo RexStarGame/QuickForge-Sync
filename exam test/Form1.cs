@@ -4910,6 +4910,17 @@ if (currentDriveService == null)
                     await ImportEncryptedBackupAsync();
                 };
 
+                void UpdateDeviceTrustActionButtons()
+                {
+                    KnownVaultDevice? selected = GetSelectedDevice();
+                    bool canManageDeviceTrust = !IsRestrictedModeActive();
+
+                    trustButton.Enabled = canManageDeviceTrust && selected != null && !selected.IsTrusted;
+                    untrustButton.Enabled = canManageDeviceTrust && selected != null && selected.IsTrusted;
+                }
+
+                deviceList.SelectedIndexChanged += (s, e) => UpdateDeviceTrustActionButtons();
+
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
                 closeButton.Left = 360;
@@ -5552,6 +5563,17 @@ if (currentDriveService == null)
                 StyleActionButton(selfCheckButton);
                 selfCheckButton.Click += (s, e) => ShowVaultSelfCheckDialog();
 
+                void UpdateDeviceTrustActionButtons()
+                {
+                    KnownVaultDevice? selected = GetSelectedDevice();
+                    bool canManageDeviceTrust = !IsRestrictedModeActive();
+
+                    trustButton.Enabled = canManageDeviceTrust && selected != null && !selected.IsTrusted;
+                    untrustButton.Enabled = canManageDeviceTrust && selected != null && selected.IsTrusted;
+                }
+
+                deviceList.SelectedIndexChanged += (s, e) => UpdateDeviceTrustActionButtons();
+
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
                 closeButton.Left = 380;
@@ -5842,78 +5864,7 @@ if (currentDriveService == null)
                     RefreshDeviceList();
                     UpdateDetail();
                 };
-
-                Button removeButton = new Button();
-                removeButton.Text = "Remove";
-                removeButton.Left = 270;
-                removeButton.Top = 395;
-                removeButton.Width = 110;
-                removeButton.Height = 34;
-                StyleActionButton(removeButton);
-                removeButton.Click += (s, e) =>
-                {
-                    KnownVaultDevice? selected = GetSelectedDevice();
-
-                    if (selected == null)
-                    {
-                        return;
-                    }
-
-                    if (selected.DeviceId == localDeviceId)
-                    {
-                        MessageBox.Show(
-                            "You cannot remove the current device from the visible list while using it.",
-                            "Current device",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information
-                        );
-
-                        return;
-                    }
-
-                    DialogResult confirmRemove = MessageBox.Show(
-                        "Remove this device from the visible trust list?" + Environment.NewLine + Environment.NewLine +
-                        selected.DeviceName + Environment.NewLine + Environment.NewLine +
-                        "If this device opens the vault again later, it can appear again as a new/untrusted device.",
-                        "Remove device",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Warning
-                    );
-
-                    if (confirmRemove != DialogResult.Yes)
-                    {
-                        return;
-                    }
-
-                    if (!ConfirmVaultCodeForDeviceTrust())
-                    {
-                        return;
-                    }
-
-                    KnownVaultDevice? deviceToRemove = currentVaultSettings.KnownDevices
-                        .FirstOrDefault(device => device.DeviceId == selected.DeviceId);
-
-                    if (deviceToRemove != null)
-                    {
-                        deviceToRemove.IsTrusted = false;
-                        deviceToRemove.IsHiddenFromTrustList = true;
-                        deviceToRemove.RemovedFromTrustListAtUtc = DateTime.UtcNow;
-                        deviceToRemove.TrustedChangedAtUtc = DateTime.UtcNow;
-                        deviceToRemove.TrustNote = "Removed from visible trust list by " + localDeviceName + ".";
-                    }
-
-                    AddSafetyTimelineEvent(
-                        "Device removed",
-                        selected.DeviceName + " was removed from the visible trust list by " + localDeviceName + "."
-                    );
-
-                    QueueBackgroundVaultSync("Device trust updated.");
-
-                    RefreshDeviceList();
-                    UpdateDetail();
-                };
-
-                Button closeButton = new Button();
+Button closeButton = new Button();
                 closeButton.Text = "Close";
                 closeButton.Left = 570;
                 closeButton.Top = 395;
@@ -7807,6 +7758,7 @@ if (currentDriveService == null)
         }
     }
 }
+
 
 
 
