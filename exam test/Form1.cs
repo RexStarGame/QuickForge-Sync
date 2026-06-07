@@ -530,11 +530,12 @@ namespace exam_test
         }
         private void CreateVaultAccessUi()
         {
-            vaultAccessPanel.Left = 175;
-            vaultAccessPanel.Top = 135;
-            vaultAccessPanel.Width = 450;
-            vaultAccessPanel.Height = 455;
+            vaultAccessPanel.Left = 140;
+            vaultAccessPanel.Top = 130;
+            vaultAccessPanel.Width = 520;
+            vaultAccessPanel.Height = 505;
             vaultAccessPanel.BackColor = Color.FromArgb(16, 20, 34);
+            vaultAccessPanel.BorderStyle = BorderStyle.FixedSingle;
 
             unlockStatusTimer.Interval = 1000;
             unlockStatusTimer.Tick += (s, e) =>
@@ -545,52 +546,85 @@ namespace exam_test
                 }
             };
 
-            vaultAccessTitleLabel.Text = "Create Vault Code";
+            vaultAccessTitleLabel.Text = "Unlock your vault";
             vaultAccessTitleLabel.ForeColor = Color.White;
             vaultAccessTitleLabel.BackColor = Color.Transparent;
-            vaultAccessTitleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
-            vaultAccessTitleLabel.AutoSize = true;
+            vaultAccessTitleLabel.Font = new Font("Segoe UI", 16, FontStyle.Bold);
+            vaultAccessTitleLabel.AutoSize = false;
             vaultAccessTitleLabel.Left = 24;
-            vaultAccessTitleLabel.Top = 20;
+            vaultAccessTitleLabel.Top = 22;
+            vaultAccessTitleLabel.Width = 450;
+            vaultAccessTitleLabel.Height = 34;
 
-            vaultAccessSubtitleLabel.Text = "This code protects reveal/copy actions inside this session.";
+            vaultAccessSubtitleLabel.Text = "Enter your vault code or recovery key to continue.";
             vaultAccessSubtitleLabel.ForeColor = softTextColor;
             vaultAccessSubtitleLabel.BackColor = Color.Transparent;
-            vaultAccessSubtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+            vaultAccessSubtitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
             vaultAccessSubtitleLabel.AutoSize = false;
             vaultAccessSubtitleLabel.Left = 24;
-            vaultAccessSubtitleLabel.Top = 55;
-            vaultAccessSubtitleLabel.Width = 390;
-            vaultAccessSubtitleLabel.Height = 36;
+            vaultAccessSubtitleLabel.Top = 60;
+            vaultAccessSubtitleLabel.Width = 450;
+            vaultAccessSubtitleLabel.Height = 45;
 
-            vaultCodeLabel.Text = "Vault code";
+            Panel accessInfoPanel = new Panel();
+            accessInfoPanel.Left = 24;
+            accessInfoPanel.Top = 112;
+            accessInfoPanel.Width = 470;
+            accessInfoPanel.Height = 70;
+            accessInfoPanel.BackColor = Color.FromArgb(20, 25, 42);
+            accessInfoPanel.BorderStyle = BorderStyle.FixedSingle;
+
+            Label accessInfoTitleLabel = new Label();
+            accessInfoTitleLabel.Text = "Encrypted vault access";
+            accessInfoTitleLabel.Left = 14;
+            accessInfoTitleLabel.Top = 10;
+            accessInfoTitleLabel.Width = 430;
+            accessInfoTitleLabel.Height = 22;
+            accessInfoTitleLabel.ForeColor = Color.White;
+            accessInfoTitleLabel.BackColor = Color.Transparent;
+            accessInfoTitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+            Label accessInfoTextLabel = new Label();
+            accessInfoTextLabel.Text = "Your saved data stays encrypted. Restore Backup helps if your cloud vault is missing.";
+            accessInfoTextLabel.Left = 14;
+            accessInfoTextLabel.Top = 34;
+            accessInfoTextLabel.Width = 430;
+            accessInfoTextLabel.Height = 28;
+            accessInfoTextLabel.ForeColor = softTextColor;
+            accessInfoTextLabel.BackColor = Color.Transparent;
+            accessInfoTextLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+            accessInfoPanel.Controls.Add(accessInfoTitleLabel);
+            accessInfoPanel.Controls.Add(accessInfoTextLabel);
+
+            vaultCodeLabel.Text = "Vault code / recovery key";
             vaultCodeLabel.ForeColor = Color.White;
             vaultCodeLabel.BackColor = Color.Transparent;
             vaultCodeLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             vaultCodeLabel.AutoSize = true;
             vaultCodeLabel.Left = 24;
-            vaultCodeLabel.Top = 92;
+            vaultCodeLabel.Top = 202;
 
             vaultCodeTextBox.Left = 24;
-            vaultCodeTextBox.Top = 114;
-            vaultCodeTextBox.Width = 390;
-            vaultCodeTextBox.Height = 26;
+            vaultCodeTextBox.Top = 224;
+            vaultCodeTextBox.Width = 425;
+            vaultCodeTextBox.Height = 28;
             vaultCodeTextBox.UseSystemPasswordChar = true;
-            vaultCodeTextBox.PlaceholderText = "Create a vault code";
+            vaultCodeTextBox.PlaceholderText = "Enter vault code or recovery key";
             vaultCodeTextBox.TextChanged += (s, e) => UpdateVaultCodeStrengthPreview();
 
             vaultCodeStrengthLabel.Text = "Vault code strength: Not checked yet";
             vaultCodeStrengthLabel.Left = 24;
-            vaultCodeStrengthLabel.Top = 142;
-            vaultCodeStrengthLabel.Width = 390;
-            vaultCodeStrengthLabel.Height = 32;
+            vaultCodeStrengthLabel.Top = 256;
+            vaultCodeStrengthLabel.Width = 450;
+            vaultCodeStrengthLabel.Height = 28;
             vaultCodeStrengthLabel.ForeColor = softTextColor;
             vaultCodeStrengthLabel.BackColor = Color.Transparent;
             vaultCodeStrengthLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
 
             vaultCodeStrengthTrack.Left = 24;
-            vaultCodeStrengthTrack.Top = 174;
-            vaultCodeStrengthTrack.Width = 390;
+            vaultCodeStrengthTrack.Top = 284;
+            vaultCodeStrengthTrack.Width = 425;
             vaultCodeStrengthTrack.Height = 7;
             vaultCodeStrengthTrack.BackColor = Color.FromArgb(35, 40, 60);
 
@@ -608,32 +642,32 @@ namespace exam_test
             confirmVaultCodeLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             confirmVaultCodeLabel.AutoSize = true;
             confirmVaultCodeLabel.Left = 24;
-            confirmVaultCodeLabel.Top = 195;
+            confirmVaultCodeLabel.Top = 300;
 
             confirmVaultCodeTextBox.Left = 24;
-            confirmVaultCodeTextBox.Top = 217;
-            confirmVaultCodeTextBox.Width = 390;
-            confirmVaultCodeTextBox.Height = 26;
+            confirmVaultCodeTextBox.Top = 322;
+            confirmVaultCodeTextBox.Width = 425;
+            confirmVaultCodeTextBox.Height = 28;
             confirmVaultCodeTextBox.UseSystemPasswordChar = true;
             confirmVaultCodeTextBox.PlaceholderText = "Repeat vault code";
 
             vaultUnlockStatusLabel.Text = "";
             vaultUnlockStatusLabel.Left = 24;
-            vaultUnlockStatusLabel.Top = 252;
-            vaultUnlockStatusLabel.Width = 400;
-            vaultUnlockStatusLabel.Height = 130;
+            vaultUnlockStatusLabel.Top = 300;
+            vaultUnlockStatusLabel.Width = 470;
+            vaultUnlockStatusLabel.Height = 105;
             vaultUnlockStatusLabel.ForeColor = softTextColor;
             vaultUnlockStatusLabel.BackColor = Color.FromArgb(20, 25, 42);
             vaultUnlockStatusLabel.BorderStyle = BorderStyle.FixedSingle;
-            vaultUnlockStatusLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
-            vaultUnlockStatusLabel.Padding = new Padding(8, 6, 8, 6);
+            vaultUnlockStatusLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+            vaultUnlockStatusLabel.Padding = new Padding(10, 8, 10, 8);
             vaultUnlockStatusLabel.Visible = false;
 
-            createVaultButton.Text = "Unlock Vault";
+            createVaultButton.Text = "Unlock vault";
             createVaultButton.Left = 24;
-            createVaultButton.Top = 305;
-            createVaultButton.Width = 120;
-            createVaultButton.Height = 32;
+            createVaultButton.Top = 430;
+            createVaultButton.Width = 135;
+            createVaultButton.Height = 36;
             createVaultButton.FlatStyle = FlatStyle.Flat;
             createVaultButton.ForeColor = Color.White;
             createVaultButton.BackColor = Color.FromArgb(45, 90, 160);
@@ -641,10 +675,10 @@ namespace exam_test
             createVaultButton.Click += CreateVaultButton_Click;
 
             resetTestVaultButton.Text = "Reset Test Vault";
-            resetTestVaultButton.Left = 155;
-            resetTestVaultButton.Top = 305;
+            resetTestVaultButton.Left = 174;
+            resetTestVaultButton.Top = 430;
             resetTestVaultButton.Width = 150;
-            resetTestVaultButton.Height = 32;
+            resetTestVaultButton.Height = 36;
             resetTestVaultButton.FlatStyle = FlatStyle.Flat;
             resetTestVaultButton.ForeColor = Color.White;
             resetTestVaultButton.BackColor = Color.FromArgb(120, 35, 45);
@@ -652,19 +686,25 @@ namespace exam_test
             resetTestVaultButton.Visible = false;
             resetTestVaultButton.Click += ResetTestVaultButton_Click;
 
-            importBackupAccessButton.Text = "Import Backup";
-            importBackupAccessButton.Left = 315;
-            importBackupAccessButton.Top = 305;
-            importBackupAccessButton.Width = 110;
-            importBackupAccessButton.Height = 32;
+            importBackupAccessButton.Text = "Restore Backup";
+            importBackupAccessButton.Left = 340;
+            importBackupAccessButton.Top = 430;
+            importBackupAccessButton.Width = 135;
+            importBackupAccessButton.Height = 36;
             importBackupAccessButton.FlatStyle = FlatStyle.Flat;
             importBackupAccessButton.ForeColor = Color.White;
             importBackupAccessButton.BackColor = Color.FromArgb(35, 40, 60);
             importBackupAccessButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
             importBackupAccessButton.Click += async (s, e) => await ImportEncryptedBackupAsync();
 
+            vaultToolTip.SetToolTip(vaultCodeTextBox, "Enter your vault code, or paste your recovery key if you forgot the code.");
+            vaultToolTip.SetToolTip(createVaultButton, "Unlock or create your encrypted vault.");
+            vaultToolTip.SetToolTip(importBackupAccessButton, "Restore from an encrypted QuickForge backup file.");
+            vaultToolTip.SetToolTip(vaultUnlockStatusLabel, "This area explains lockout, recovery, and cloud-vault status.");
+
             vaultAccessPanel.Controls.Add(vaultAccessTitleLabel);
             vaultAccessPanel.Controls.Add(vaultAccessSubtitleLabel);
+            vaultAccessPanel.Controls.Add(accessInfoPanel);
             vaultAccessPanel.Controls.Add(vaultCodeLabel);
             vaultAccessPanel.Controls.Add(vaultCodeTextBox);
             vaultAccessPanel.Controls.Add(vaultCodeStrengthLabel);
@@ -1534,10 +1574,10 @@ namespace exam_test
         {
             unlockStatusTimer.Stop();
 
-            vaultAccessTitleLabel.Text = "Cloud vault missing";
+            vaultAccessTitleLabel.Text = "Set up or restore vault";
             vaultAccessSubtitleLabel.Text =
-                "QuickForge could not find an encrypted cloud vault for " + GetConnectedGoogleEmailDisplay() + "." + Environment.NewLine +
-                "Create a new vault, or import an encrypted backup if you expected existing data.";
+                "No encrypted cloud vault was found for " + GetConnectedGoogleEmailDisplay() + "." + Environment.NewLine +
+                "Create a new vault, or restore an encrypted backup if you already have one.";
             vaultCodeLabel.Text = "Create vault code";
             vaultCodeTextBox.PlaceholderText = "Create a vault code";
 
@@ -1563,8 +1603,8 @@ namespace exam_test
                 "- you need to restore from an encrypted backup";
             vaultUnlockStatusLabel.ForeColor = Color.FromArgb(255, 190, 90);
 
-            SetVaultAccessButtonRowTop(390);
-            createVaultButton.Text = "Create New Vault";
+            SetVaultAccessButtonRowTop(430);
+            createVaultButton.Text = "Create vault";
 
             vaultCodeTextBox.Clear();
             confirmVaultCodeTextBox.Clear();
@@ -1575,10 +1615,10 @@ namespace exam_test
         }
         private void ConfigureVaultAccessForUnlock()
         {
-            vaultAccessTitleLabel.Text = "Unlock Vault";
+            vaultAccessTitleLabel.Text = "Unlock your vault";
             vaultAccessSubtitleLabel.Text =
                 "Vault for " + GetConnectedGoogleEmailDisplay() + "." + Environment.NewLine +
-                "Enter your vault code or recovery key.";
+                "Enter your vault code or recovery key to continue.";
             vaultCodeLabel.Text = "Vault code / recovery key";
             vaultCodeTextBox.PlaceholderText = "Enter vault code or recovery key";
 
@@ -1595,7 +1635,7 @@ namespace exam_test
                 confirmVaultCodeVisibilityButton.Visible = false;
             }
 
-            SetVaultAccessButtonRowTop(390);
+            SetVaultAccessButtonRowTop(430);
             UpdateVaultUnlockStatusLabel();
             unlockStatusTimer.Start();
             createVaultButton.Text = "Unlock Vault";
@@ -8972,7 +9012,6 @@ if (currentDriveService == null)
         }
     }
 }
-
 
 
 
