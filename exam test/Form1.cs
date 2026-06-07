@@ -5810,20 +5810,21 @@ if (currentDriveService == null)
                 }
 
                 string usernameText = string.IsNullOrWhiteSpace(entry.Username)
-                    ? "no username/email saved"
-                    : "username/email: " + entry.Username.Trim();
+                    ? "No username/email saved"
+                    : entry.Username.Trim();
 
-                return serviceName + " - " + usernameText;
+                return "- Saved account: " + serviceName + Environment.NewLine +
+                       "  Username/email: " + usernameText;
             }
 
             string BuildIssueListText(List<VaultEntry> entries)
             {
                 if (entries.Count == 0)
                 {
-                    return "None";
+                    return "- No saved account found";
                 }
 
-                return string.Join(", ", entries.Select(BuildEntryIssueName));
+                return string.Join(Environment.NewLine, entries.Select(BuildEntryIssueName));
             }
 
             List<VaultEntry> weakPasswordIssueEntries = vaultEntries
@@ -5916,11 +5917,11 @@ if (currentDriveService == null)
             }
             else if (reusedPasswordEntries > 0)
             {
-                nextAction = (reusedPasswordIssueEntries.Count == 1 ? "This saved account uses a password that is also used somewhere else. Change it: " : "These saved accounts reuse the same password. Change them one by one: ") + BuildIssueListText(reusedPasswordIssueEntries) + ".";
+                nextAction = (reusedPasswordIssueEntries.Count == 1 ? "This saved account uses a password that is also used somewhere else. Change it:" : "These saved accounts reuse the same password. Change them one by one:") + Environment.NewLine + BuildIssueListText(reusedPasswordIssueEntries);
             }
             else if (weakPasswords > 0)
             {
-                nextAction = (weakPasswordIssueEntries.Count == 1 ? "This saved account has a weak password. Make it stronger: " : "These saved accounts have weak passwords. Make them stronger: ") + BuildIssueListText(weakPasswordIssueEntries) + ".";
+                nextAction = (weakPasswordIssueEntries.Count == 1 ? "This saved account has a weak password. Make it stronger:" : "These saved accounts have weak passwords. Make them stronger:") + Environment.NewLine + BuildIssueListText(weakPasswordIssueEntries);
             }
             else if (missingWebsiteLinks > 0)
             {
@@ -6090,7 +6091,7 @@ if (currentDriveService == null)
                 overviewTab.Controls.Add(CreateCard(
                     "PASSWORD HEALTH",
                     weakPasswords == 0 && reusedPasswordEntries == 0 ? "Good" : "Review",
-                    "Weak: " + weakPasswords + " | Reused: " + reusedPasswordEntries + " | See exact accounts below.",
+                    "Weak: " + weakPasswords + " | Reused: " + reusedPasswordEntries + " | Details below.",
                     weakPasswords == 0 && reusedPasswordEntries == 0 ? successColor : Color.FromArgb(255, 190, 90),
                     248,
                     148,
@@ -6113,7 +6114,7 @@ if (currentDriveService == null)
                 nextActionPanel.Left = 18;
                 nextActionPanel.Top = 285;
                 nextActionPanel.Width = 670;
-                nextActionPanel.Height = 135;
+                nextActionPanel.Height = 155;
                 nextActionPanel.BackColor = Color.FromArgb(20, 25, 42);
                 nextActionPanel.BorderStyle = BorderStyle.FixedSingle;
 
@@ -6132,7 +6133,7 @@ if (currentDriveService == null)
                 nextActionText.Left = 14;
                 nextActionText.Top = 40;
                 nextActionText.Width = 635;
-                nextActionText.Height = 88;
+                nextActionText.Height = 108;
                 nextActionText.ForeColor = softTextColor;
                 nextActionText.BackColor = Color.Transparent;
                 nextActionText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
