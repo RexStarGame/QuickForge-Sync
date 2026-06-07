@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -5276,6 +5276,47 @@ if (currentDriveService == null)
             return encryptedJson;
         }
 
+        private string GetDefaultEncryptedBackupFolder()
+        {
+            string documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+            if (string.IsNullOrWhiteSpace(documentsFolder))
+            {
+                documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            }
+
+            string backupFolder = Path.Combine(documentsFolder, "QuickForge Encrypted Backups");
+            Directory.CreateDirectory(backupFolder);
+
+            return backupFolder;
+        }
+
+        private string CreateDefaultEncryptedBackupFileName()
+        {
+            return "QuickForge-Encrypted-Backup-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".qfvault";
+        }
+
+        private void OpenFolderInExplorer(string folderPath)
+        {
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            {
+                return;
+            }
+
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = folderPath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not open backup folder: " + ex.Message);
+            }
+        }
+
         private void ExportEncryptedBackup()
         {
             if (!isVaultUnlocked)
@@ -5286,38 +5327,60 @@ if (currentDriveService == null)
 
             try
             {
-                string encryptedJson = CreateCurrentEncryptedVaultJson();
+                string defaultBackupFolder = GetDefaultEncryptedBackupFolder();
 
                 using (SaveFileDialog saveDialog = new SaveFileDialog())
                 {
-                    saveDialog.Title = "Export encrypted backup";
-                    saveDialog.FileName = "QuickForge-Backup.qfvault";
-                    saveDialog.Filter = "QuickForge encrypted backup (*.qfvault)|*.qfvault|JSON files (*.json)|*.json|All files (*.*)|*.*";
+                    saveDialog.Title = "Export encrypted QuickForge backup";
+                    saveDialog.InitialDirectory = defaultBackupFolder;
+                    saveDialog.FileName = CreateDefaultEncryptedBackupFileName();
+                    saveDialog.DefaultExt = "qfvault";
+                    saveDialog.AddExtension = true;
+                    saveDialog.OverwritePrompt = true;
+                    saveDialog.Filter = "QuickForge encrypted backup (*.qfvault)|*.qfvault|All files (*.*)|*.*";
 
                     if (saveDialog.ShowDialog(this) != DialogResult.OK)
                     {
                         return;
                     }
 
-                    File.WriteAllText(saveDialog.FileName, encryptedJson);
+                    string encryptedJson = CreateCurrentEncryptedVaultJson();
+                    File.WriteAllText(saveDialog.FileName, encryptedJson, Encoding.UTF8);
+
+                    string backupFileName = Path.GetFileName(saveDialog.FileName);
+                    string backupFolder = Path.GetDirectoryName(saveDialog.FileName) ?? defaultBackupFolder;
+
+                    MarkBackupCreatedByCurrentDevice(backupFileName);
+                    QueueBackgroundVaultSync("Encrypted backup exported: " + backupFileName);
 
                     SetPreviewText(
                         "Encrypted backup exported.",
-                        "Store this backup somewhere safe outside this app.",
-                        "You still need your vault code or recovery key to open it."
+                        "File: " + backupFileName,
+                        "Folder: " + backupFolder,
+                        "You still need your vault code or recovery key to restore it."
                     );
 
                     backupButton.BackColor = Color.FromArgb(35, 40, 60);
                     backupButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
 
-                    MessageBox.Show(
+                    DialogResult openFolder = MessageBox.Show(
                         "Encrypted backup exported successfully." + Environment.NewLine + Environment.NewLine +
-                        "Store it somewhere safe, such as an external drive or secure cloud folder." + Environment.NewLine +
-                        "Do not store your recovery key and backup file in the exact same place.",
+                        "Saved as:" + Environment.NewLine +
+                        backupFileName + Environment.NewLine + Environment.NewLine +
+                        "Default backup folder:" + Environment.NewLine +
+                        backupFolder + Environment.NewLine + Environment.NewLine +
+                        "Anyone can delete this backup file from Windows, but they cannot read your passwords without your vault code or recovery key." + Environment.NewLine +
+                        "Do not store your recovery key and backup file in the exact same place." + Environment.NewLine + Environment.NewLine +
+                        "Open backup folder now?",
                         "Backup exported",
-                        MessageBoxButtons.OK,
+                        MessageBoxButtons.YesNo,
                         MessageBoxIcon.Information
                     );
+
+                    if (openFolder == DialogResult.Yes)
+                    {
+                        OpenFolderInExplorer(backupFolder);
+                    }
                 }
             }
             catch (Exception ex)
