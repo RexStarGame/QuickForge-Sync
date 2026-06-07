@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -4202,7 +4202,11 @@ if (currentDriveService == null)
 
         private async Task OpenAndFillButton_Click()
         {
-            if (!RequireTrustedDeviceForSensitiveAction("Open + Fill"))             {                 return;             } 
+            if (!RequireTrustedDeviceForSensitiveAction("Open + Fill"))
+            {
+                return;
+            }
+
             VaultEntry? entry = GetSelectedEntry();
 
             if (entry == null)
@@ -4228,29 +4232,46 @@ if (currentDriveService == null)
                 return;
             }
 
+            string usernameToFill = entry.Username;
+            string passwordToFill = entry.Secret;
+
+            selectedPreviewLabel.Text =
+                "Open + Fill started." + Environment.NewLine +
+                "The website will open now." + Environment.NewLine +
+                "If the username field is not focused, click it within 5 seconds.";
+
             OpenWebsite(entry.Website);
 
-            selectedPreviewLabel.Text = "Opening site. Preparing to fill username and password...";
+            await Task.Delay(5000);
 
-            await Task.Delay(900);
+            try
+            {
+                Clipboard.SetText(usernameToFill);
+                SendKeys.SendWait("^v");
 
-            Clipboard.SetText(entry.Username);
-            SendKeys.SendWait("^v");
+                await Task.Delay(250);
 
-            selectedPreviewLabel.Text = "Username filled. Moving to password field...";
+                SendKeys.SendWait("{TAB}");
 
-            await Task.Delay(120);
+                await Task.Delay(250);
 
-            SendKeys.SendWait("{TAB}");
+                Clipboard.SetText(passwordToFill);
+                SendKeys.SendWait("^v");
 
-            await Task.Delay(120);
+                selectedPreviewLabel.Text =
+                    "Open + Fill completed." + Environment.NewLine +
+                    "If the website did not fill correctly, click the username field and use Ctrl + Alt + Q." + Environment.NewLine +
+                    "Clipboard clears in 20 seconds.";
 
-            Clipboard.SetText(entry.Secret);
-            SendKeys.SendWait("^v");
-
-            selectedPreviewLabel.Text = "Open + Fill completed. Clipboard clears in 20 seconds.";
-
-            _ = ClearClipboardLaterAsync(entry.Secret, 20000);
+                _ = ClearClipboardLaterAsync(passwordToFill, 20000);
+            }
+            catch (Exception ex)
+            {
+                selectedPreviewLabel.Text =
+                    "Open + Fill could not complete automatically." + Environment.NewLine +
+                    "Click the username field and use Ctrl + Alt + Q instead." + Environment.NewLine +
+                    "Error: " + ex.Message;
+            }
         }
 
         private void OpenWebsite(string website)
@@ -7621,6 +7642,13 @@ if (currentDriveService == null)
             StyleActionButton(createPasswordQuickFillButton, true);
             createPasswordQuickFillButton.Click += (s, e) =>
             {
+                if (!RequireTrustedDeviceForSensitiveAction("QuickFill password generator"))
+                {
+                    SetQuickFillStatus("Blocked: this device is untrusted.");
+                    quickFillForm?.Hide();
+                    return;
+                }
+
                 ShowCreatePasswordDialog(PasswordGeneratorTarget.QuickFill);
             };
 
