@@ -4517,11 +4517,28 @@ if (currentDriveService == null)
         {
             bool confirmed = false;
 
+            string ShortenForDialog(string value, int maxLength)
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    return "Not saved";
+                }
+
+                string clean = value.Trim();
+
+                if (clean.Length <= maxLength)
+                {
+                    return clean;
+                }
+
+                return clean.Substring(0, Math.Max(0, maxLength - 3)) + "...";
+            }
+
             using (Form dialog = new Form())
             {
-                dialog.Width = 430;
-                dialog.Height = 230;
-                dialog.Text = "Delete entry";
+                dialog.Width = 580;
+                dialog.Height = 430;
+                dialog.Text = "Delete saved entry";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialog.MaximizeBox = false;
@@ -4529,40 +4546,118 @@ if (currentDriveService == null)
                 dialog.BackColor = Color.FromArgb(16, 20, 34);
 
                 Label titleLabel = new Label();
-                titleLabel.Text = "Delete this entry?";
-                titleLabel.Left = 20;
-                titleLabel.Top = 18;
-                titleLabel.Width = 360;
-                titleLabel.Height = 28;
+                titleLabel.Text = "Delete saved entry?";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 500;
+                titleLabel.Height = 34;
                 titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
-                titleLabel.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
 
-                Label entryLabel = new Label();
-                entryLabel.Text = entry.GetDisplayName();
-                entryLabel.Left = 20;
-                entryLabel.Top = 55;
-                entryLabel.Width = 360;
-                entryLabel.Height = 24;
-                entryLabel.ForeColor = Color.White;
-                entryLabel.BackColor = Color.Transparent;
-                entryLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "QuickForge will remove this saved account from your vault and sync the deletion.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 515;
+                subtitleLabel.Height = 32;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
 
-                Label warningLabel = new Label();
-                warningLabel.Text = "This action cannot be undone after sync.";
-                warningLabel.Left = 20;
-                warningLabel.Top = 470;
-                warningLabel.Width = 360;
-                warningLabel.Height = 55;
-                warningLabel.ForeColor = dangerColor;
-                warningLabel.BackColor = Color.Transparent;
+                Panel entryPanel = new Panel();
+                entryPanel.Left = 24;
+                entryPanel.Top = 105;
+                entryPanel.Width = 515;
+                entryPanel.Height = 95;
+                entryPanel.BackColor = Color.FromArgb(24, 28, 44);
+                entryPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label entryTitleLabel = new Label();
+                entryTitleLabel.Text = "Entry selected for deletion";
+                entryTitleLabel.Left = 14;
+                entryTitleLabel.Top = 10;
+                entryTitleLabel.Width = 470;
+                entryTitleLabel.Height = 22;
+                entryTitleLabel.ForeColor = Color.White;
+                entryTitleLabel.BackColor = Color.Transparent;
+                entryTitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label entryInfoLabel = new Label();
+                entryInfoLabel.Text =
+                    "Service: " + ShortenForDialog(entry.GetDisplayName(), 52) + Environment.NewLine +
+                    "Username/email: " + ShortenForDialog(entry.Username, 48) + Environment.NewLine +
+                    "Website: " + ShortenForDialog(entry.Website, 52);
+                entryInfoLabel.Left = 14;
+                entryInfoLabel.Top = 36;
+                entryInfoLabel.Width = 470;
+                entryInfoLabel.Height = 52;
+                entryInfoLabel.ForeColor = softTextColor;
+                entryInfoLabel.BackColor = Color.Transparent;
+                entryInfoLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                entryPanel.Controls.Add(entryTitleLabel);
+                entryPanel.Controls.Add(entryInfoLabel);
+
+                Panel warningPanel = new Panel();
+                warningPanel.Left = 24;
+                warningPanel.Top = 220;
+                warningPanel.Width = 515;
+                warningPanel.Height = 92;
+                warningPanel.BackColor = Color.FromArgb(36, 30, 30);
+                warningPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label warningTitleLabel = new Label();
+                warningTitleLabel.Text = "Before you delete";
+                warningTitleLabel.Left = 14;
+                warningTitleLabel.Top = 10;
+                warningTitleLabel.Width = 470;
+                warningTitleLabel.Height = 22;
+                warningTitleLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                warningTitleLabel.BackColor = Color.Transparent;
+                warningTitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label warningTextLabel = new Label();
+                warningTextLabel.Text =
+                    "This cannot be undone after sync." + Environment.NewLine +
+                    "If you only want to change this entry, cancel and use Edit instead.";
+                warningTextLabel.Left = 14;
+                warningTextLabel.Top = 36;
+                warningTextLabel.Width = 470;
+                warningTextLabel.Height = 45;
+                warningTextLabel.ForeColor = softTextColor;
+                warningTextLabel.BackColor = Color.Transparent;
+                warningTextLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                warningPanel.Controls.Add(warningTitleLabel);
+                warningPanel.Controls.Add(warningTextLabel);
+
+                CheckBox confirmCheckBox = new CheckBox();
+                confirmCheckBox.Text = "I understand. Delete this saved entry.";
+                confirmCheckBox.Left = 24;
+                confirmCheckBox.Top = 330;
+                confirmCheckBox.Width = 360;
+                confirmCheckBox.Height = 28;
+                confirmCheckBox.ForeColor = softTextColor;
+                confirmCheckBox.BackColor = Color.Transparent;
+                confirmCheckBox.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 330;
+                cancelButton.Top = 365;
+                cancelButton.Width = 95;
+                cancelButton.Height = 34;
+                cancelButton.DialogResult = DialogResult.Cancel;
+                StyleActionButton(cancelButton);
 
                 Button deleteButton = new Button();
-                deleteButton.Text = "Delete";
-                deleteButton.Left = 190;
-                deleteButton.Top = 145;
-                deleteButton.Width = 95;
+                deleteButton.Text = "Delete entry";
+                deleteButton.Left = 440;
+                deleteButton.Top = 365;
+                deleteButton.Width = 100;
                 deleteButton.Height = 34;
+                deleteButton.Enabled = false;
                 deleteButton.FlatStyle = FlatStyle.Flat;
                 deleteButton.UseVisualStyleBackColor = false;
                 deleteButton.ForeColor = Color.White;
@@ -4571,31 +4666,37 @@ if (currentDriveService == null)
                 deleteButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(150, 45, 55);
                 deleteButton.FlatAppearance.MouseDownBackColor = Color.FromArgb(90, 25, 35);
 
-                Button cancelButton = new Button();
-                cancelButton.Text = "Cancel";
-                cancelButton.Left = 295;
-                cancelButton.Top = 145;
-                cancelButton.Width = 95;
-                cancelButton.Height = 34;
-                StyleActionButton(cancelButton);
+                confirmCheckBox.CheckedChanged += (s, e) =>
+                {
+                    deleteButton.Enabled = confirmCheckBox.Checked;
+                };
 
                 deleteButton.Click += (s, e) =>
                 {
+                    if (!confirmCheckBox.Checked)
+                    {
+                        return;
+                    }
+
                     confirmed = true;
+                    dialog.DialogResult = DialogResult.OK;
                     dialog.Close();
                 };
 
                 cancelButton.Click += (s, e) =>
                 {
                     confirmed = false;
+                    dialog.DialogResult = DialogResult.Cancel;
                     dialog.Close();
                 };
 
                 dialog.Controls.Add(titleLabel);
-                dialog.Controls.Add(entryLabel);
-                dialog.Controls.Add(warningLabel);
-                dialog.Controls.Add(deleteButton);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(entryPanel);
+                dialog.Controls.Add(warningPanel);
+                dialog.Controls.Add(confirmCheckBox);
                 dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(deleteButton);
 
                 dialog.CancelButton = cancelButton;
 
