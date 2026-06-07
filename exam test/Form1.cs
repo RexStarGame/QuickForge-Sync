@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -200,6 +200,7 @@ namespace exam_test
         private readonly ComboBox autoLockComboBox = new ComboBox();
         private readonly Label autoRefreshLabel = new Label();
         private readonly ComboBox autoRefreshComboBox = new ComboBox();
+        private readonly ToolTip vaultToolTip = new ToolTip();
 
         private DateTime lastVaultActivityUtc = DateTime.UtcNow;
         // Colors
@@ -220,6 +221,11 @@ namespace exam_test
             MinimumSize = new Size(800, 790);
             DoubleBuffered = true;
             BackColor = backgroundColor;
+
+            vaultToolTip.AutoPopDelay = 12000;
+            vaultToolTip.InitialDelay = 500;
+            vaultToolTip.ReshowDelay = 100;
+            vaultToolTip.ShowAlways = true;
 
             SetStyle(
                 ControlStyles.AllPaintingInWmPaint |
@@ -869,8 +875,17 @@ namespace exam_test
             cancelEditButton.Visible = false;
             cancelEditButton.Click += CancelEditButton_Click;
 
+            Label savedAccountsHeaderLabel = new Label();
+            savedAccountsHeaderLabel.Text = "Saved accounts";
+            savedAccountsHeaderLabel.Left = 315;
+            savedAccountsHeaderLabel.Top = 64;
+            savedAccountsHeaderLabel.Width = 120;
+            savedAccountsHeaderLabel.Height = 20;
+            savedAccountsHeaderLabel.ForeColor = Color.White;
+            savedAccountsHeaderLabel.BackColor = Color.Transparent;
+            savedAccountsHeaderLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             vaultSearchTextBox.Left = 315;
-            vaultSearchTextBox.Top = 82;
+            vaultSearchTextBox.Top = 90;
             vaultSearchTextBox.Width = 310;
             vaultSearchTextBox.Height = 26;
             vaultSearchTextBox.PlaceholderText = "Search saved entries...";
@@ -880,22 +895,31 @@ namespace exam_test
             vaultSearchTextBox.TextChanged += (s, e) => RefreshVaultList();
 
             vaultListBox.Left = 315;
-            vaultListBox.Top = 114;
+            vaultListBox.Top = 124;
             vaultListBox.Width = 310;
-            vaultListBox.Height = 106;
+            vaultListBox.Height = 96;
             vaultListBox.BackColor = Color.FromArgb(24, 28, 44);
             vaultListBox.ForeColor = Color.White;
             vaultListBox.BorderStyle = BorderStyle.FixedSingle;
             vaultListBox.SelectedIndexChanged += VaultListBox_SelectedIndexChanged;
 
-            selectedPreviewLabel.Text = "Select an entry to preview it.";
+            Label selectedFeedbackHeaderLabel = new Label();
+            selectedFeedbackHeaderLabel.Text = "Selected account / feedback";
+            selectedFeedbackHeaderLabel.Left = 315;
+            selectedFeedbackHeaderLabel.Top = 230;
+            selectedFeedbackHeaderLabel.Width = 220;
+            selectedFeedbackHeaderLabel.Height = 20;
+            selectedFeedbackHeaderLabel.ForeColor = Color.White;
+            selectedFeedbackHeaderLabel.BackColor = Color.Transparent;
+            selectedFeedbackHeaderLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            selectedPreviewLabel.Text = "Select a saved account to see safe details and action feedback here.";
             selectedPreviewLabel.ForeColor = softTextColor;
             selectedPreviewLabel.BackColor = Color.FromArgb(24, 28, 44);
-            selectedPreviewLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+            selectedPreviewLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
             selectedPreviewLabel.Left = 315;
-            selectedPreviewLabel.Top = 228;
+            selectedPreviewLabel.Top = 252;
             selectedPreviewLabel.Width = 310;
-            selectedPreviewLabel.Height = 92;
+            selectedPreviewLabel.Height = 76;
             selectedPreviewLabel.Multiline = true;
             selectedPreviewLabel.ReadOnly = true;
             selectedPreviewLabel.ScrollBars = ScrollBars.Vertical;
@@ -971,8 +995,10 @@ namespace exam_test
             vaultPanel.Controls.Add(clearButton);
             vaultPanel.Controls.Add(saveChangesButton);
             vaultPanel.Controls.Add(cancelEditButton);
+            vaultPanel.Controls.Add(savedAccountsHeaderLabel);
             vaultPanel.Controls.Add(vaultSearchTextBox);
             vaultPanel.Controls.Add(vaultListBox);
+            vaultPanel.Controls.Add(selectedFeedbackHeaderLabel);
             vaultPanel.Controls.Add(selectedPreviewLabel);
             vaultPanel.Controls.Add(revealButton);
             vaultPanel.Controls.Add(copySecretButton);
@@ -1111,6 +1137,16 @@ namespace exam_test
             manualSyncButton.FlatAppearance.BorderColor = borderColor;
             manualSyncButton.Click += ManualSyncButton_Click;
 
+            vaultToolTip.SetToolTip(vaultSearchTextBox, "Search by service, username, website, or note.");
+            vaultToolTip.SetToolTip(vaultListBox, "Select a saved account to preview it and use the action buttons.");
+            vaultToolTip.SetToolTip(selectedPreviewLabel, "This box shows safe details and action feedback. It will not reveal passwords unless you choose Reveal.");
+            vaultToolTip.SetToolTip(saveEntryButton, "Save this account to your encrypted vault.");
+            vaultToolTip.SetToolTip(createPasswordButton, "Generate a stronger password for this saved account.");
+            vaultToolTip.SetToolTip(openAndFillButton, "Open the saved website and fill the selected username/password when possible.");
+            vaultToolTip.SetToolTip(securityCenterButton, "Open Security Center to check vault health, devices, backups, and password issues.");
+            vaultToolTip.SetToolTip(backupButton, "Create or restore encrypted QuickForge backup files.");
+            vaultToolTip.SetToolTip(refreshCloudButton, "Load the latest encrypted vault and device trust status from Google Drive.");
+            vaultToolTip.SetToolTip(manualSyncButton, "Save local changes to Google Drive now.");
             vaultPanel.Controls.Add(securitySettingsLabel);
             vaultPanel.Controls.Add(recoveryReminderLabel);
             vaultPanel.Controls.Add(recoveryReminderComboBox);
@@ -1120,7 +1156,7 @@ namespace exam_test
             vaultPanel.Controls.Add(refreshCloudButton);
             vaultPanel.Controls.Add(manualSyncButton);
 
-            performanceSettingsLabel.Text = "Performance & safety";
+            performanceSettingsLabel.Text = "Performance and safety";
             performanceSettingsLabel.Left = 20;
             performanceSettingsLabel.Top = 445;
             performanceSettingsLabel.Width = 200;
@@ -4175,7 +4211,16 @@ if (currentDriveService == null)
 
             if (entry == null)
             {
-                selectedPreviewLabel.Text = "Select an entry to preview it.";
+                Label selectedFeedbackHeaderLabel = new Label();
+            selectedFeedbackHeaderLabel.Text = "Selected account / feedback";
+            selectedFeedbackHeaderLabel.Left = 315;
+            selectedFeedbackHeaderLabel.Top = 230;
+            selectedFeedbackHeaderLabel.Width = 220;
+            selectedFeedbackHeaderLabel.Height = 20;
+            selectedFeedbackHeaderLabel.ForeColor = Color.White;
+            selectedFeedbackHeaderLabel.BackColor = Color.Transparent;
+            selectedFeedbackHeaderLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            selectedPreviewLabel.Text = "Select a saved account to see safe details and action feedback here.";
                 UpdateFavoriteButtonText();
                 return;
             }
