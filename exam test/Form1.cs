@@ -5788,7 +5788,7 @@ if (currentDriveService == null)
                         return;
                     }
 
-                    if (!ConfirmVaultCodeForDeviceTrust()
+                    if (!ConfirmVaultCodeForDeviceTrust())
                     {
                         return;
                     }
@@ -5832,7 +5832,7 @@ if (currentDriveService == null)
                         return;
                     }
 
-                    if (!ConfirmVaultCodeForDeviceTrust()
+                    if (!ConfirmVaultCodeForDeviceTrust())
                     {
                         return;
                     }
@@ -7758,6 +7758,7 @@ if (currentDriveService == null)
         }
     }
 }
+
 
 
 
