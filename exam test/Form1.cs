@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -5767,9 +5767,7 @@ if (currentDriveService == null)
             int favoriteEntries = vaultEntries.Count(entry => entry.IsFavorite);
             int weakPasswords = CountWeakPasswords();
             int reusedPasswordEntries = CountReusedPasswordEntries();
-            int missingWebsiteLinks = vaultEntries.Count(entry =>
-                string.IsNullOrWhiteSpace(entry.Website)
-            );
+            int missingWebsiteLinks = vaultEntries.Count(entry => string.IsNullOrWhiteSpace(entry.Website));
 
             string autoLockText = currentVaultSettings.AutoLockMinutes <= 0
                 ? "Off"
@@ -5779,25 +5777,111 @@ if (currentDriveService == null)
                 ? "Never"
                 : currentVaultSettings.RecoveryKeyReminderDays + " days";
 
-            string summary;
+            string fullSafetyReport = BuildVaultSafetyReport(totalEntries, weakPasswords, reusedPasswordEntries, missingWebsiteLinks);
 
-            if (totalEntries == 0)
+            int safetyScore = 100;
+            string firstReportLine = fullSafetyReport.Split(new[] { Environment.NewLine }, StringSplitOptions.None).FirstOrDefault() ?? "";
+            string scorePrefix = "Vault Safety Score: ";
+
+            if (firstReportLine.StartsWith(scorePrefix))
             {
-                summary = "Your vault is ready. Add your first login.";
+                string scorePart = firstReportLine.Substring(scorePrefix.Length).Split('/')[0].Trim();
+                int.TryParse(scorePart, out safetyScore);
             }
-            else if (weakPasswords == 0 && reusedPasswordEntries == 0)
+
+            bool backupRecent =
+                currentVaultSettings.LastBackupAtUtc.HasValue &&
+                (DateTime.UtcNow - currentVaultSettings.LastBackupAtUtc.Value).TotalDays <= 7;
+
+            bool recoveryKeyExists = currentEncryptedVaultFile?.RecoveryKeyWrapper != null;
+            bool deviceTrusted = IsCurrentDeviceTrusted();
+            bool syncConnected = currentDriveService != null;
+            bool pendingSync = HasPendingBackgroundVaultSync();
+
+            Color scoreColor = safetyScore >= 80
+                ? successColor
+                : safetyScore >= 60 ? Color.FromArgb(255, 190, 90) : dangerColor;
+
+            string headline;
+
+            if (!cloudVaultExists)
             {
-                summary = "Your vault looks good.";
+                headline = "Cloud vault needs attention.";
+            }
+            else if (!deviceTrusted)
+            {
+                headline = "This device is not trusted yet.";
+            }
+            else if (!backupRecent)
+            {
+                headline = "Create an encrypted backup soon.";
+            }
+            else if (weakPasswords > 0 || reusedPasswordEntries > 0)
+            {
+                headline = "Some saved passwords need attention.";
             }
             else
             {
-                summary = "Some passwords need attention.";
+                headline = "Your vault looks good.";
             }
+
+            string nextAction;
+
+            if (!cloudVaultExists)
+            {
+                nextAction = "Restore from encrypted backup or create a new vault for this Google account.";
+            }
+            else if (!deviceTrusted)
+            {
+                nextAction = "Open Device Trust from a trusted PC and trust this device if it is yours.";
+            }
+            else if (!backupRecent)
+            {
+                nextAction = "Export an encrypted backup and keep it separate from your recovery key.";
+            }
+            else if (reusedPasswordEntries > 0)
+            {
+                nextAction = "Replace reused passwords first. Reused passwords create the biggest risk.";
+            }
+            else if (weakPasswords > 0)
+            {
+                nextAction = "Generate stronger passwords for weak entries.";
+            }
+            else if (missingWebsiteLinks > 0)
+            {
+                nextAction = "Optional: add website links to make Open + Fill and QuickFill smoother.";
+            }
+            else
+            {
+                nextAction = "No urgent action needed. Keep backups updated and continue normal use.";
+            }
+
+            string fullDetails =
+                fullSafetyReport +
+                Environment.NewLine + Environment.NewLine +
+                "Vault/session:" + Environment.NewLine +
+                "- Vault: " + (isVaultUnlocked ? "Unlocked" : "Locked") + Environment.NewLine +
+                "- Google sync: " + (syncConnected ? "Connected" : "Not connected") + Environment.NewLine +
+                "- Cloud vault storage: App-managed Google Drive appDataFolder" + Environment.NewLine +
+                "- Cloud vault status: " + (cloudVaultExists ? "Detected" : "Cloud vault missing. Restore from encrypted backup or create a new vault.") + Environment.NewLine +
+                "- Auto-lock: " + autoLockText + Environment.NewLine +
+                "- Clipboard cleanup: Active" + Environment.NewLine +
+                "- Recovery key reminder: " + recoveryReminderText + Environment.NewLine +
+                Environment.NewLine +
+                "Vault files:" + Environment.NewLine +
+                "- Not meant to be opened directly." + Environment.NewLine +
+                "- Use QuickForge to unlock, export, import, or restore." + Environment.NewLine +
+                Environment.NewLine +
+                "Still required before public/stable release:" + Environment.NewLine +
+                "- Repeated multi-device testing" + Environment.NewLine +
+                "- Fresh install restore testing" + Environment.NewLine +
+                "- External code/security review" + Environment.NewLine +
+                "- Installer/signing decision";
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 560;
-                dialog.Height = 600;
+                dialog.Width = 780;
+                dialog.Height = 720;
                 dialog.Text = "Security Center";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -5807,146 +5891,240 @@ if (currentDriveService == null)
 
                 Label titleLabel = new Label();
                 titleLabel.Text = "Security Center";
-                titleLabel.Left = 20;
+                titleLabel.Left = 22;
                 titleLabel.Top = 18;
-                titleLabel.Width = 440;
+                titleLabel.Width = 520;
                 titleLabel.Height = 30;
                 titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
-                titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
 
-                Label summaryLabel = new Label();
-                summaryLabel.Text = summary;
-                summaryLabel.Left = 20;
-                summaryLabel.Top = 52;
-                summaryLabel.Width = 440;
-                summaryLabel.Height = 28;
-                summaryLabel.ForeColor =
-                    weakPasswords == 0 && reusedPasswordEntries == 0
-                        ? successColor
-                        : Color.FromArgb(255, 190, 90);
-                summaryLabel.BackColor = Color.Transparent;
-                summaryLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+                Label headlineLabel = new Label();
+                headlineLabel.Text = headline;
+                headlineLabel.Left = 22;
+                headlineLabel.Top = 52;
+                headlineLabel.Width = 700;
+                headlineLabel.Height = 28;
+                headlineLabel.ForeColor = scoreColor;
+                headlineLabel.BackColor = Color.Transparent;
+                headlineLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
 
-                TextBox statusBox = new TextBox();
-                statusBox.Left = 20;
-                statusBox.Top = 90;
-                statusBox.Width = 500;
-                statusBox.Height = 345;
-                statusBox.Multiline = true;
-                statusBox.ReadOnly = true;
-                statusBox.WordWrap = true;
-                statusBox.ScrollBars = ScrollBars.Vertical;
-                statusBox.TabStop = false;
-                statusBox.BackColor = Color.FromArgb(24, 28, 44);
-                statusBox.ForeColor = Color.White;
-                statusBox.BorderStyle = BorderStyle.FixedSingle;
+                TabControl tabs = new TabControl();
+                tabs.Left = 20;
+                tabs.Top = 92;
+                tabs.Width = 725;
+                tabs.Height = 480;
 
-                statusBox.Text =
-                    BuildVaultSafetyReport(totalEntries, weakPasswords, reusedPasswordEntries, missingWebsiteLinks) +
-                    Environment.NewLine + Environment.NewLine +
-                    "Vault: " + (isVaultUnlocked ? "Unlocked" : "Locked") + Environment.NewLine +
-                    "Google sync: " + (currentDriveService != null ? "Connected" : "Not connected") + Environment.NewLine +
-                    "Cloud vault storage: App-managed Google Drive appDataFolder" + Environment.NewLine +
-                    "Cloud vault status: " + (cloudVaultExists ? "Detected" : "Cloud vault missing. Restore from encrypted backup or create a new vault.") + Environment.NewLine +
-                    "Auto-lock: " + autoLockText + Environment.NewLine +
-                    "Clipboard cleanup: Active" + Environment.NewLine +
-                    Environment.NewLine +
-                    "Saved entries: " + totalEntries + Environment.NewLine +
-                    "Favorites: " + favoriteEntries + Environment.NewLine +
-                    "Weak passwords: " + weakPasswords + Environment.NewLine +
-                    "Reused passwords: " + reusedPasswordEntries + Environment.NewLine +
-                    "Missing website links: " + missingWebsiteLinks + Environment.NewLine +
-                    "Recovery key reminder: " + recoveryReminderText + Environment.NewLine +
-                    Environment.NewLine +
-                    "Real-data status: Controlled personal beta use supported" + Environment.NewLine +
-                    "Vault files: Not meant to be opened directly. Use QuickForge to unlock, export, import, or restore." + Environment.NewLine +
-                    Environment.NewLine +
-                    "Completed:" + Environment.NewLine +
-                    "- Strong vault code policy" + Environment.NewLine +
-                    "- Recovery key" + Environment.NewLine +
-                    "- Encrypted backup" + Environment.NewLine +
-                    "- Cloud conflict protection" + Environment.NewLine +
-                    "- App-managed Google Drive vault storage" + Environment.NewLine +
-                    "- Manual Sync and Refresh" + Environment.NewLine +
-                    Environment.NewLine +
-                    "Still required:" + Environment.NewLine +
-                    "- Repeated multi-device testing" + Environment.NewLine +
-                    "- Fresh install restore testing" + Environment.NewLine +
-                    "- External code/security review" + Environment.NewLine +
-                    "- Installer/signing decision";
+                TabPage overviewTab = new TabPage("Overview");
+                overviewTab.BackColor = Color.FromArgb(16, 20, 34);
 
-                Label adviceLabel = new Label();
-                adviceLabel.Left = 20;
-                adviceLabel.Top = 450;
-                adviceLabel.Width = 460;
-                adviceLabel.Height = 40;
-                adviceLabel.ForeColor = softTextColor;
-                adviceLabel.BackColor = Color.Transparent;
+                TabPage detailsTab = new TabPage("Details");
+                detailsTab.BackColor = Color.FromArgb(16, 20, 34);
 
-                if (reusedPasswordEntries > 0)
+                Panel CreateCard(string title, string status, string detail, Color statusColor, int left, int top, int width, int height)
                 {
-                    adviceLabel.Text = "Best next step: replace reused passwords first.";
-                }
-                else if (weakPasswords > 0)
-                {
-                    adviceLabel.Text = "Best next step: generate stronger passwords for weak entries.";
-                }
-                else if (totalEntries > 0 && favoriteEntries == 0)
-                {
-                    adviceLabel.Text = "Tip: add favorites to make QuickFill faster.";
-                }
-                else if (missingWebsiteLinks > 0)
-                {
-                    adviceLabel.Text = "Optional: add website links to make QuickFill smoother.";
-                }
-                else
-                {
-                    adviceLabel.Text = "No urgent action needed.";
+                    Panel card = new Panel();
+                    card.Left = left;
+                    card.Top = top;
+                    card.Width = width;
+                    card.Height = height;
+                    card.BackColor = Color.FromArgb(24, 28, 44);
+                    card.BorderStyle = BorderStyle.FixedSingle;
+
+                    Label cardTitle = new Label();
+                    cardTitle.Text = title;
+                    cardTitle.Left = 12;
+                    cardTitle.Top = 10;
+                    cardTitle.Width = width - 24;
+                    cardTitle.Height = 20;
+                    cardTitle.ForeColor = softTextColor;
+                    cardTitle.BackColor = Color.Transparent;
+                    cardTitle.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+                    Label cardStatus = new Label();
+                    cardStatus.Text = status;
+                    cardStatus.Left = 12;
+                    cardStatus.Top = 34;
+                    cardStatus.Width = width - 24;
+                    cardStatus.Height = 26;
+                    cardStatus.ForeColor = statusColor;
+                    cardStatus.BackColor = Color.Transparent;
+                    cardStatus.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+
+                    Label cardDetail = new Label();
+                    cardDetail.Text = detail;
+                    cardDetail.Left = 12;
+                    cardDetail.Top = 64;
+                    cardDetail.Width = width - 24;
+                    cardDetail.Height = height - 70;
+                    cardDetail.ForeColor = softTextColor;
+                    cardDetail.BackColor = Color.Transparent;
+                    cardDetail.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+
+                    card.Controls.Add(cardTitle);
+                    card.Controls.Add(cardStatus);
+                    card.Controls.Add(cardDetail);
+
+                    return card;
                 }
 
+                overviewTab.Controls.Add(CreateCard(
+                    "VAULT SCORE",
+                    safetyScore + "/100",
+                    safetyScore >= 80 ? "Strong overall status." : "Review warnings and next action.",
+                    scoreColor,
+                    18,
+                    18,
+                    210,
+                    112
+                ));
+
+                overviewTab.Controls.Add(CreateCard(
+                    "CLOUD VAULT",
+                    cloudVaultExists ? "Detected" : "Missing",
+                    "Storage: Google Drive appDataFolder.",
+                    cloudVaultExists ? successColor : Color.FromArgb(255, 190, 90),
+                    248,
+                    18,
+                    210,
+                    112
+                ));
+
+                overviewTab.Controls.Add(CreateCard(
+                    "DEVICE TRUST",
+                    deviceTrusted ? "Trusted" : "Untrusted",
+                    deviceTrusted ? "Sensitive actions are allowed." : "Sensitive actions are restricted.",
+                    deviceTrusted ? successColor : dangerColor,
+                    478,
+                    18,
+                    210,
+                    112
+                ));
+
+                overviewTab.Controls.Add(CreateCard(
+                    "BACKUP",
+                    backupRecent ? "Recent" : "Needed",
+                    backupRecent ? "Encrypted backup was created recently." : "Export an encrypted backup soon.",
+                    backupRecent ? successColor : Color.FromArgb(255, 190, 90),
+                    18,
+                    148,
+                    210,
+                    112
+                ));
+
+                overviewTab.Controls.Add(CreateCard(
+                    "PASSWORD HEALTH",
+                    weakPasswords == 0 && reusedPasswordEntries == 0 ? "Good" : "Review",
+                    "Weak: " + weakPasswords + " | Reused: " + reusedPasswordEntries + " | Missing links: " + missingWebsiteLinks,
+                    weakPasswords == 0 && reusedPasswordEntries == 0 ? successColor : Color.FromArgb(255, 190, 90),
+                    248,
+                    148,
+                    210,
+                    112
+                ));
+
+                overviewTab.Controls.Add(CreateCard(
+                    "SESSION SAFETY",
+                    pendingSync ? "Sync pending" : "Protected",
+                    "Vault: " + (isVaultUnlocked ? "Unlocked" : "Locked") + " | Auto-lock: " + autoLockText,
+                    pendingSync ? Color.FromArgb(255, 190, 90) : successColor,
+                    478,
+                    148,
+                    210,
+                    112
+                ));
+
+                Panel nextActionPanel = new Panel();
+                nextActionPanel.Left = 18;
+                nextActionPanel.Top = 285;
+                nextActionPanel.Width = 670;
+                nextActionPanel.Height = 115;
+                nextActionPanel.BackColor = Color.FromArgb(20, 25, 42);
+                nextActionPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label nextActionTitle = new Label();
+                nextActionTitle.Text = "Best next action";
+                nextActionTitle.Left = 14;
+                nextActionTitle.Top = 12;
+                nextActionTitle.Width = 620;
+                nextActionTitle.Height = 22;
+                nextActionTitle.ForeColor = Color.White;
+                nextActionTitle.BackColor = Color.Transparent;
+                nextActionTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label nextActionText = new Label();
+                nextActionText.Text = nextAction;
+                nextActionText.Left = 14;
+                nextActionText.Top = 40;
+                nextActionText.Width = 635;
+                nextActionText.Height = 60;
+                nextActionText.ForeColor = softTextColor;
+                nextActionText.BackColor = Color.Transparent;
+                nextActionText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                nextActionPanel.Controls.Add(nextActionTitle);
+                nextActionPanel.Controls.Add(nextActionText);
+                overviewTab.Controls.Add(nextActionPanel);
+
+                TextBox detailsBox = new TextBox();
+                detailsBox.Left = 12;
+                detailsBox.Top = 12;
+                detailsBox.Width = 680;
+                detailsBox.Height = 410;
+                detailsBox.Multiline = true;
+                detailsBox.ReadOnly = true;
+                detailsBox.WordWrap = true;
+                detailsBox.ScrollBars = ScrollBars.Vertical;
+                detailsBox.TabStop = false;
+                detailsBox.BackColor = Color.FromArgb(24, 28, 44);
+                detailsBox.ForeColor = Color.White;
+                detailsBox.BorderStyle = BorderStyle.FixedSingle;
+                detailsBox.Text = fullDetails;
+
+                detailsTab.Controls.Add(detailsBox);
+
+                tabs.TabPages.Add(overviewTab);
+                tabs.TabPages.Add(detailsTab);
 
                 Button deviceTrustButton = new Button();
                 deviceTrustButton.Text = "Device Trust";
-                deviceTrustButton.Left = 90;
-                deviceTrustButton.Top = 500;
+                deviceTrustButton.Left = 185;
+                deviceTrustButton.Top = 600;
                 deviceTrustButton.Width = 130;
-                deviceTrustButton.Height = 32;
+                deviceTrustButton.Height = 34;
                 StyleActionButton(deviceTrustButton);
                 deviceTrustButton.Enabled = true;
                 deviceTrustButton.Click += (s, e) => ShowDeviceTrustDialog();
 
                 Button selfCheckButton = new Button();
                 selfCheckButton.Text = "Vault self-check";
-                selfCheckButton.Left = 235;
-                selfCheckButton.Top = 500;
-                selfCheckButton.Width = 130;
-                selfCheckButton.Height = 32;
+                selfCheckButton.Left = 330;
+                selfCheckButton.Top = 600;
+                selfCheckButton.Width = 135;
+                selfCheckButton.Height = 34;
                 StyleActionButton(selfCheckButton);
                 selfCheckButton.Click += (s, e) => ShowVaultSelfCheckDialog();
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 380;
-                closeButton.Top = 500;
+                closeButton.Left = 480;
+                closeButton.Top = 600;
                 closeButton.Width = 100;
-                closeButton.Height = 32;
+                closeButton.Height = 34;
                 StyleActionButton(closeButton, true);
                 closeButton.Click += (s, e) => dialog.Close();
 
                 dialog.Controls.Add(titleLabel);
-                dialog.Controls.Add(summaryLabel);
-                dialog.Controls.Add(statusBox);
-                dialog.Controls.Add(adviceLabel);
+                dialog.Controls.Add(headlineLabel);
+                dialog.Controls.Add(tabs);
                 dialog.Controls.Add(deviceTrustButton);
                 dialog.Controls.Add(selfCheckButton);
                 dialog.Controls.Add(closeButton);
 
-
                 dialog.Shown += (s, e) =>
                 {
-                    statusBox.SelectionStart = 0;
-                    statusBox.SelectionLength = 0;
+                    detailsBox.SelectionStart = 0;
+                    detailsBox.SelectionLength = 0;
                     closeButton.Focus();
                 };
 
