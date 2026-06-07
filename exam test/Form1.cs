@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -7487,29 +7487,87 @@ if (currentDriveService == null)
 
             double idleMinutes = (DateTime.UtcNow - lastVaultActivityUtc).TotalMinutes;
 
-            if (idleMinutes >= minutes)
+            if (idleMinutes < minutes)
             {
-                LockVaultForSafety("Vault locked for safety.");
+                return;
             }
+
+            if (backgroundVaultSyncRunning || backgroundVaultSyncRequested || hasUnsyncedLocalChanges)
+            {
+                SetSyncStatus("Auto-lock waiting for sync", error: true);
+
+                selectedPreviewLabel.Text =
+                    "Auto-lock is ready, but QuickForge is waiting for pending sync to finish." + Environment.NewLine +
+                    "Use Sync pending or wait for background sync before locking." + Environment.NewLine +
+                    "This avoids losing local changes before they are encrypted and synced.";
+
+                return;
+            }
+
+            LockVaultForSafety("Vault locked for safety.");
+        }
+
+        private void SecurelyClearCurrentDataKey()
+        {
+            if (currentDataKey == null)
+            {
+                return;
+            }
+
+            try
+            {
+                CryptographicOperations.ZeroMemory(currentDataKey);
+            }
+            catch
+            {
+                Array.Clear(currentDataKey, 0, currentDataKey.Length);
+            }
+
+            currentDataKey = null;
+        }
+
+        private void ClearUnlockedVaultSessionSecrets()
+        {
+            quickFillForm?.Hide();
+            ClearSecretAccessWindow();
+
+            vaultCode = "";
+
+            try
+            {
+                vaultCodeTextBox.Clear();
+                confirmVaultCodeTextBox.Clear();
+                secretTextBox.Clear();
+            }
+            catch
+            {
+                // Ignore UI clear errors during lock.
+            }
+
+            SecurelyClearCurrentDataKey();
+            currentEncryptedVaultFile = null;
+
+            vaultEntries.Clear();
+            visibleVaultEntries.Clear();
+
+            editingEntry = null;
+            editingEntryIndex = -1;
         }
 
         private void LockVaultForSafety(string message)
         {
-            quickFillForm?.Hide();
+            autoRefreshTimer.Stop();
 
             isVaultUnlocked = false;
-            ClearSecretAccessWindow();
+            ClearUnlockedVaultSessionSecrets();
 
-            vaultCode = "";
-            currentDataKey = null;
-            currentEncryptedVaultFile = null;
-
-            vaultEntries.Clear();
             RefreshVaultList();
             ClearEntryInputs();
             SetEntryEditMode(false);
 
-            selectedPreviewLabel.Text = message;
+            selectedPreviewLabel.Text =
+                message + Environment.NewLine +
+                "Unlocked vault secrets were cleared from this session.";
 
             try
             {
