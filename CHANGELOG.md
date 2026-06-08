@@ -311,3 +311,18 @@ This is not a stable/final password manager release yet.
 
 
 
+
+---
+
+## v0.2.0 Final Development Notes
+
+- Improved Backup Center layout and restore wording.
+- Improved Security Center overview, password health feedback, and device-trust readability.
+- Improved recovery-key creation and rotation dialogs.
+- Improved vault unlock/setup layout for both existing users and new users.
+- Improved delete-entry confirmation safety.
+- Improved change-vault-code dialog with field visibility buttons, live strength feedback, and copy-before-change protection.
+- Improved logout confirmation wording and removed misleading direct switch-account wording.
+- Fixed mojibake text issues in logout/change-vault-code UI strings.
+- UI polish is paused unless a real bug is found.
+- Automated tests pass: 30/30.
