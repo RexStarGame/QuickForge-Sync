@@ -683,6 +683,8 @@ namespace exam_test
                 string recoveryReminderStatus = currentVaultSettings.RecoveryKeyReminderDays <= 0
                     ? "Off"
                     : currentVaultSettings.RecoveryKeyReminderDays + " days";
+
+                string authenticatorLockStatus = IsAuthenticatorLockConfigured() ? "On" : "Off";
                 string lastSaveSettingsText = lastCloudSaveUtc.HasValue
                     ? lastCloudSaveUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
                     : "Not yet";
@@ -693,25 +695,27 @@ namespace exam_test
 
                 securityTab.Controls.Add(CreateSettingsCard(
                     "Two-step vault unlock",
-                    "Planned for v0.2.1",
-                    "Optional Authenticator Lock will add a 6-digit authenticator-code check after your vault code. It will never be forced.",
+                    authenticatorLockStatus,
+                    authenticatorLockStatus == "On"
+                        ? "After your vault code, QuickForge asks for a 6-digit authenticator code."
+                        : "Add an optional authenticator-app code after your vault code.",
                     16,
                     18,
                     320,
                     150,
-                    "Coming soon",
+                    authenticatorLockStatus == "On" ? "Manage" : "Set up",
                     () =>
                     {
-                        MessageBox.Show(
-                            "Authenticator Lock is planned for v0.2.1." + Environment.NewLine + Environment.NewLine +
-                            "It will be optional and will support authenticator apps generally, not only Google Authenticator.",
-                            "Authenticator Lock planned",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information
-                        );
-                    }
-                ));
+                        bool changed = ShowAuthenticatorLockSettingsDialog();
 
+                        if (changed)
+                        {
+                            dialog.Close();
+                            BeginInvoke(new Action(() => ShowSettingsDialog(0)));
+                        }
+                    },
+                    authenticatorLockStatus == "On"
+                ));
                 securityTab.Controls.Add(CreateSettingsCard(
                     "Auto-lock",
                     autoLockStatus,
