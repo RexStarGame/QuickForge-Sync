@@ -498,7 +498,7 @@ namespace exam_test
                     "Account details are hidden in lists and preview areas.";
             }
         }
-        private void ShowSettingsDialog()
+        private void ShowSettingsDialog(int selectedTabIndex = 0)
         {
             if (currentDriveService == null)
             {
@@ -822,7 +822,7 @@ namespace exam_test
                         if (saved)
                         {
                             dialog.Close();
-                            BeginInvoke(new Action(() => ShowSettingsDialog()));
+                            BeginInvoke(new Action(() => ShowSettingsDialog(2)));
                         }
                     },
                     true
@@ -1000,7 +1000,7 @@ namespace exam_test
                         return;
                     }
 
-                    currentVaultSettings.PrivacyModeEnabled = privacyCheckBox.Checked;
+                    currentVaultSettings.PrivacyModeEnabled = selectedPrivacyMode;
 
                     try
                     {
@@ -1050,7 +1050,8 @@ namespace exam_test
                 dialog.Controls.Add(titleLabel);
                 dialog.Controls.Add(subtitleLabel);
                 dialog.Controls.Add(infoPanel);
-                dialog.Controls.Add(privacyCheckBox);
+                dialog.Controls.Add(switchLabel);
+                dialog.Controls.Add(privacyToggleButton);
                 dialog.Controls.Add(statusLabel);
                 dialog.Controls.Add(saveButton);
                 dialog.Controls.Add(cancelButton);
