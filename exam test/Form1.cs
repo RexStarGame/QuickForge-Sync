@@ -1358,6 +1358,224 @@ namespace exam_test
                 dialog.ShowDialog(this);
             }
         }
+        private int GetPasswordHealthScore(string secret)
+        {
+            if (string.IsNullOrWhiteSpace(secret))
+            {
+                return 0;
+            }
+
+            string clean = secret.Trim();
+            int score = 0;
+
+            score += Math.Min(45, clean.Length * 3);
+
+            if (clean.Length >= 12)
+            {
+                score += 8;
+            }
+
+            if (clean.Length >= 16)
+            {
+                score += 8;
+            }
+
+            if (clean.Length >= 20)
+            {
+                score += 7;
+            }
+
+            bool hasLower = clean.Any(char.IsLower);
+            bool hasUpper = clean.Any(char.IsUpper);
+            bool hasDigit = clean.Any(char.IsDigit);
+            bool hasSpecial = clean.Any(ch => !char.IsLetterOrDigit(ch));
+
+            if (hasLower)
+            {
+                score += 7;
+            }
+
+            if (hasUpper)
+            {
+                score += 7;
+            }
+
+            if (hasDigit)
+            {
+                score += 7;
+            }
+
+            if (hasSpecial)
+            {
+                score += 10;
+            }
+
+            int categoryCount = 0;
+
+            if (hasLower) categoryCount++;
+            if (hasUpper) categoryCount++;
+            if (hasDigit) categoryCount++;
+            if (hasSpecial) categoryCount++;
+
+            if (categoryCount >= 3)
+            {
+                score += 8;
+            }
+
+            int uniqueCharacters = clean.Distinct().Count();
+
+            if (uniqueCharacters >= Math.Min(10, clean.Length))
+            {
+                score += 6;
+            }
+
+            string lower = clean.ToLowerInvariant();
+
+            string[] riskyWords =
+            {
+                "password",
+                "qwerty",
+                "admin",
+                "letmein",
+                "welcome",
+                "quickforge",
+                "youtube",
+                "google",
+                "facebook",
+                "steam",
+                "123456",
+                "111111",
+                "000000"
+            };
+
+            if (riskyWords.Any(word => lower.Contains(word)))
+            {
+                score -= 30;
+            }
+
+            if (clean.All(ch => ch == clean[0]))
+            {
+                score -= 40;
+            }
+
+            if (clean.All(char.IsDigit) || clean.All(char.IsLetter))
+            {
+                score -= 20;
+            }
+
+            if (clean.Length < 8)
+            {
+                score -= 25;
+            }
+
+            return Math.Max(0, Math.Min(100, score));
+        }
+
+        private string GetPasswordHealthLevel(string secret)
+        {
+            if (string.IsNullOrWhiteSpace(secret))
+            {
+                return "Missing";
+            }
+
+            int score = GetPasswordHealthScore(secret);
+
+            if (score < 20)
+            {
+                return "Super weak";
+            }
+
+            if (score < 40)
+            {
+                return "Weak";
+            }
+
+            if (score < 65)
+            {
+                return "OK but improve";
+            }
+
+            if (score < 80)
+            {
+                return "Good";
+            }
+
+            if (score < 92)
+            {
+                return "Strong";
+            }
+
+            return "Very strong";
+        }
+
+        private bool ShouldReviewPassword(string secret)
+        {
+            return GetPasswordHealthScore(secret) < 65;
+        }
+
+        private string GetPasswordHealthReason(string secret, bool reused)
+        {
+            if (string.IsNullOrWhiteSpace(secret))
+            {
+                return "No password/secret is saved for this entry.";
+            }
+
+            int score = GetPasswordHealthScore(secret);
+
+            if (reused)
+            {
+                return "This exact password/secret is reused somewhere else in the vault.";
+            }
+
+            if (score < 20)
+            {
+                return "Very easy to guess, empty, too short, or contains a risky/common pattern.";
+            }
+
+            if (score < 40)
+            {
+                return "Too weak. Use more length and mix letters, numbers, and symbols.";
+            }
+
+            if (score < 65)
+            {
+                return "Acceptable for low-risk use, but still below QuickForge's recommended strength.";
+            }
+
+            if (score < 80)
+            {
+                return "Good. Better than weak passwords, but it could still be stronger.";
+            }
+
+            if (score < 92)
+            {
+                return "Strong. Usually acceptable for normal use.";
+            }
+
+            return "Very strong. No immediate password-strength action needed.";
+        }
+
+        private Color GetPasswordHealthColor(string secret, bool reused)
+        {
+            if (reused)
+            {
+                return Color.FromArgb(255, 190, 90);
+            }
+
+            int score = GetPasswordHealthScore(secret);
+
+            if (score < 20)
+            {
+                return dangerColor;
+            }
+
+            if (score < 65)
+            {
+                return Color.FromArgb(255, 190, 90);
+            }
+
+            return successColor;
+        }
         private void ShowTrustCenterDialog()
         {
             if (!isVaultUnlocked)
@@ -1418,7 +1636,7 @@ namespace exam_test
             string passwordHealthStatus =
                 weakPasswords == 0 && reusedPasswords == 0
                     ? "Looks good"
-                    : weakPasswords + " weak / " + reusedPasswords + " reused";
+                    : weakPasswords + " to review / " + reusedPasswords + " reused";
 
             string overallStatus;
 
@@ -1592,7 +1810,7 @@ namespace exam_test
                 Panel passwordCard = CreateTrustCard(
                     "Password Health",
                     passwordHealthStatus,
-                    "Weak or reused secrets should be changed first. QuickForge only shows safe summary data here.",
+                    "Shows which saved entries need stronger or unique passwords.",
                     420,
                     305,
                     weakPasswords == 0 && reusedPasswords == 0 ? successColor : Color.FromArgb(255, 190, 90),
@@ -1682,12 +1900,43 @@ namespace exam_test
         }
         private void ShowPasswordHealthDialog(int weakPasswords, int reusedPasswords)
         {
-            bool hasIssues = weakPasswords > 0 || reusedPasswords > 0;
+            HashSet<string> reusedSecrets = vaultEntries
+                .Where(entry => !string.IsNullOrWhiteSpace(entry.Secret))
+                .GroupBy(entry => entry.Secret, StringComparer.Ordinal)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key)
+                .ToHashSet(StringComparer.Ordinal);
+
+            var findings = vaultEntries
+                .Select(entry => new
+                {
+                    Entry = entry,
+                    Level = GetPasswordHealthLevel(entry.Secret),
+                    Score = GetPasswordHealthScore(entry.Secret),
+                    Reused = !string.IsNullOrWhiteSpace(entry.Secret) && reusedSecrets.Contains(entry.Secret),
+                    NeedsReview = ShouldReviewPassword(entry.Secret) ||
+                                  (!string.IsNullOrWhiteSpace(entry.Secret) && reusedSecrets.Contains(entry.Secret))
+                })
+                .OrderBy(item => item.Score)
+                .ThenBy(item => item.Entry.Platform)
+                .ToList();
+
+            int missingCount = findings.Count(item => item.Level == "Missing");
+            int superWeakCount = findings.Count(item => item.Level == "Super weak");
+            int weakCount = findings.Count(item => item.Level == "Weak");
+            int okButImproveCount = findings.Count(item => item.Level == "OK but improve");
+            int goodCount = findings.Count(item => item.Level == "Good");
+            int strongCount = findings.Count(item => item.Level == "Strong");
+            int veryStrongCount = findings.Count(item => item.Level == "Very strong");
+            int reusedEntryCount = findings.Count(item => item.Reused);
+            int reviewCount = findings.Count(item => item.NeedsReview);
+
+            bool hasIssues = reviewCount > 0;
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 560;
-                dialog.Height = 390;
+                dialog.Width = 760;
+                dialog.Height = 610;
                 dialog.Text = "Password Health";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -1696,10 +1945,10 @@ namespace exam_test
                 dialog.BackColor = Color.FromArgb(16, 20, 34);
 
                 Label titleLabel = new Label();
-                titleLabel.Text = hasIssues ? "Password issues found" : "Password health looks good";
+                titleLabel.Text = hasIssues ? "Password review needed" : "Password health looks good";
                 titleLabel.Left = 24;
                 titleLabel.Top = 20;
-                titleLabel.Width = 500;
+                titleLabel.Width = 680;
                 titleLabel.Height = 34;
                 titleLabel.ForeColor = hasIssues ? Color.FromArgb(255, 190, 90) : successColor;
                 titleLabel.BackColor = Color.Transparent;
@@ -1707,11 +1956,11 @@ namespace exam_test
 
                 Label subtitleLabel = new Label();
                 subtitleLabel.Text = hasIssues
-                    ? "QuickForge found saved entries that deserve your attention."
-                    : "No weak or reused secrets were found in the current vault check.";
+                    ? "QuickForge found exactly which saved entries need attention. No passwords are shown here."
+                    : "No weak, OK-but-risky, or reused secrets were found in the current vault check.";
                 subtitleLabel.Left = 24;
                 subtitleLabel.Top = 58;
-                subtitleLabel.Width = 500;
+                subtitleLabel.Width = 700;
                 subtitleLabel.Height = 38;
                 subtitleLabel.ForeColor = softTextColor;
                 subtitleLabel.BackColor = Color.Transparent;
@@ -1719,42 +1968,120 @@ namespace exam_test
 
                 Panel summaryPanel = new Panel();
                 summaryPanel.Left = 24;
-                summaryPanel.Top = 110;
-                summaryPanel.Width = 500;
-                summaryPanel.Height = 125;
+                summaryPanel.Top = 108;
+                summaryPanel.Width = 700;
+                summaryPanel.Height = 118;
                 summaryPanel.BackColor = Color.FromArgb(24, 28, 44);
                 summaryPanel.BorderStyle = BorderStyle.FixedSingle;
 
                 Label summaryTitle = new Label();
                 summaryTitle.Text = "Summary";
                 summaryTitle.Left = 16;
-                summaryTitle.Top = 12;
-                summaryTitle.Width = 460;
-                summaryTitle.Height = 24;
+                summaryTitle.Top = 10;
+                summaryTitle.Width = 660;
+                summaryTitle.Height = 22;
                 summaryTitle.ForeColor = Color.White;
                 summaryTitle.BackColor = Color.Transparent;
-                summaryTitle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+                summaryTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
 
                 Label summaryText = new Label();
                 summaryText.Text =
                     "Saved entries: " + vaultEntries.Count + Environment.NewLine +
-                    "Weak or empty secrets: " + weakPasswords + Environment.NewLine +
-                    "Reused password groups: " + reusedPasswords;
+                    "Need review: " + reviewCount + " | Reused entries: " + reusedEntryCount + Environment.NewLine +
+                    "Missing: " + missingCount + " | Super weak: " + superWeakCount + " | Weak: " + weakCount + " | OK but improve: " + okButImproveCount + Environment.NewLine +
+                    "Good: " + goodCount + " | Strong: " + strongCount + " | Very strong: " + veryStrongCount;
                 summaryText.Left = 16;
-                summaryText.Top = 42;
-                summaryText.Width = 460;
-                summaryText.Height = 70;
+                summaryText.Top = 36;
+                summaryText.Width = 660;
+                summaryText.Height = 72;
                 summaryText.ForeColor = softTextColor;
                 summaryText.BackColor = Color.Transparent;
-                summaryText.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+                summaryText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
 
                 summaryPanel.Controls.Add(summaryTitle);
                 summaryPanel.Controls.Add(summaryText);
 
+                Label listTitleLabel = new Label();
+                listTitleLabel.Text = hasIssues ? "Entries to fix first" : "Saved entries checked";
+                listTitleLabel.Left = 24;
+                listTitleLabel.Top = 242;
+                listTitleLabel.Width = 680;
+                listTitleLabel.Height = 24;
+                listTitleLabel.ForeColor = Color.White;
+                listTitleLabel.BackColor = Color.Transparent;
+                listTitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                TextBox issueBox = new TextBox();
+                issueBox.Left = 24;
+                issueBox.Top = 272;
+                issueBox.Width = 700;
+                issueBox.Height = 205;
+                issueBox.Multiline = true;
+                issueBox.ReadOnly = true;
+                issueBox.ScrollBars = ScrollBars.Vertical;
+                issueBox.WordWrap = true;
+                issueBox.BackColor = Color.FromArgb(24, 28, 44);
+                issueBox.ForeColor = Color.White;
+                issueBox.BorderStyle = BorderStyle.FixedSingle;
+                issueBox.Font = new Font("Consolas", 9, FontStyle.Regular);
+
+                List<string> issueLines = new List<string>();
+
+                foreach (var finding in findings.Where(item => item.NeedsReview))
+                {
+                    string platform = string.IsNullOrWhiteSpace(finding.Entry.Platform)
+                        ? "Unnamed entry"
+                        : finding.Entry.Platform.Trim();
+
+                    string username = string.IsNullOrWhiteSpace(finding.Entry.Username)
+                        ? "No username saved"
+                        : finding.Entry.Username.Trim();
+
+                    string reusedText = finding.Reused ? " | REUSED" : "";
+
+                    issueLines.Add(
+                        "[" + finding.Level.ToUpperInvariant() + reusedText + "] " +
+                        platform +
+                        " | user: " + username +
+                        " | score: " + finding.Score + "/100"
+                    );
+
+                    issueLines.Add("  Why: " + GetPasswordHealthReason(finding.Entry.Secret, finding.Reused));
+                    issueLines.Add("");
+                }
+
+                if (issueLines.Count == 0)
+                {
+                    foreach (var finding in findings)
+                    {
+                        string platform = string.IsNullOrWhiteSpace(finding.Entry.Platform)
+                            ? "Unnamed entry"
+                            : finding.Entry.Platform.Trim();
+
+                        string username = string.IsNullOrWhiteSpace(finding.Entry.Username)
+                            ? "No username saved"
+                            : finding.Entry.Username.Trim();
+
+                        issueLines.Add(
+                            "[" + finding.Level.ToUpperInvariant() + "] " +
+                            platform +
+                            " | user: " + username +
+                            " | score: " + finding.Score + "/100"
+                        );
+                    }
+
+                    if (issueLines.Count == 0)
+                    {
+                        issueLines.Add("No saved entries yet.");
+                    }
+                }
+
+                issueBox.Text = string.Join(Environment.NewLine, issueLines);
+
                 Panel nextActionPanel = new Panel();
                 nextActionPanel.Left = 24;
-                nextActionPanel.Top = 250;
-                nextActionPanel.Width = 500;
+                nextActionPanel.Top = 492;
+                nextActionPanel.Width = 580;
                 nextActionPanel.Height = 58;
                 nextActionPanel.BackColor = hasIssues
                     ? Color.FromArgb(36, 30, 30)
@@ -1763,12 +2090,12 @@ namespace exam_test
 
                 Label nextActionLabel = new Label();
                 nextActionLabel.Text = hasIssues
-                    ? "Best next action: fix reused passwords first, then weak passwords."
-                    : "Best next action: keep using unique passwords and create backups regularly.";
+                    ? "Best next action: fix Missing/Super weak first, then Weak, then OK-but-improve, then reused entries."
+                    : "Best next action: keep using unique passwords and create encrypted backups regularly.";
                 nextActionLabel.Left = 14;
-                nextActionLabel.Top = 15;
-                nextActionLabel.Width = 465;
-                nextActionLabel.Height = 32;
+                nextActionLabel.Top = 12;
+                nextActionLabel.Width = 550;
+                nextActionLabel.Height = 38;
                 nextActionLabel.ForeColor = hasIssues ? Color.FromArgb(255, 190, 90) : successColor;
                 nextActionLabel.BackColor = Color.Transparent;
                 nextActionLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
@@ -1777,8 +2104,8 @@ namespace exam_test
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 424;
-                closeButton.Top = 320;
+                closeButton.Left = 624;
+                closeButton.Top = 504;
                 closeButton.Width = 100;
                 closeButton.Height = 34;
                 StyleActionButton(closeButton, true);
@@ -1787,12 +2114,15 @@ namespace exam_test
                 dialog.Controls.Add(titleLabel);
                 dialog.Controls.Add(subtitleLabel);
                 dialog.Controls.Add(summaryPanel);
+                dialog.Controls.Add(listTitleLabel);
+                dialog.Controls.Add(issueBox);
                 dialog.Controls.Add(nextActionPanel);
                 dialog.Controls.Add(closeButton);
 
                 dialog.ShowDialog(this);
             }
         }
+
         private void AboutButton_Click(object? sender, EventArgs e)
         {
             MessageBox.Show(
