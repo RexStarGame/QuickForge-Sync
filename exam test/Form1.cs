@@ -11599,6 +11599,23 @@ if (currentDriveService == null)
             ConfigureVaultAccessForUnlock();
             ShowVaultAccessUi();
         }
+        private string GetQuickFillDisplayText(VaultEntry entry, int hiddenNumber)
+        {
+            string prefix = entry.IsFavorite ? "[F] " : "";
+
+            if (IsStreamerModeEnabled())
+            {
+                return prefix + "Hidden saved login #" + hiddenNumber;
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.Platform) &&
+                !string.IsNullOrWhiteSpace(entry.Username))
+            {
+                return prefix + entry.Platform + " - " + entry.Username;
+            }
+
+            return prefix + entry.GetDisplayName();
+        }
         private void ShowQuickFill()
         {
             IntPtr activeWindow = GetForegroundWindow();
@@ -11876,7 +11893,7 @@ if (currentDriveService == null)
             if (quickFillListBox.Items.Count > 0)
             {
                 quickFillListBox.SelectedIndex = 0;
-                SetQuickFillStatus("Choose a login, then copy or fill.");
+                SetQuickFillStatus(IsStreamerModeEnabled() ? "Streamer mode is on. Login names are hidden; copy/fill still works." : "Choose a login, then copy or fill.");
             }
             else
             {
@@ -12045,23 +12062,17 @@ if (currentDriveService == null)
         private class QuickFillItem
         {
             public VaultEntry Entry { get; }
+            private readonly string displayText;
 
-            public QuickFillItem(VaultEntry entry)
+            public QuickFillItem(VaultEntry entry, string displayText)
             {
                 Entry = entry;
+                this.displayText = displayText;
             }
 
             public override string ToString()
             {
-                string prefix = Entry.IsFavorite ? "[F] " : "";
-
-                if (!string.IsNullOrWhiteSpace(Entry.Platform) &&
-                    !string.IsNullOrWhiteSpace(Entry.Username))
-                {
-                    return prefix + Entry.Platform + " - " + Entry.Username;
-                }
-
-                return prefix + Entry.GetDisplayName();
+                return displayText;
             }
         }
         protected override void OnFormClosed(FormClosedEventArgs e)
