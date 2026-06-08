@@ -1599,10 +1599,7 @@ namespace exam_test
                 !device.IsTrusted
             );
 
-            int weakPasswords = vaultEntries.Count(entry =>
-                string.IsNullOrWhiteSpace(entry.Secret) ||
-                entry.Secret.Length < 10
-            );
+            int weakPasswords = vaultEntries.Count(entry => ShouldReviewPassword(entry.Secret));
 
             int reusedPasswords = vaultEntries
                 .Where(entry => !string.IsNullOrWhiteSpace(entry.Secret))
@@ -1917,7 +1914,8 @@ namespace exam_test
                     NeedsReview = ShouldReviewPassword(entry.Secret) ||
                                   (!string.IsNullOrWhiteSpace(entry.Secret) && reusedSecrets.Contains(entry.Secret))
                 })
-                .OrderBy(item => item.Score)
+                .OrderBy(item => item.NeedsReview ? 0 : 1)
+                .ThenBy(item => item.Score)
                 .ThenBy(item => item.Entry.Platform)
                 .ToList();
 
@@ -1933,10 +1931,70 @@ namespace exam_test
 
             bool hasIssues = reviewCount > 0;
 
+            Color GetBarColor(int score, bool reused)
+            {
+                if (reused)
+                {
+                    return Color.FromArgb(255, 190, 90);
+                }
+
+                if (score < 20)
+                {
+                    return dangerColor;
+                }
+
+                if (score < 65)
+                {
+                    return Color.FromArgb(255, 190, 90);
+                }
+
+                if (score < 80)
+                {
+                    return Color.FromArgb(120, 220, 140);
+                }
+
+                return successColor;
+            }
+
+            string GetSeverityText(int score, bool reused)
+            {
+                if (reused)
+                {
+                    return "Warning: reused secret. Change this so every account has its own password.";
+                }
+
+                if (score < 20)
+                {
+                    return "Urgent: this is very easy to guess or crack. Change it as soon as possible.";
+                }
+
+                if (score < 40)
+                {
+                    return "High risk: this password is weak. Use a longer generated password.";
+                }
+
+                if (score < 65)
+                {
+                    return "Improve: acceptable only for low-risk use, but not recommended.";
+                }
+
+                if (score < 80)
+                {
+                    return "Suggestion: good enough for normal use, but it can still be stronger.";
+                }
+
+                if (score < 92)
+                {
+                    return "Looks strong. No urgent action needed.";
+                }
+
+                return "Very strong. No password-strength action needed.";
+            }
+
             using (Form dialog = new Form())
             {
-                dialog.Width = 760;
-                dialog.Height = 610;
+                dialog.Width = 820;
+                dialog.Height = 700;
                 dialog.Text = "Password Health";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -1947,8 +2005,8 @@ namespace exam_test
                 Label titleLabel = new Label();
                 titleLabel.Text = hasIssues ? "Password review needed" : "Password health looks good";
                 titleLabel.Left = 24;
-                titleLabel.Top = 20;
-                titleLabel.Width = 680;
+                titleLabel.Top = 18;
+                titleLabel.Width = 740;
                 titleLabel.Height = 34;
                 titleLabel.ForeColor = hasIssues ? Color.FromArgb(255, 190, 90) : successColor;
                 titleLabel.BackColor = Color.Transparent;
@@ -1956,11 +2014,11 @@ namespace exam_test
 
                 Label subtitleLabel = new Label();
                 subtitleLabel.Text = hasIssues
-                    ? "QuickForge found exactly which saved entries need attention. No passwords are shown here."
+                    ? "QuickForge shows which saved entries need attention. Passwords are never shown here."
                     : "No weak, OK-but-risky, or reused secrets were found in the current vault check.";
                 subtitleLabel.Left = 24;
-                subtitleLabel.Top = 58;
-                subtitleLabel.Width = 700;
+                subtitleLabel.Top = 56;
+                subtitleLabel.Width = 750;
                 subtitleLabel.Height = 38;
                 subtitleLabel.ForeColor = softTextColor;
                 subtitleLabel.BackColor = Color.Transparent;
@@ -1968,8 +2026,8 @@ namespace exam_test
 
                 Panel summaryPanel = new Panel();
                 summaryPanel.Left = 24;
-                summaryPanel.Top = 108;
-                summaryPanel.Width = 700;
+                summaryPanel.Top = 104;
+                summaryPanel.Width = 760;
                 summaryPanel.Height = 118;
                 summaryPanel.BackColor = Color.FromArgb(24, 28, 44);
                 summaryPanel.BorderStyle = BorderStyle.FixedSingle;
@@ -1978,7 +2036,7 @@ namespace exam_test
                 summaryTitle.Text = "Summary";
                 summaryTitle.Left = 16;
                 summaryTitle.Top = 10;
-                summaryTitle.Width = 660;
+                summaryTitle.Width = 720;
                 summaryTitle.Height = 22;
                 summaryTitle.ForeColor = Color.White;
                 summaryTitle.BackColor = Color.Transparent;
@@ -1992,7 +2050,7 @@ namespace exam_test
                     "Good: " + goodCount + " | Strong: " + strongCount + " | Very strong: " + veryStrongCount;
                 summaryText.Left = 16;
                 summaryText.Top = 36;
-                summaryText.Width = 660;
+                summaryText.Width = 720;
                 summaryText.Height = 72;
                 summaryText.ForeColor = softTextColor;
                 summaryText.BackColor = Color.Transparent;
@@ -2001,33 +2059,28 @@ namespace exam_test
                 summaryPanel.Controls.Add(summaryTitle);
                 summaryPanel.Controls.Add(summaryText);
 
-                Label listTitleLabel = new Label();
-                listTitleLabel.Text = hasIssues ? "Entries to fix first" : "Saved entries checked";
-                listTitleLabel.Left = 24;
-                listTitleLabel.Top = 242;
-                listTitleLabel.Width = 680;
-                listTitleLabel.Height = 24;
-                listTitleLabel.ForeColor = Color.White;
-                listTitleLabel.BackColor = Color.Transparent;
-                listTitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+                Label legendLabel = new Label();
+                legendLabel.Text = "Strength bars: red = urgent, amber = improve, green = acceptable/strong.";
+                legendLabel.Left = 24;
+                legendLabel.Top = 234;
+                legendLabel.Width = 760;
+                legendLabel.Height = 22;
+                legendLabel.ForeColor = softTextColor;
+                legendLabel.BackColor = Color.Transparent;
+                legendLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
 
-                TextBox issueBox = new TextBox();
-                issueBox.Left = 24;
-                issueBox.Top = 272;
-                issueBox.Width = 700;
-                issueBox.Height = 205;
-                issueBox.Multiline = true;
-                issueBox.ReadOnly = true;
-                issueBox.ScrollBars = ScrollBars.Vertical;
-                issueBox.WordWrap = true;
-                issueBox.BackColor = Color.FromArgb(24, 28, 44);
-                issueBox.ForeColor = Color.White;
-                issueBox.BorderStyle = BorderStyle.FixedSingle;
-                issueBox.Font = new Font("Consolas", 9, FontStyle.Regular);
+                FlowLayoutPanel findingsPanel = new FlowLayoutPanel();
+                findingsPanel.Left = 24;
+                findingsPanel.Top = 264;
+                findingsPanel.Width = 760;
+                findingsPanel.Height = 310;
+                findingsPanel.AutoScroll = true;
+                findingsPanel.FlowDirection = FlowDirection.TopDown;
+                findingsPanel.WrapContents = false;
+                findingsPanel.BackColor = Color.FromArgb(16, 20, 34);
+                findingsPanel.BorderStyle = BorderStyle.FixedSingle;
 
-                List<string> issueLines = new List<string>();
-
-                foreach (var finding in findings.Where(item => item.NeedsReview))
+                void AddFindingRow(dynamic finding)
                 {
                     string platform = string.IsNullOrWhiteSpace(finding.Entry.Platform)
                         ? "Unnamed entry"
@@ -2037,51 +2090,109 @@ namespace exam_test
                         ? "No username saved"
                         : finding.Entry.Username.Trim();
 
-                    string reusedText = finding.Reused ? " | REUSED" : "";
+                    int score = finding.Score;
+                    bool reused = finding.Reused;
+                    bool needsReview = finding.NeedsReview;
+                    Color barColor = GetBarColor(score, reused);
 
-                    issueLines.Add(
-                        "[" + finding.Level.ToUpperInvariant() + reusedText + "] " +
-                        platform +
-                        " | user: " + username +
-                        " | score: " + finding.Score + "/100"
-                    );
+                    Panel row = new Panel();
+                    row.Width = 720;
+                    row.Height = 108;
+                    row.Margin = new Padding(8, 8, 8, 2);
+                    row.BackColor = needsReview
+                        ? Color.FromArgb(26, 24, 34)
+                        : Color.FromArgb(20, 32, 28);
+                    row.BorderStyle = BorderStyle.FixedSingle;
 
-                    issueLines.Add("  Why: " + GetPasswordHealthReason(finding.Entry.Secret, finding.Reused));
-                    issueLines.Add("");
+                    Label accountLabel = new Label();
+                    accountLabel.Text = platform + "  |  user: " + username;
+                    accountLabel.Left = 12;
+                    accountLabel.Top = 8;
+                    accountLabel.Width = 520;
+                    accountLabel.Height = 22;
+                    accountLabel.ForeColor = Color.White;
+                    accountLabel.BackColor = Color.Transparent;
+                    accountLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                    Label levelLabel = new Label();
+                    levelLabel.Text = finding.Level + (reused ? " + reused" : "") + "  (" + score + "/100)";
+                    levelLabel.Left = 540;
+                    levelLabel.Top = 8;
+                    levelLabel.Width = 160;
+                    levelLabel.Height = 22;
+                    levelLabel.ForeColor = barColor;
+                    levelLabel.BackColor = Color.Transparent;
+                    levelLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                    Panel barTrack = new Panel();
+                    barTrack.Left = 12;
+                    barTrack.Top = 38;
+                    barTrack.Width = 680;
+                    barTrack.Height = 14;
+                    barTrack.BackColor = Color.FromArgb(45, 50, 68);
+                    barTrack.BorderStyle = BorderStyle.FixedSingle;
+
+                    Panel barFill = new Panel();
+                    barFill.Left = 0;
+                    barFill.Top = 0;
+                    barFill.Width = Math.Max(4, Math.Min(678, score * 678 / 100));
+                    barFill.Height = 12;
+                    barFill.BackColor = barColor;
+
+                    barTrack.Controls.Add(barFill);
+
+                    Label reasonLabel = new Label();
+                    reasonLabel.Text = GetSeverityText(score, reused) + " " + GetPasswordHealthReason(finding.Entry.Secret, reused);
+                    reasonLabel.Left = 12;
+                    reasonLabel.Top = 62;
+                    reasonLabel.Width = 680;
+                    reasonLabel.Height = 36;
+                    reasonLabel.ForeColor = needsReview ? Color.FromArgb(255, 210, 150) : softTextColor;
+                    reasonLabel.BackColor = Color.Transparent;
+                    reasonLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+
+                    row.Controls.Add(accountLabel);
+                    row.Controls.Add(levelLabel);
+                    row.Controls.Add(barTrack);
+                    row.Controls.Add(reasonLabel);
+
+                    findingsPanel.Controls.Add(row);
                 }
 
-                if (issueLines.Count == 0)
+                List<dynamic> rowsToShow = findings
+                    .Where(item => item.NeedsReview)
+                    .Cast<dynamic>()
+                    .ToList();
+
+                if (rowsToShow.Count == 0)
                 {
-                    foreach (var finding in findings)
-                    {
-                        string platform = string.IsNullOrWhiteSpace(finding.Entry.Platform)
-                            ? "Unnamed entry"
-                            : finding.Entry.Platform.Trim();
-
-                        string username = string.IsNullOrWhiteSpace(finding.Entry.Username)
-                            ? "No username saved"
-                            : finding.Entry.Username.Trim();
-
-                        issueLines.Add(
-                            "[" + finding.Level.ToUpperInvariant() + "] " +
-                            platform +
-                            " | user: " + username +
-                            " | score: " + finding.Score + "/100"
-                        );
-                    }
-
-                    if (issueLines.Count == 0)
-                    {
-                        issueLines.Add("No saved entries yet.");
-                    }
+                    rowsToShow = findings.Cast<dynamic>().ToList();
                 }
 
-                issueBox.Text = string.Join(Environment.NewLine, issueLines);
+                if (rowsToShow.Count == 0)
+                {
+                    Label emptyLabel = new Label();
+                    emptyLabel.Text = "No saved entries yet.";
+                    emptyLabel.Left = 12;
+                    emptyLabel.Top = 12;
+                    emptyLabel.Width = 700;
+                    emptyLabel.Height = 30;
+                    emptyLabel.ForeColor = softTextColor;
+                    emptyLabel.BackColor = Color.Transparent;
+                    findingsPanel.Controls.Add(emptyLabel);
+                }
+                else
+                {
+                    foreach (dynamic finding in rowsToShow)
+                    {
+                        AddFindingRow(finding);
+                    }
+                }
 
                 Panel nextActionPanel = new Panel();
                 nextActionPanel.Left = 24;
-                nextActionPanel.Top = 492;
-                nextActionPanel.Width = 580;
+                nextActionPanel.Top = 590;
+                nextActionPanel.Width = 620;
                 nextActionPanel.Height = 58;
                 nextActionPanel.BackColor = hasIssues
                     ? Color.FromArgb(36, 30, 30)
@@ -2090,11 +2201,11 @@ namespace exam_test
 
                 Label nextActionLabel = new Label();
                 nextActionLabel.Text = hasIssues
-                    ? "Best next action: fix Missing/Super weak first, then Weak, then OK-but-improve, then reused entries."
+                    ? "Best next action: fix red entries first, then amber entries. Green entries are suggestions only."
                     : "Best next action: keep using unique passwords and create encrypted backups regularly.";
                 nextActionLabel.Left = 14;
                 nextActionLabel.Top = 12;
-                nextActionLabel.Width = 550;
+                nextActionLabel.Width = 590;
                 nextActionLabel.Height = 38;
                 nextActionLabel.ForeColor = hasIssues ? Color.FromArgb(255, 190, 90) : successColor;
                 nextActionLabel.BackColor = Color.Transparent;
@@ -2104,8 +2215,8 @@ namespace exam_test
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 624;
-                closeButton.Top = 504;
+                closeButton.Left = 684;
+                closeButton.Top = 602;
                 closeButton.Width = 100;
                 closeButton.Height = 34;
                 StyleActionButton(closeButton, true);
@@ -2114,8 +2225,8 @@ namespace exam_test
                 dialog.Controls.Add(titleLabel);
                 dialog.Controls.Add(subtitleLabel);
                 dialog.Controls.Add(summaryPanel);
-                dialog.Controls.Add(listTitleLabel);
-                dialog.Controls.Add(issueBox);
+                dialog.Controls.Add(legendLabel);
+                dialog.Controls.Add(findingsPanel);
                 dialog.Controls.Add(nextActionPanel);
                 dialog.Controls.Add(closeButton);
 
