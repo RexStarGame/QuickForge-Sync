@@ -606,11 +606,14 @@ namespace exam_test
                 securityTab.Controls.Add(CreateSettingsCard(
                     "Auto-lock",
                     autoLockStatus,
-                    "QuickForge can lock the vault automatically after inactivity. The existing control remains on the main panel for now.",
+                    "QuickForge can lock the vault automatically after inactivity.",
                     360,
                     18,
                     320,
-                    150
+                    150,
+                    "Change auto-lock",
+                    () => ShowAutoLockSettingsDialog(),
+                    true
                 ));
 
                 securityTab.Controls.Add(CreateSettingsCard(
@@ -638,12 +641,9 @@ namespace exam_test
                     188,
                     320,
                     150,
-                    "New recovery key",
-                    () =>
-                    {
-                        dialog.Close();
-                        RotateRecoveryKeyButton_Click(this, EventArgs.Empty);
-                    }
+                    "Recovery settings",
+                    () => ShowRecoveryReminderSettingsDialog(),
+                    true
                 ));
 
                 syncTab.Controls.Add(CreateSettingsCard(
@@ -663,7 +663,10 @@ namespace exam_test
                     360,
                     18,
                     320,
-                    150
+                    150,
+                    "Change refresh",
+                    () => ShowAutoRefreshSettingsDialog(),
+                    true
                 ));
 
                 syncTab.Controls.Add(CreateSettingsCard(
@@ -727,10 +730,23 @@ namespace exam_test
                 ));
 
                 privacyTab.Controls.Add(CreateSettingsCard(
+                    "Background animation",
+                    currentVaultSettings.BackgroundAnimationEnabled ? "On" : "Off",
+                    "Disable animation if you want lower visual load while keeping the vault open.",
+                    16,
+                    188,
+                    320,
+                    150,
+                    "Change animation",
+                    () => ShowBackgroundAnimationSettingsDialog(),
+                    true
+                ));
+
+                privacyTab.Controls.Add(CreateSettingsCard(
                     "Streamer mode",
                     "Planned",
                     "Future privacy mode can hide emails, usernames, device IDs, and preview details while screen sharing.",
-                    16,
+                    360,
                     188,
                     320,
                     150,
@@ -799,6 +815,542 @@ namespace exam_test
                 dialog.Controls.Add(subtitleLabel);
                 dialog.Controls.Add(tabs);
                 dialog.Controls.Add(closeButton);
+
+                dialog.ShowDialog(this);
+            }
+        }
+        private void ShowAutoLockSettingsDialog()
+        {
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 430;
+                dialog.Height = 250;
+                dialog.Text = "Auto-lock settings";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Auto-lock";
+                titleLabel.Left = 20;
+                titleLabel.Top = 18;
+                titleLabel.Width = 360;
+                titleLabel.Height = 28;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
+
+                Label infoLabel = new Label();
+                infoLabel.Text = "Choose when QuickForge should lock the vault after inactivity.";
+                infoLabel.Left = 20;
+                infoLabel.Top = 52;
+                infoLabel.Width = 360;
+                infoLabel.Height = 38;
+                infoLabel.ForeColor = softTextColor;
+                infoLabel.BackColor = Color.Transparent;
+
+                ComboBox comboBox = new ComboBox();
+                comboBox.Left = 20;
+                comboBox.Top = 100;
+                comboBox.Width = 180;
+                comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+                comboBox.Items.Add("Never");
+                comboBox.Items.Add("5 minutes");
+                comboBox.Items.Add("10 minutes");
+                comboBox.Items.Add("30 minutes");
+
+                if (currentVaultSettings.AutoLockMinutes == 5)
+                {
+                    comboBox.SelectedIndex = 1;
+                }
+                else if (currentVaultSettings.AutoLockMinutes == 10)
+                {
+                    comboBox.SelectedIndex = 2;
+                }
+                else if (currentVaultSettings.AutoLockMinutes == 30)
+                {
+                    comboBox.SelectedIndex = 3;
+                }
+                else
+                {
+                    comboBox.SelectedIndex = 0;
+                }
+
+                Button saveButton = new Button();
+                saveButton.Text = "Save";
+                saveButton.Left = 210;
+                saveButton.Top = 98;
+                saveButton.Width = 85;
+                saveButton.Height = 32;
+                StyleActionButton(saveButton, true);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 305;
+                cancelButton.Top = 98;
+                cancelButton.Width = 85;
+                cancelButton.Height = 32;
+                StyleActionButton(cancelButton);
+                cancelButton.Click += (s, e) => dialog.Close();
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "Stored inside your encrypted vault.";
+                statusLabel.Left = 20;
+                statusLabel.Top = 150;
+                statusLabel.Width = 360;
+                statusLabel.Height = 32;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+
+                saveButton.Click += async (s, e) =>
+                {
+                    if (!RequireTrustedDeviceForSensitiveAction("Change auto-lock setting"))
+                    {
+                        return;
+                    }
+
+                    if (comboBox.SelectedIndex == 1)
+                    {
+                        currentVaultSettings.AutoLockMinutes = 5;
+                    }
+                    else if (comboBox.SelectedIndex == 2)
+                    {
+                        currentVaultSettings.AutoLockMinutes = 10;
+                    }
+                    else if (comboBox.SelectedIndex == 3)
+                    {
+                        currentVaultSettings.AutoLockMinutes = 30;
+                    }
+                    else
+                    {
+                        currentVaultSettings.AutoLockMinutes = 0;
+                    }
+
+                    try
+                    {
+                        ApplyPerformanceSettingsToUi();
+                        HideMainPanelSettingsForV021();
+                        MarkVaultActivity();
+
+                        await SaveCurrentVaultToCloudAsync();
+
+                        selectedPreviewLabel.Text = "Auto-lock setting saved.";
+                        dialog.Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        statusLabel.Text = "Could not save auto-lock setting.";
+                        MessageBox.Show("Could not save auto-lock setting: " + ex.Message);
+                    }
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(infoLabel);
+                dialog.Controls.Add(comboBox);
+                dialog.Controls.Add(saveButton);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(statusLabel);
+
+                dialog.ShowDialog(this);
+            }
+        }
+
+        private void ShowAutoRefreshSettingsDialog()
+        {
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 450;
+                dialog.Height = 250;
+                dialog.Text = "Auto-refresh settings";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Auto-refresh";
+                titleLabel.Left = 20;
+                titleLabel.Top = 18;
+                titleLabel.Width = 360;
+                titleLabel.Height = 28;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
+
+                Label infoLabel = new Label();
+                infoLabel.Text = "Choose how often QuickForge checks Google Drive for cloud and Device Trust changes.";
+                infoLabel.Left = 20;
+                infoLabel.Top = 52;
+                infoLabel.Width = 390;
+                infoLabel.Height = 42;
+                infoLabel.ForeColor = softTextColor;
+                infoLabel.BackColor = Color.Transparent;
+
+                ComboBox comboBox = new ComboBox();
+                comboBox.Left = 20;
+                comboBox.Top = 105;
+                comboBox.Width = 190;
+                comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+                comboBox.Items.Add("Never");
+                comboBox.Items.Add("Every 1 minute");
+                comboBox.Items.Add("Every 5 minutes");
+                comboBox.Items.Add("Every 15 minutes");
+                comboBox.Items.Add("Every 30 minutes");
+
+                if (currentVaultSettings.AutoRefreshMinutes == 1)
+                {
+                    comboBox.SelectedIndex = 1;
+                }
+                else if (currentVaultSettings.AutoRefreshMinutes == 5)
+                {
+                    comboBox.SelectedIndex = 2;
+                }
+                else if (currentVaultSettings.AutoRefreshMinutes == 15)
+                {
+                    comboBox.SelectedIndex = 3;
+                }
+                else if (currentVaultSettings.AutoRefreshMinutes == 30)
+                {
+                    comboBox.SelectedIndex = 4;
+                }
+                else
+                {
+                    comboBox.SelectedIndex = 0;
+                }
+
+                Button saveButton = new Button();
+                saveButton.Text = "Save";
+                saveButton.Left = 220;
+                saveButton.Top = 103;
+                saveButton.Width = 85;
+                saveButton.Height = 32;
+                StyleActionButton(saveButton, true);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 315;
+                cancelButton.Top = 103;
+                cancelButton.Width = 85;
+                cancelButton.Height = 32;
+                StyleActionButton(cancelButton);
+                cancelButton.Click += (s, e) => dialog.Close();
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "Stored inside your encrypted vault.";
+                statusLabel.Left = 20;
+                statusLabel.Top = 155;
+                statusLabel.Width = 390;
+                statusLabel.Height = 32;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+
+                saveButton.Click += async (s, e) =>
+                {
+                    if (!RequireTrustedDeviceForSensitiveAction("Change auto-refresh setting"))
+                    {
+                        return;
+                    }
+
+                    if (comboBox.SelectedIndex == 1)
+                    {
+                        currentVaultSettings.AutoRefreshMinutes = 1;
+                    }
+                    else if (comboBox.SelectedIndex == 2)
+                    {
+                        currentVaultSettings.AutoRefreshMinutes = 5;
+                    }
+                    else if (comboBox.SelectedIndex == 3)
+                    {
+                        currentVaultSettings.AutoRefreshMinutes = 15;
+                    }
+                    else if (comboBox.SelectedIndex == 4)
+                    {
+                        currentVaultSettings.AutoRefreshMinutes = 30;
+                    }
+                    else
+                    {
+                        currentVaultSettings.AutoRefreshMinutes = 0;
+                    }
+
+                    try
+                    {
+                        ApplyPerformanceSettingsToUi();
+                        HideMainPanelSettingsForV021();
+                        ConfigureAutoRefreshTimer();
+                        MarkVaultActivity();
+
+                        await SaveCurrentVaultToCloudAsync();
+
+                        selectedPreviewLabel.Text = "Auto-refresh setting saved.";
+                        dialog.Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        statusLabel.Text = "Could not save auto-refresh setting.";
+                        MessageBox.Show("Could not save auto-refresh setting: " + ex.Message);
+                    }
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(infoLabel);
+                dialog.Controls.Add(comboBox);
+                dialog.Controls.Add(saveButton);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(statusLabel);
+
+                dialog.ShowDialog(this);
+            }
+        }
+
+        private void ShowRecoveryReminderSettingsDialog()
+        {
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 470;
+                dialog.Height = 270;
+                dialog.Text = "Recovery key settings";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Recovery key";
+                titleLabel.Left = 20;
+                titleLabel.Top = 18;
+                titleLabel.Width = 360;
+                titleLabel.Height = 28;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
+
+                Label infoLabel = new Label();
+                infoLabel.Text = "Set recovery reminder timing or rotate your recovery key.";
+                infoLabel.Left = 20;
+                infoLabel.Top = 52;
+                infoLabel.Width = 390;
+                infoLabel.Height = 36;
+                infoLabel.ForeColor = softTextColor;
+                infoLabel.BackColor = Color.Transparent;
+
+                ComboBox comboBox = new ComboBox();
+                comboBox.Left = 20;
+                comboBox.Top = 100;
+                comboBox.Width = 150;
+                comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+                comboBox.Items.Add("Never");
+                comboBox.Items.Add("30 days");
+                comboBox.Items.Add("90 days");
+
+                if (currentVaultSettings.RecoveryKeyReminderDays == 30)
+                {
+                    comboBox.SelectedIndex = 1;
+                }
+                else if (currentVaultSettings.RecoveryKeyReminderDays == 90)
+                {
+                    comboBox.SelectedIndex = 2;
+                }
+                else
+                {
+                    comboBox.SelectedIndex = 0;
+                }
+
+                Button saveButton = new Button();
+                saveButton.Text = "Save reminder";
+                saveButton.Left = 180;
+                saveButton.Top = 98;
+                saveButton.Width = 115;
+                saveButton.Height = 32;
+                StyleActionButton(saveButton, true);
+
+                Button rotateButton = new Button();
+                rotateButton.Text = "New key";
+                rotateButton.Left = 305;
+                rotateButton.Top = 98;
+                rotateButton.Width = 85;
+                rotateButton.Height = 32;
+                StyleActionButton(rotateButton);
+
+                Button closeButton = new Button();
+                closeButton.Text = "Close";
+                closeButton.Left = 305;
+                closeButton.Top = 168;
+                closeButton.Width = 85;
+                closeButton.Height = 32;
+                StyleActionButton(closeButton);
+                closeButton.Click += (s, e) => dialog.Close();
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "Keep your recovery key separate from your encrypted backup.";
+                statusLabel.Left = 20;
+                statusLabel.Top = 145;
+                statusLabel.Width = 270;
+                statusLabel.Height = 58;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+
+                saveButton.Click += async (s, e) =>
+                {
+                    if (!RequireTrustedDeviceForSensitiveAction("Change recovery reminder setting"))
+                    {
+                        return;
+                    }
+
+                    if (comboBox.SelectedIndex == 1)
+                    {
+                        currentVaultSettings.RecoveryKeyReminderDays = 30;
+                    }
+                    else if (comboBox.SelectedIndex == 2)
+                    {
+                        currentVaultSettings.RecoveryKeyReminderDays = 90;
+                    }
+                    else
+                    {
+                        currentVaultSettings.RecoveryKeyReminderDays = 0;
+                    }
+
+                    try
+                    {
+                        ApplyRecoverySettingsToUi();
+                        HideMainPanelSettingsForV021();
+                        MarkVaultActivity();
+
+                        await SaveCurrentVaultToCloudAsync();
+
+                        selectedPreviewLabel.Text = "Recovery reminder setting saved.";
+                        dialog.Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        statusLabel.Text = "Could not save recovery reminder.";
+                        MessageBox.Show("Could not save recovery reminder: " + ex.Message);
+                    }
+                };
+
+                rotateButton.Click += (s, e) =>
+                {
+                    dialog.Close();
+                    RotateRecoveryKeyButton_Click(this, EventArgs.Empty);
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(infoLabel);
+                dialog.Controls.Add(comboBox);
+                dialog.Controls.Add(saveButton);
+                dialog.Controls.Add(rotateButton);
+                dialog.Controls.Add(statusLabel);
+                dialog.Controls.Add(closeButton);
+
+                dialog.ShowDialog(this);
+            }
+        }
+
+        private void ShowBackgroundAnimationSettingsDialog()
+        {
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 430;
+                dialog.Height = 240;
+                dialog.Text = "Background animation";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Background animation";
+                titleLabel.Left = 20;
+                titleLabel.Top = 18;
+                titleLabel.Width = 360;
+                titleLabel.Height = 28;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
+
+                Label infoLabel = new Label();
+                infoLabel.Text = "Turn off animation if you want lower visual load.";
+                infoLabel.Left = 20;
+                infoLabel.Top = 52;
+                infoLabel.Width = 360;
+                infoLabel.Height = 36;
+                infoLabel.ForeColor = softTextColor;
+                infoLabel.BackColor = Color.Transparent;
+
+                CheckBox animationCheckBox = new CheckBox();
+                animationCheckBox.Text = "Enable background animation";
+                animationCheckBox.Left = 20;
+                animationCheckBox.Top = 95;
+                animationCheckBox.Width = 230;
+                animationCheckBox.Height = 28;
+                animationCheckBox.Checked = currentVaultSettings.BackgroundAnimationEnabled;
+                animationCheckBox.ForeColor = softTextColor;
+                animationCheckBox.BackColor = Color.Transparent;
+
+                Button saveButton = new Button();
+                saveButton.Text = "Save";
+                saveButton.Left = 260;
+                saveButton.Top = 93;
+                saveButton.Width = 75;
+                saveButton.Height = 32;
+                StyleActionButton(saveButton, true);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 20;
+                cancelButton.Top = 145;
+                cancelButton.Width = 90;
+                cancelButton.Height = 32;
+                StyleActionButton(cancelButton);
+                cancelButton.Click += (s, e) => dialog.Close();
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "Stored inside your encrypted vault.";
+                statusLabel.Left = 120;
+                statusLabel.Top = 150;
+                statusLabel.Width = 260;
+                statusLabel.Height = 28;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+
+                saveButton.Click += async (s, e) =>
+                {
+                    if (!RequireTrustedDeviceForSensitiveAction("Change animation setting"))
+                    {
+                        return;
+                    }
+
+                    currentVaultSettings.BackgroundAnimationEnabled = animationCheckBox.Checked;
+
+                    try
+                    {
+                        ApplyPerformanceSettingsToUi();
+                        HideMainPanelSettingsForV021();
+                        UpdateAnimationState();
+                        MarkVaultActivity();
+
+                        await SaveCurrentVaultToCloudAsync();
+
+                        selectedPreviewLabel.Text = "Background animation setting saved.";
+                        dialog.Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        statusLabel.Text = "Could not save animation setting.";
+                        MessageBox.Show("Could not save animation setting: " + ex.Message);
+                    }
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(infoLabel);
+                dialog.Controls.Add(animationCheckBox);
+                dialog.Controls.Add(saveButton);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(statusLabel);
 
                 dialog.ShowDialog(this);
             }
