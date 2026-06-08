@@ -1723,6 +1723,7 @@ namespace exam_test
             vaultPanel.Controls.Add(autoLockComboBox);
             vaultPanel.Controls.Add(autoRefreshLabel);
             vaultPanel.Controls.Add(autoRefreshComboBox);
+            HideMainPanelSettingsForV021();
 
             openSiteButton.Text = "Open site";
             openSiteButton.Left = 315;
