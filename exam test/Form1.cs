@@ -6469,6 +6469,36 @@ namespace exam_test
                 return true;
             }
         }
+        private async Task SaveCurrentVaultToCloudWithoutDeviceRegistrationAsync()
+        {
+            if (currentDriveService == null)
+            {
+                throw new InvalidOperationException("Google Drive is not connected.");
+            }
+
+            if (currentDataKey == null || currentEncryptedVaultFile == null)
+            {
+                throw new InvalidOperationException("Vault is locked.");
+            }
+
+            SetSyncStatus("Checking cloud...");
+            await EnsureCloudVaultIsSafeToOverwriteAsync();
+
+            SetSyncStatus("Saving...");
+
+            string encryptedJson = CreateCurrentEncryptedVaultJson();
+
+            GoogleDriveVaultMetadata? uploadedMetadata =
+                await GoogleDriveVaultService.UploadEncryptedVaultAsync(
+                    currentDriveService,
+                    encryptedJson
+                );
+
+            lastKnownCloudFingerprint = uploadedMetadata?.Fingerprint ?? lastKnownCloudFingerprint;
+            cloudVaultExists = true;
+            lastCloudSaveUtc = DateTime.UtcNow;
+            SetSyncStatus("Active", success: true);
+        }
         private async Task SaveCurrentVaultToCloudAsync()
         {
             if (currentDriveService == null)
@@ -10544,18 +10574,11 @@ if (currentDriveService == null)
             EnsureLocalDeviceIdentity();
             EnsureVaultSafetyCollections();
 
-            if (string.Equals(selectedDevice.DeviceId, localDeviceId, StringComparison.OrdinalIgnoreCase))
-            {
-                MessageBox.Show(
-                    "This step only forgets another selected device." + Environment.NewLine + Environment.NewLine +
-                    "Current-PC forget will be added in the next safe patch.",
-                    "Current device selected",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
-
-                return;
-            }
+            bool isCurrentDevice = string.Equals(
+                selectedDevice.DeviceId,
+                localDeviceId,
+                StringComparison.OrdinalIgnoreCase
+            );
 
             string selectedDeviceName = string.IsNullOrWhiteSpace(selectedDevice.DeviceName)
                 ? "Selected device"
@@ -10581,12 +10604,18 @@ if (currentDriveService == null)
                 return;
             }
 
+            string confirmMessage = isCurrentDevice
+                ? "Forget this current PC from Device Trust?" + Environment.NewLine + Environment.NewLine +
+                  "Device: " + selectedDeviceName + Environment.NewLine + Environment.NewLine +
+                  "This removes this PC from the trusted-device list and deletes the local device.id file." + Environment.NewLine +
+                  "Restart QuickForge after this. On next unlock, this PC should appear as a new untrusted device."
+                : "Forget this selected device from Device Trust?" + Environment.NewLine + Environment.NewLine +
+                  "Device: " + selectedDeviceName + Environment.NewLine + Environment.NewLine +
+                  "This hides it from the normal Device Trust list and marks it untrusted." + Environment.NewLine +
+                  "If that device opens this vault again later, it will reappear as untrusted.";
+
             DialogResult confirm = MessageBox.Show(
-                "Forget this selected device from Device Trust?" + Environment.NewLine + Environment.NewLine +
-                "Device: " + selectedDeviceName + Environment.NewLine + Environment.NewLine +
-                "This hides it from the normal Device Trust list and marks it untrusted." + Environment.NewLine +
-                "If that device opens this normal Device Trust list and marks it untrusted." + Environment.NewLine +
-                "If that device opens this vault again later, it will reappear as untrusted.",
+                confirmMessage,
                 "Forget selected device",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning,
@@ -10596,6 +10625,20 @@ if (currentDriveService == null)
             if (confirm != DialogResult.Yes)
             {
                 return;
+            }
+
+            if (isCurrentDevice)
+            {
+                string? typed = ShowPasswordPrompt(
+                    "Confirm forget current PC",
+                    "Type FORGET THIS DEVICE to continue:"
+                );
+
+                if (!string.Equals(typed, "FORGET THIS DEVICE", StringComparison.Ordinal))
+                {
+                    MessageBox.Show("Forget current PC cancelled.");
+                    return;
+                }
             }
 
             DateTime removedAtUtc = DateTime.UtcNow;
@@ -10615,16 +10658,30 @@ if (currentDriveService == null)
                 selectedDeviceName + " was forgotten from Device Trust by " + localDeviceName + "."
             );
 
-            QueueBackgroundVaultSync("Device forgotten from Device Trust.");
+            await SaveCurrentVaultToCloudWithoutDeviceRegistrationAsync();
+
+            if (isCurrentDevice)
+            {
+                string deviceFilePath = GetLocalDeviceIdentityFilePath();
+
+                if (File.Exists(deviceFilePath))
+                {
+                    File.Delete(deviceFilePath);
+                }
+
+                ApplyDeviceTrustRestrictionsToUi();
+            }
 
             SetPreviewText(
                 "Device forgotten.",
                 selectedDeviceName + " was removed from the normal Device Trust list.",
-                "If that device opens this vault again, it will reappear as untrusted."
+                isCurrentDevice
+                    ? "Restart QuickForge. On next unlock, this PC should appear as a new untrusted device."
+                    : "If that device opens this vault again, it will reappear as untrusted."
             );
 
             MessageBox.Show(
-                "Selected device was forgotten.",
+                isCurrentDevice ? "This PC was forgotten. Restart QuickForge to test new-device behavior." : "Selected device was forgotten.",
                 "Device forgotten",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information
@@ -11013,7 +11070,7 @@ if (currentDriveService == null)
 
                     trustButton.Enabled = canManageDeviceTrust && selected != null && !selected.IsTrusted;
                     untrustButton.Enabled = canManageDeviceTrust && selected != null && selected.IsTrusted && selected.DeviceId != localDeviceId;
-                    forgetCurrentPcButton.Enabled = canManageDeviceTrust && selected != null && selected.DeviceId != localDeviceId;
+                    forgetCurrentPcButton.Enabled = canManageDeviceTrust && selected != null;
                 }
 
                 deviceList.SelectedIndexChanged += (s, e) => UpdateDeviceTrustActionButtons();
