@@ -479,7 +479,7 @@ namespace exam_test
                 return entry.GetDisplayName();
             }
 
-            return (entry.IsFavorite ? "Ã¢Ëœâ€¦ " : "") + "Saved entry hidden by Streamer mode";
+            return (entry.IsFavorite ? "[Favorite] " : "") + "Saved entry hidden by Streamer mode";
         }
 
         private void ApplyStreamerModeToUi()
