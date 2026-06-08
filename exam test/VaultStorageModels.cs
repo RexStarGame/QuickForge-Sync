@@ -16,8 +16,8 @@ namespace exam_test
         public bool RecoveryKeyRotationRequired { get; set; } = false;
 
         public bool BackgroundAnimationEnabled { get; set; } = true;
-        
-        public bool PrivacyModeEnabled { get; set; } = false;public int AutoLockMinutes { get; set; } = 10;
+        public bool PrivacyModeEnabled { get; set; } = false;
+        public int AutoLockMinutes { get; set; } = 10;
         public int AutoRefreshMinutes { get; set; } = 5;
 
         public List<KnownVaultDevice> KnownDevices { get; set; } = new List<KnownVaultDevice>();
