@@ -581,6 +581,13 @@ namespace exam_test
                 string recoveryReminderStatus = currentVaultSettings.RecoveryKeyReminderDays <= 0
                     ? "Off"
                     : currentVaultSettings.RecoveryKeyReminderDays + " days";
+                string lastSaveSettingsText = lastCloudSaveUtc.HasValue
+                    ? lastCloudSaveUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                    : "Not yet";
+
+                string lastLoadSettingsText = lastCloudLoadUtc.HasValue
+                    ? lastCloudLoadUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                    : "Not yet";
 
                 securityTab.Controls.Add(CreateSettingsCard(
                     "Two-step vault unlock",
