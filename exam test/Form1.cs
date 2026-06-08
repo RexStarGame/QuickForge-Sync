@@ -929,6 +929,632 @@ namespace exam_test
                 dialog.ShowDialog(this);
             }
         }
+        private bool IsAuthenticatorLockConfigured()
+        {
+            return currentVaultSettings != null &&
+                   currentVaultSettings.AuthenticatorLockEnabled &&
+                   !string.IsNullOrWhiteSpace(currentVaultSettings.AuthenticatorSecretBase32);
+        }
+
+        private string GenerateAuthenticatorSecretBase32()
+        {
+            byte[] secretBytes = KeyGeneration.GenerateRandomKey(20);
+            return Base32Encoding.ToString(secretBytes);
+        }
+
+        private string BuildAuthenticatorSetupUri(string secretBase32)
+        {
+            string accountLabel = string.IsNullOrWhiteSpace(connectedGoogleEmail)
+                ? "vault"
+                : connectedGoogleEmail.Trim();
+
+            string label = Uri.EscapeDataString("QuickForge:" + accountLabel);
+            string issuer = Uri.EscapeDataString("QuickForge Sync");
+
+            return "otpauth://totp/" + label +
+                   "?secret=" + secretBase32 +
+                   "&issuer=" + issuer +
+                   "&digits=6&period=30";
+        }
+
+        private Bitmap CreateAuthenticatorQrBitmap(string setupUri)
+        {
+            QRCodeGenerator qrGenerator = new QRCodeGenerator();
+            QRCodeData qrCodeData = qrGenerator.CreateQrCode(setupUri, QRCodeGenerator.ECCLevel.Q);
+            PngByteQRCode qrCode = new PngByteQRCode(qrCodeData);
+            byte[] qrBytes = qrCode.GetGraphic(10);
+
+            using (MemoryStream stream = new MemoryStream(qrBytes))
+            using (Bitmap temporary = new Bitmap(stream))
+            {
+                qrCodeData.Dispose();
+                return new Bitmap(temporary);
+            }
+        }
+
+        private bool VerifyAuthenticatorCode(string secretBase32, string code, out long timeWindowUsed)
+        {
+            timeWindowUsed = 0;
+
+            string cleanCode = new string((code ?? "").Where(char.IsDigit).ToArray());
+
+            if (cleanCode.Length != 6 || string.IsNullOrWhiteSpace(secretBase32))
+            {
+                return false;
+            }
+
+            try
+            {
+                byte[] secretBytes = Base32Encoding.ToBytes(secretBase32);
+                Totp totp = new Totp(secretBytes);
+
+                return totp.VerifyTotp(
+                    cleanCode,
+                    out timeWindowUsed,
+                    new VerificationWindow(previous: 1, future: 1)
+                );
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private string? ShowAuthenticatorCodePrompt(string title, string message)
+        {
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 420;
+                dialog.Height = 210;
+                dialog.Text = title;
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label messageLabel = new Label();
+                messageLabel.Text = message;
+                messageLabel.Left = 20;
+                messageLabel.Top = 18;
+                messageLabel.Width = 360;
+                messageLabel.Height = 45;
+                messageLabel.ForeColor = softTextColor;
+                messageLabel.BackColor = Color.Transparent;
+                messageLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                TextBox codeBox = new TextBox();
+                codeBox.Left = 20;
+                codeBox.Top = 75;
+                codeBox.Width = 150;
+                codeBox.Height = 28;
+                codeBox.MaxLength = 6;
+                codeBox.PlaceholderText = "6-digit code";
+                codeBox.Font = new Font("Consolas", 12, FontStyle.Bold);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 180;
+                cancelButton.Top = 120;
+                cancelButton.Width = 90;
+                cancelButton.Height = 32;
+                cancelButton.DialogResult = DialogResult.Cancel;
+                StyleActionButton(cancelButton);
+
+                Button confirmButton = new Button();
+                confirmButton.Text = "Continue";
+                confirmButton.Left = 285;
+                confirmButton.Top = 120;
+                confirmButton.Width = 95;
+                confirmButton.Height = 32;
+                confirmButton.DialogResult = DialogResult.OK;
+                StyleActionButton(confirmButton, true);
+
+                dialog.Controls.Add(messageLabel);
+                dialog.Controls.Add(codeBox);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(confirmButton);
+
+                dialog.AcceptButton = confirmButton;
+                dialog.CancelButton = cancelButton;
+
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                {
+                    return codeBox.Text;
+                }
+
+                return null;
+            }
+        }
+
+        private bool ShowAuthenticatorUnlockDialog()
+        {
+            if (!IsAuthenticatorLockConfigured())
+            {
+                return true;
+            }
+
+            bool verified = false;
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 460;
+                dialog.Height = 250;
+                dialog.Text = "Two-step vault unlock";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Authenticator code required";
+                titleLabel.Left = 22;
+                titleLabel.Top = 18;
+                titleLabel.Width = 390;
+                titleLabel.Height = 28;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
+
+                Label detailLabel = new Label();
+                detailLabel.Text = "Enter the 6-digit code from your authenticator app.";
+                detailLabel.Left = 22;
+                detailLabel.Top = 55;
+                detailLabel.Width = 390;
+                detailLabel.Height = 32;
+                detailLabel.ForeColor = softTextColor;
+                detailLabel.BackColor = Color.Transparent;
+                detailLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                TextBox codeBox = new TextBox();
+                codeBox.Left = 22;
+                codeBox.Top = 95;
+                codeBox.Width = 160;
+                codeBox.Height = 30;
+                codeBox.MaxLength = 6;
+                codeBox.PlaceholderText = "6-digit code";
+                codeBox.Font = new Font("Consolas", 12, FontStyle.Bold);
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "";
+                statusLabel.Left = 22;
+                statusLabel.Top = 132;
+                statusLabel.Width = 390;
+                statusLabel.Height = 28;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+                statusLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 220;
+                cancelButton.Top = 170;
+                cancelButton.Width = 90;
+                cancelButton.Height = 34;
+                StyleActionButton(cancelButton);
+                cancelButton.Click += (s, e) => dialog.Close();
+
+                Button unlockButton = new Button();
+                unlockButton.Text = "Unlock";
+                unlockButton.Left = 325;
+                unlockButton.Top = 170;
+                unlockButton.Width = 90;
+                unlockButton.Height = 34;
+                StyleActionButton(unlockButton, true);
+
+                unlockButton.Click += (s, e) =>
+                {
+                    if (VerifyAuthenticatorCode(
+                        currentVaultSettings.AuthenticatorSecretBase32,
+                        codeBox.Text,
+                        out long timeWindowUsed))
+                    {
+                        currentVaultSettings.LastAuthenticatorTimeWindowUsed = timeWindowUsed;
+                        verified = true;
+                        dialog.Close();
+                        return;
+                    }
+
+                    statusLabel.Text = "Wrong or expired code. Try the newest 6-digit code.";
+                    statusLabel.ForeColor = dangerColor;
+                    codeBox.SelectAll();
+                    codeBox.Focus();
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(detailLabel);
+                dialog.Controls.Add(codeBox);
+                dialog.Controls.Add(statusLabel);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(unlockButton);
+
+                dialog.AcceptButton = unlockButton;
+                dialog.CancelButton = cancelButton;
+
+                dialog.ShowDialog(this);
+            }
+
+            return verified;
+        }
+
+        private bool ShowAuthenticatorLockSettingsDialog()
+        {
+            if (!isVaultUnlocked || currentEncryptedVaultFile == null)
+            {
+                MessageBox.Show(
+                    "Unlock your vault before changing Authenticator Lock.",
+                    "Vault locked",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return false;
+            }
+
+            if (!RequireTrustedDeviceForSensitiveAction("Manage Authenticator Lock"))
+            {
+                return false;
+            }
+
+            if (IsAuthenticatorLockConfigured())
+            {
+                return ShowDisableAuthenticatorLockDialog();
+            }
+
+            return ShowAuthenticatorSetupDialog();
+        }
+
+        private bool ShowAuthenticatorSetupDialog()
+        {
+            string? unlockCheck = ShowPasswordPrompt(
+                "Confirm Vault Code",
+                "Enter your vault code or recovery key before enabling Authenticator Lock:"
+            );
+
+            if (string.IsNullOrWhiteSpace(unlockCheck) ||
+                currentEncryptedVaultFile == null ||
+                !VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, unlockCheck))
+            {
+                MessageBox.Show(
+                    "Wrong vault code or recovery key. Authenticator Lock was not enabled.",
+                    "Confirmation failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return false;
+            }
+
+            string secretBase32 = GenerateAuthenticatorSecretBase32();
+            string setupUri = BuildAuthenticatorSetupUri(secretBase32);
+            Bitmap qrBitmap = CreateAuthenticatorQrBitmap(setupUri);
+            bool saved = false;
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 720;
+                dialog.Height = 620;
+                dialog.Text = "Set up Authenticator Lock";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Set up two-step vault unlock";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 640;
+                titleLabel.Height = 32;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "Scan this QR code with an authenticator app, then enter the 6-digit code.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 640;
+                subtitleLabel.Height = 28;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                PictureBox qrPicture = new PictureBox();
+                qrPicture.Left = 24;
+                qrPicture.Top = 100;
+                qrPicture.Width = 260;
+                qrPicture.Height = 260;
+                qrPicture.SizeMode = PictureBoxSizeMode.Zoom;
+                qrPicture.BackColor = Color.White;
+                qrPicture.Image = qrBitmap;
+
+                Panel infoPanel = new Panel();
+                infoPanel.Left = 310;
+                infoPanel.Top = 100;
+                infoPanel.Width = 370;
+                infoPanel.Height = 260;
+                infoPanel.BackColor = Color.FromArgb(24, 28, 44);
+                infoPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label infoTitle = new Label();
+                infoTitle.Text = "Before enabling";
+                infoTitle.Left = 14;
+                infoTitle.Top = 12;
+                infoTitle.Width = 330;
+                infoTitle.Height = 24;
+                infoTitle.ForeColor = Color.FromArgb(255, 190, 90);
+                infoTitle.BackColor = Color.Transparent;
+                infoTitle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+
+                Label infoText = new Label();
+                infoText.Text =
+                    "Works with Google Authenticator, Microsoft Authenticator, Aegis, 2FAS, and similar apps." +
+                    Environment.NewLine + Environment.NewLine +
+                    "You will need your vault code and a 6-digit authenticator code to unlock." +
+                    Environment.NewLine + Environment.NewLine +
+                    "If you lose your authenticator app, your recovery key is the emergency path.";
+                infoText.Left = 14;
+                infoText.Top = 44;
+                infoText.Width = 335;
+                infoText.Height = 190;
+                infoText.ForeColor = softTextColor;
+                infoText.BackColor = Color.Transparent;
+                infoText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                infoPanel.Controls.Add(infoTitle);
+                infoPanel.Controls.Add(infoText);
+
+                Label manualLabel = new Label();
+                manualLabel.Text = "Manual setup key";
+                manualLabel.Left = 24;
+                manualLabel.Top = 380;
+                manualLabel.Width = 200;
+                manualLabel.Height = 22;
+                manualLabel.ForeColor = Color.White;
+                manualLabel.BackColor = Color.Transparent;
+                manualLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                TextBox manualKeyBox = new TextBox();
+                manualKeyBox.Left = 24;
+                manualKeyBox.Top = 405;
+                manualKeyBox.Width = 420;
+                manualKeyBox.Height = 28;
+                manualKeyBox.ReadOnly = true;
+                manualKeyBox.Text = secretBase32;
+                manualKeyBox.Font = new Font("Consolas", 9, FontStyle.Regular);
+
+                Label codeLabel = new Label();
+                codeLabel.Text = "6-digit code";
+                codeLabel.Left = 24;
+                codeLabel.Top = 445;
+                codeLabel.Width = 180;
+                codeLabel.Height = 22;
+                codeLabel.ForeColor = Color.White;
+                codeLabel.BackColor = Color.Transparent;
+                codeLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                TextBox codeBox = new TextBox();
+                codeBox.Left = 24;
+                codeBox.Top = 470;
+                codeBox.Width = 150;
+                codeBox.Height = 30;
+                codeBox.MaxLength = 6;
+                codeBox.PlaceholderText = "123456";
+                codeBox.Font = new Font("Consolas", 12, FontStyle.Bold);
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "Scan QR, enter the current code, then enable.";
+                statusLabel.Left = 195;
+                statusLabel.Top = 470;
+                statusLabel.Width = 485;
+                statusLabel.Height = 35;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+                statusLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 460;
+                cancelButton.Top = 530;
+                cancelButton.Width = 90;
+                cancelButton.Height = 34;
+                StyleActionButton(cancelButton);
+                cancelButton.Click += (s, e) => dialog.Close();
+
+                Button enableButton = new Button();
+                enableButton.Text = "Enable";
+                enableButton.Left = 570;
+                enableButton.Top = 530;
+                enableButton.Width = 95;
+                enableButton.Height = 34;
+                StyleActionButton(enableButton, true);
+
+                enableButton.Click += async (s, e) =>
+                {
+                    if (!VerifyAuthenticatorCode(secretBase32, codeBox.Text, out long timeWindowUsed))
+                    {
+                        statusLabel.Text = "Wrong or expired code. Wait for a fresh code and try again.";
+                        statusLabel.ForeColor = dangerColor;
+                        codeBox.SelectAll();
+                        codeBox.Focus();
+                        return;
+                    }
+
+                    bool previousEnabled = currentVaultSettings.AuthenticatorLockEnabled;
+                    string previousSecret = currentVaultSettings.AuthenticatorSecretBase32;
+                    DateTime? previousEnabledAt = currentVaultSettings.AuthenticatorEnabledAtUtc;
+                    long? previousWindow = currentVaultSettings.LastAuthenticatorTimeWindowUsed;
+
+                    try
+                    {
+                        currentVaultSettings.AuthenticatorLockEnabled = true;
+                        currentVaultSettings.AuthenticatorSecretBase32 = secretBase32;
+                        currentVaultSettings.AuthenticatorEnabledAtUtc = DateTime.UtcNow;
+                        currentVaultSettings.LastAuthenticatorTimeWindowUsed = timeWindowUsed;
+
+                        MarkVaultChangedByCurrentDevice("Authenticator Lock enabled");
+                        await SaveCurrentVaultToCloudAsync();
+
+                        saved = true;
+                        SetPreviewText(
+                            "Authenticator Lock enabled.",
+                            "QuickForge will ask for a 6-digit authenticator code after your vault code.",
+                            "Keep your recovery key safe."
+                        );
+
+                        dialog.Close();
+
+                        MessageBox.Show(
+                            "Authenticator Lock is now enabled." + Environment.NewLine + Environment.NewLine +
+                            "Keep your recovery key safe. It is your emergency path if you lose your authenticator app.",
+                            "Authenticator Lock enabled",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        currentVaultSettings.AuthenticatorLockEnabled = previousEnabled;
+                        currentVaultSettings.AuthenticatorSecretBase32 = previousSecret;
+                        currentVaultSettings.AuthenticatorEnabledAtUtc = previousEnabledAt;
+                        currentVaultSettings.LastAuthenticatorTimeWindowUsed = previousWindow;
+
+                        statusLabel.Text = "Could not save Authenticator Lock.";
+                        statusLabel.ForeColor = dangerColor;
+
+                        MessageBox.Show(
+                            "Could not save Authenticator Lock: " + ex.Message,
+                            "Save failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
+                    }
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(qrPicture);
+                dialog.Controls.Add(infoPanel);
+                dialog.Controls.Add(manualLabel);
+                dialog.Controls.Add(manualKeyBox);
+                dialog.Controls.Add(codeLabel);
+                dialog.Controls.Add(codeBox);
+                dialog.Controls.Add(statusLabel);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(enableButton);
+
+                dialog.AcceptButton = enableButton;
+                dialog.CancelButton = cancelButton;
+
+                dialog.ShowDialog(this);
+            }
+
+            qrBitmap.Dispose();
+            return saved;
+        }
+
+        private bool ShowDisableAuthenticatorLockDialog()
+        {
+            DialogResult choice = MessageBox.Show(
+                "Authenticator Lock is currently ON." + Environment.NewLine + Environment.NewLine +
+                "Disable it for this vault?",
+                "Manage Authenticator Lock",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+
+            if (choice != DialogResult.Yes)
+            {
+                return false;
+            }
+
+            string? unlockCheck = ShowPasswordPrompt(
+                "Disable Authenticator Lock",
+                "Enter your vault code or recovery key:"
+            );
+
+            if (string.IsNullOrWhiteSpace(unlockCheck) ||
+                currentEncryptedVaultFile == null ||
+                !VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, unlockCheck))
+            {
+                MessageBox.Show(
+                    "Wrong vault code or recovery key. Authenticator Lock was not disabled.",
+                    "Confirmation failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return false;
+            }
+
+            string? code = ShowAuthenticatorCodePrompt(
+                "Disable Authenticator Lock",
+                "Enter the current 6-digit authenticator code:"
+            );
+
+            if (string.IsNullOrWhiteSpace(code) ||
+                !VerifyAuthenticatorCode(currentVaultSettings.AuthenticatorSecretBase32, code, out _))
+            {
+                MessageBox.Show(
+                    "Wrong or expired authenticator code. Authenticator Lock was not disabled.",
+                    "Authenticator check failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return false;
+            }
+
+            bool previousEnabled = currentVaultSettings.AuthenticatorLockEnabled;
+            string previousSecret = currentVaultSettings.AuthenticatorSecretBase32;
+            DateTime? previousEnabledAt = currentVaultSettings.AuthenticatorEnabledAtUtc;
+            long? previousWindow = currentVaultSettings.LastAuthenticatorTimeWindowUsed;
+
+            try
+            {
+                currentVaultSettings.AuthenticatorLockEnabled = false;
+                currentVaultSettings.AuthenticatorSecretBase32 = "";
+                currentVaultSettings.AuthenticatorEnabledAtUtc = null;
+                currentVaultSettings.LastAuthenticatorTimeWindowUsed = null;
+
+                MarkVaultChangedByCurrentDevice("Authenticator Lock disabled");
+                SaveCurrentVaultToCloudAsync().GetAwaiter().GetResult();
+
+                SetPreviewText(
+                    "Authenticator Lock disabled.",
+                    "QuickForge will unlock with Google login and vault code only.",
+                    "You can enable it again from Settings > Security."
+                );
+
+                MessageBox.Show(
+                    "Authenticator Lock has been disabled.",
+                    "Authenticator Lock disabled",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                currentVaultSettings.AuthenticatorLockEnabled = previousEnabled;
+                currentVaultSettings.AuthenticatorSecretBase32 = previousSecret;
+                currentVaultSettings.AuthenticatorEnabledAtUtc = previousEnabledAt;
+                currentVaultSettings.LastAuthenticatorTimeWindowUsed = previousWindow;
+
+                MessageBox.Show(
+                    "Could not disable Authenticator Lock: " + ex.Message,
+                    "Save failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+
+                return false;
+            }
+        }
         private bool ShowStreamerModeSettingsDialog()
         {
             bool saved = false;
@@ -4537,6 +5163,29 @@ namespace exam_test
             currentVaultSettings = vaultData.Settings ?? new VaultSettings();
             currentDataKey = dataKey;
             currentEncryptedVaultFile = decryptedEncryptedVaultFile;
+
+            if (!usedRecoveryKey && IsAuthenticatorLockConfigured())
+            {
+                SetSyncStatus("Authenticator required");
+                SetPreviewText(
+                    "Two-step vault unlock",
+                    "Enter the 6-digit authenticator code to finish unlocking.",
+                    "Recovery key can be used as the emergency path if authenticator access is lost."
+                );
+
+                if (!ShowAuthenticatorUnlockDialog())
+                {
+                    vaultCode = "";
+                    currentDataKey = null;
+                    currentEncryptedVaultFile = null;
+                    currentVaultSettings = new VaultSettings();
+                    vaultEntries.Clear();
+                    RefreshVaultList();
+                    SetSyncStatus("Authenticator cancelled", error: true);
+                    ClearVaultCodeInputForRetry();
+                    return false;
+                }
+            }
 
             vaultEntries.Clear();
 
