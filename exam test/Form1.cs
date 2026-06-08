@@ -26,6 +26,7 @@ namespace exam_test
         private readonly System.Windows.Forms.Timer autoLockTimer = new System.Windows.Forms.Timer();
         private readonly System.Windows.Forms.Timer unlockStatusTimer = new System.Windows.Forms.Timer();
         private readonly System.Windows.Forms.Timer autoRefreshTimer = new System.Windows.Forms.Timer();
+        private readonly System.Windows.Forms.Timer deviceTrustRefreshTimer = new System.Windows.Forms.Timer();
 
         private float time = 0f;
 
@@ -126,6 +127,7 @@ namespace exam_test
         private string backgroundVaultSyncReason = "";
         private bool hasUnsyncedLocalChanges = false;
         private bool autoRefreshRunning = false;
+        private bool deviceTrustBackgroundRefreshRunning = false;
 
         private const int MaxBackgroundSyncRetries = 5;
         private const int BackgroundSyncRetryDelaySeconds = 10;
@@ -261,6 +263,10 @@ namespace exam_test
             autoLockTimer.Start();
 
             autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
+
+            deviceTrustRefreshTimer.Interval = 30000;
+            deviceTrustRefreshTimer.Tick += async (s, e) => await RefreshDeviceTrustFromCloudInBackgroundAsync();
+            deviceTrustRefreshTimer.Start();
         }
 
 
@@ -1135,7 +1141,7 @@ namespace exam_test
             securityCenterButton.ForeColor = Color.White;
             securityCenterButton.BackColor = Color.FromArgb(45, 90, 160);
             securityCenterButton.FlatAppearance.BorderColor = borderColor;
-            securityCenterButton.Click += async (s, e) => await OpenSecurityCenterWithRefreshAsync();
+            securityCenterButton.Click += (s, e) => ShowSecurityCenterDialog();
 
             backupButton.Text = "Backup";
             backupButton.Left = 430;
@@ -6965,6 +6971,62 @@ if (currentDriveService == null)
             }
 
             return confirmed;
+        }
+        private async Task RefreshDeviceTrustFromCloudInBackgroundAsync()
+        {
+            if (deviceTrustBackgroundRefreshRunning ||
+                !isVaultUnlocked ||
+                currentDriveService == null ||
+                currentDataKey == null ||
+                currentEncryptedVaultFile == null ||
+                HasPendingBackgroundVaultSync() ||
+                editingEntry != null)
+            {
+                return;
+            }
+
+            try
+            {
+                deviceTrustBackgroundRefreshRunning = true;
+
+                GoogleDriveVaultMetadata? cloudMetadata =
+                    await GoogleDriveVaultService.GetVaultMetadataAsync(currentDriveService);
+
+                string? encryptedJson =
+                    await GoogleDriveVaultService.DownloadEncryptedVaultAsync(currentDriveService);
+
+                if (string.IsNullOrWhiteSpace(encryptedJson))
+                {
+                    return;
+                }
+
+                VaultData cloudVault = VaultCryptoService.DecryptVaultWithExistingDataKey(
+                    encryptedJson,
+                    currentDataKey,
+                    out EncryptedVaultFile latestEncryptedVaultFile
+                );
+
+                MergeVaultSettingsFromCloud(cloudVault.Settings);
+
+                currentEncryptedVaultFile = latestEncryptedVaultFile;
+                lastKnownCloudFingerprint = cloudMetadata?.Fingerprint ?? lastKnownCloudFingerprint;
+                lastCloudLoadUtc = DateTime.UtcNow;
+
+                bool deviceTrustRegistrationChanged = RegisterCurrentDeviceForVault(false);
+                SyncDeviceTrustRegistrationAfterUnlockIfNeeded(deviceTrustRegistrationChanged);
+
+                ApplyRecoverySettingsToUi();
+                ApplyPerformanceSettingsToUi();
+                ApplyDeviceTrustRestrictionsToUi();
+            }
+            catch
+            {
+                // Background Device Trust refresh must never block normal app use.
+            }
+            finally
+            {
+                deviceTrustBackgroundRefreshRunning = false;
+            }
         }
         private async Task OpenSecurityCenterWithRefreshAsync()
         {
