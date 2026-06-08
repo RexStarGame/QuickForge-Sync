@@ -3816,7 +3816,7 @@ namespace exam_test
                 Button CreateEyeButton(TextBox targetTextBox, int left, int top, string tooltip)
                 {
                     Button eyeButton = new Button();
-                    eyeButton.Text = "Ã°Å¸â€˜Â";
+                    eyeButton.Text = "\U0001F441";
                     eyeButton.Left = left;
                     eyeButton.Top = top;
                     eyeButton.Width = 34;
@@ -3832,7 +3832,7 @@ namespace exam_test
                     eyeButton.Click += (s, e) =>
                     {
                         targetTextBox.UseSystemPasswordChar = !targetTextBox.UseSystemPasswordChar;
-                        eyeButton.Text = targetTextBox.UseSystemPasswordChar ? "Ã°Å¸â€˜Â" : "Ã°Å¸â„¢Ë†";
+                        eyeButton.Text = targetTextBox.UseSystemPasswordChar ? "\U0001F441" : "\U0001F648";
                     };
 
                     return eyeButton;
@@ -4358,7 +4358,7 @@ namespace exam_test
             {
                 dialog.Width = 690;
                 dialog.Height = 525;
-                dialog.Text = "Logout / switch account";
+                dialog.Text = "Log out";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialog.MaximizeBox = false;
@@ -4366,7 +4366,7 @@ namespace exam_test
                 dialog.BackColor = Color.FromArgb(16, 20, 34);
 
                 Label titleLabel = new Label();
-                titleLabel.Text = "Log out or switch account?";
+                titleLabel.Text = "Log out from this account?";
                 titleLabel.Left = 24;
                 titleLabel.Top = 20;
                 titleLabel.Width = 630;
@@ -4376,7 +4376,7 @@ namespace exam_test
                 titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
 
                 Label subtitleLabel = new Label();
-                subtitleLabel.Text = "QuickForge will lock the current vault before changing Google account access.";
+                subtitleLabel.Text = "QuickForge will lock this vault and sign out from the current Google account.";
                 subtitleLabel.Left = 24;
                 subtitleLabel.Top = 58;
                 subtitleLabel.Width = 630;
@@ -4425,7 +4425,7 @@ namespace exam_test
                 infoPanel.BorderStyle = BorderStyle.FixedSingle;
 
                 Label infoTitleLabel = new Label();
-                infoTitleLabel.Text = "What happens next";
+                infoTitleLabel.Text = "What happens after logout";
                 infoTitleLabel.Left = 14;
                 infoTitleLabel.Top = 10;
                 infoTitleLabel.Width = 590;
@@ -4436,9 +4436,9 @@ namespace exam_test
 
                 Label infoTextLabel = new Label();
                 infoTextLabel.Text =
-                    "â€¢ Your current vault will be locked." + Environment.NewLine +
-                    "â€¢ Each Google account has its own separate QuickForge vault." + Environment.NewLine +
-                    "â€¢ A different Google account may show a different or empty vault.";
+                    "- Your current vault will be locked." + Environment.NewLine +
+                    "- This Google account will be signed out locally." + Environment.NewLine +
+                    "- To use another Google account, log in again after logout.";
                 infoTextLabel.Left = 14;
                 infoTextLabel.Top = 36;
                 infoTextLabel.Width = 590;
@@ -4477,7 +4477,7 @@ namespace exam_test
                 syncPanel.Controls.Add(syncTextLabel);
 
                 CheckBox confirmCheckBox = new CheckBox();
-                confirmCheckBox.Text = "I understand. Lock this vault and continue.";
+                confirmCheckBox.Text = "I understand. Lock this vault and log out.";
                 confirmCheckBox.Left = 24;
                 confirmCheckBox.Top = 445;
                 confirmCheckBox.Width = 380;
@@ -4496,7 +4496,7 @@ namespace exam_test
                 StyleActionButton(cancelButton);
 
                 Button continueButton = new Button();
-                continueButton.Text = "Continue";
+                continueButton.Text = "Log out";
                 continueButton.Left = 565;
                 continueButton.Top = 445;
                 continueButton.Width = 95;
