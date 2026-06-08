@@ -641,7 +641,7 @@ namespace exam_test
                     188,
                     320,
                     150,
-                    "Recovery settings",
+                    "Recovery options",
                     () => ShowRecoveryReminderSettingsDialog(),
                     true
                 ));
@@ -677,7 +677,7 @@ namespace exam_test
                     188,
                     320,
                     150,
-                    "Refresh now",
+                    "Refresh vault",
                     () =>
                     {
                         dialog.Close();
@@ -1454,7 +1454,7 @@ namespace exam_test
                 titleLabel.Font = new Font("Segoe UI", 16, FontStyle.Bold);
 
                 Label subtitleLabel = new Label();
-                subtitleLabel.Text = "Clear safety overview for your vault, devices, backups, sync, and recovery.";
+                subtitleLabel.Text = "Review your vault safety. Use each card action to fix or inspect that area.";
                 subtitleLabel.Left = 24;
                 subtitleLabel.Top = 56;
                 subtitleLabel.Width = 700;
@@ -1498,7 +1498,7 @@ namespace exam_test
                     cardTitle.Text = title;
                     cardTitle.Left = 14;
                     cardTitle.Top = 10;
-                    cardTitle.Width = 310;
+                    cardTitle.Width = 335;
                     cardTitle.Height = 22;
                     cardTitle.ForeColor = Color.White;
                     cardTitle.BackColor = Color.Transparent;
@@ -1508,7 +1508,7 @@ namespace exam_test
                     cardStatus.Text = status;
                     cardStatus.Left = 14;
                     cardStatus.Top = 36;
-                    cardStatus.Width = 310;
+                    cardStatus.Width = 335;
                     cardStatus.Height = 22;
                     cardStatus.ForeColor = statusColor;
                     cardStatus.BackColor = Color.Transparent;
@@ -1518,8 +1518,8 @@ namespace exam_test
                     cardDetail.Text = detail;
                     cardDetail.Left = 14;
                     cardDetail.Top = 62;
-                    cardDetail.Width = 310;
-                    cardDetail.Height = 46;
+                    cardDetail.Width = 335;
+                    cardDetail.Height = 50;
                     cardDetail.ForeColor = softTextColor;
                     cardDetail.BackColor = Color.Transparent;
                     cardDetail.Font = new Font("Segoe UI", 8, FontStyle.Regular);
@@ -1527,8 +1527,8 @@ namespace exam_test
                     Button actionButton = new Button();
                     actionButton.Text = actionText;
                     actionButton.Left = 14;
-                    actionButton.Top = 112;
-                    actionButton.Width = 140;
+                    actionButton.Top = 116;
+                    actionButton.Width = 150;
                     actionButton.Height = 28;
                     StyleActionButton(actionButton, primaryAction);
                     actionButton.Click += (s, e) => action();
@@ -1565,10 +1565,10 @@ namespace exam_test
                     "Recovery",
                     recoveryStatus,
                     "Your recovery key protects you if the vault code is forgotten. Keep it separate from backups.",
-                    394,
+                    420,
                     130,
                     currentVaultSettings.RecoveryKeyRotationRequired ? Color.FromArgb(255, 190, 90) : successColor,
-                    "Recovery settings",
+                    "Recovery options",
                     () =>
                     {
                         dialog.Close();
@@ -1582,9 +1582,9 @@ namespace exam_test
                     hasRecentBackup ? "Recent backup found" : "Backup recommended",
                     backupStatus + ". Encrypted backups still require your vault code or recovery key.",
                     24,
-                    300,
+                    305,
                     hasRecentBackup ? successColor : Color.FromArgb(255, 190, 90),
-                    "Backup Center",
+                    "Create backup",
                     () =>
                     {
                         dialog.Close();
@@ -1597,10 +1597,10 @@ namespace exam_test
                     "Password Health",
                     passwordHealthStatus,
                     "Weak or reused secrets should be changed first. QuickForge only shows safe summary data here.",
-                    394,
-                    300,
+                    420,
+                    305,
                     weakPasswords == 0 && reusedPasswords == 0 ? successColor : Color.FromArgb(255, 190, 90),
-                    "View summary",
+                    "View issues",
                     () =>
                     {
                         MessageBox.Show(
@@ -1622,9 +1622,9 @@ namespace exam_test
                     hasRecentCloudLoad ? "Recently checked" : "Refresh recommended",
                     syncStatus + ". Refresh if another device may have changed the vault.",
                     24,
-                    470,
+                    480,
                     hasRecentCloudLoad ? successColor : Color.FromArgb(255, 190, 90),
-                    "Refresh now",
+                    "Refresh vault",
                     () =>
                     {
                         dialog.Close();
@@ -1637,10 +1637,10 @@ namespace exam_test
                     "Authenticator Lock",
                     "Planned for v0.2.1",
                     "Optional two-step vault unlock will add a 6-digit authenticator-code check after vault code.",
-                    394,
-                    470,
+                    420,
+                    480,
                     Color.FromArgb(255, 190, 90),
-                    "Learn more",
+                    "What is this?",
                     () =>
                     {
                         MessageBox.Show(
@@ -1656,8 +1656,8 @@ namespace exam_test
                 Button legacyReportButton = new Button();
                 legacyReportButton.Text = "Full report";
                 legacyReportButton.Left = 24;
-                legacyReportButton.Top = 635;
-                legacyReportButton.Width = 105;
+                legacyReportButton.Top = 700;
+                legacyReportButton.Width = 120;
                 legacyReportButton.Height = 30;
                 StyleActionButton(legacyReportButton);
                 legacyReportButton.Click += (s, e) =>
@@ -1672,9 +1672,9 @@ namespace exam_test
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 655;
-                closeButton.Top = 635;
-                closeButton.Width = 90;
+                closeButton.Left = 715;
+                closeButton.Top = 700;
+                closeButton.Width = 100;
                 closeButton.Height = 30;
                 StyleActionButton(closeButton, true);
                 closeButton.Click += (s, e) => dialog.Close();
@@ -7511,7 +7511,7 @@ namespace exam_test
             {
                 dialog.Width = 720;
                 dialog.Height = 570;
-                dialog.Text = "Backup Center";
+                dialog.Text = "Create backup";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialog.MaximizeBox = false;
@@ -7519,7 +7519,7 @@ namespace exam_test
                 dialog.BackColor = Color.FromArgb(16, 20, 34);
 
                 Label titleLabel = new Label();
-                titleLabel.Text = "Backup Center";
+                titleLabel.Text = "Create backup";
                 titleLabel.Left = 24;
                 titleLabel.Top = 20;
                 titleLabel.Width = 600;
