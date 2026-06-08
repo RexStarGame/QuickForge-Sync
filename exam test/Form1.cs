@@ -323,12 +323,20 @@ namespace exam_test
         }
 
         private void ShowMainWindow()
-        {
+       s*MarkVaultChangedByCurrentDevice\("Streamer mode changed"\);\s*UpdateAnimationState\(\);\s*\}'
+
+ {
             Show();
             WindowState = FormWindowState.Normal;
             Activate();
 
-            MarkVaultChangedByCurrentDevice("Streamer mode changed");
+            RestoreConnectedAccountStatus();
+
+            if (isVaultUnlocked)
+            {
+                RefreshVaultList();
+            }
+
             UpdateAnimationState();
         }
 
@@ -10560,9 +10568,11 @@ if (currentDriveService == null)
                 {
                     visibleVaultEntries.Add(entry);
 
-                    string listText = entry.IsFavorite
-                        ? "\u2605 " + entry.GetDisplayName()
-                        : "  " + entry.GetDisplayName();
+                    string listText = IsStreamerModeEnabled()
+                        ? GetVaultListDisplayName(entry)
+                        : (entry.IsFavorite
+                            ? "\u2605 " + entry.GetDisplayName()
+                            : "  " + entry.GetDisplayName());
 
                     vaultListBox.Items.Add(listText);
                 }
