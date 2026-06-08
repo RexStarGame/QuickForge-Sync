@@ -467,6 +467,15 @@ namespace exam_test
             return email.Substring(0, 1) + "***@" + "hidden";
         }
 
+        private string GetConnectedAccountStatusText()
+        {
+            if (string.IsNullOrWhiteSpace(connectedGoogleEmail))
+            {
+                return "Not connected";
+            }
+
+            return "Connected: " + MaskEmailForStreamer(connectedGoogleEmail);
+        }
         private string GetVaultListDisplayName(VaultEntry entry)
         {
             if (entry == null)
@@ -7899,11 +7908,10 @@ namespace exam_test
 
         private void RestoreConnectedAccountStatus()
         {
-            if (!string.IsNullOrWhiteSpace(connectedGoogleEmail))
-            {
-                accountStatusLabel.Text = "Connected: " + MaskEmailForStreamer(connectedGoogleEmail);
-                accountStatusLabel.ForeColor = successColor;
-            }
+            accountStatusLabel.Text = GetConnectedAccountStatusText();
+            accountStatusLabel.ForeColor = string.IsNullOrWhiteSpace(connectedGoogleEmail)
+                ? softTextColor
+                : successColor;
         }
         private async Task<bool> RotateRecoveryKeyAsync()
         {
