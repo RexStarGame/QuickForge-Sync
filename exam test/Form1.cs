@@ -374,6 +374,15 @@ namespace exam_test
             accountStatusLabel.Top = 52;
             accountStatusLabel.Width = 305;
             accountStatusLabel.Height = 22;
+            accountStatusLabel.Cursor = Cursors.Hand;
+            accountStatusLabel.Click += (s, e) =>
+            {
+                if (isVaultUnlocked && !IsStreamerModeEnabled())
+                {
+                    ShowSettingsDialog(2);
+                }
+            };
+            vaultToolTip.SetToolTip(accountStatusLabel, "Streamer mode hides account details while screen sharing. Click when privacy is visible.");
 
             settingsButton.Text = "Settings";
             settingsButton.Width = 88;
@@ -7909,11 +7918,23 @@ namespace exam_test
             {
                 accountStatusLabel.Text = "Not connected";
                 accountStatusLabel.ForeColor = softTextColor;
+                vaultToolTip.SetToolTip(accountStatusLabel, "Connect with Google first.");
+                return;
+            }
+
+            if (isVaultUnlocked && !IsStreamerModeEnabled())
+            {
+                accountStatusLabel.Text = "Privacy visible - click to hide";
+                accountStatusLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                vaultToolTip.SetToolTip(accountStatusLabel, "Streamer mode is off. Click to open Settings > Privacy before screenshots, recording, or streaming.");
                 return;
             }
 
             accountStatusLabel.Text = "Connected: " + MaskEmailForStreamer(connectedGoogleEmail);
             accountStatusLabel.ForeColor = successColor;
+            vaultToolTip.SetToolTip(accountStatusLabel, IsStreamerModeEnabled()
+                ? "Streamer mode is on. Account details are hidden while sharing."
+                : "Connected with Google.");
         }
 
         private async Task<bool> RotateRecoveryKeyAsync()
