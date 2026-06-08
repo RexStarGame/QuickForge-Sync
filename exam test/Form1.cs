@@ -1134,7 +1134,7 @@ namespace exam_test
             securityCenterButton.ForeColor = Color.White;
             securityCenterButton.BackColor = Color.FromArgb(45, 90, 160);
             securityCenterButton.FlatAppearance.BorderColor = borderColor;
-            securityCenterButton.Click += (s, e) => ShowSecurityCenterDialog();
+            securityCenterButton.Click += async (s, e) => await OpenSecurityCenterWithRefreshAsync();
 
             backupButton.Text = "Backup";
             backupButton.Left = 430;
@@ -3354,6 +3354,9 @@ namespace exam_test
             int score = 100;
             List<string> good = new List<string>();
             List<string> warnings = new List<string>();
+
+            int untrustedKnownDevices = currentVaultSettings.KnownDevices
+                .Count(device => !device.IsHiddenFromTrustList && !device.IsTrusted && device.DeviceId != localDeviceId);
 
             bool backupRecent =
                 currentVaultSettings.LastBackupAtUtc.HasValue &&
@@ -7046,7 +7049,7 @@ if (currentDriveService == null)
             }
             else if (deviceNeedsAttention)
             {
-                headline = "This device is not trusted yet.";
+                headline = deviceTrusted ? "Device Trust needs review." : "This device is not trusted yet.";
             }
             else if (!backupRecent)
             {
