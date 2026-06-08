@@ -3816,7 +3816,7 @@ namespace exam_test
                 Button CreateEyeButton(TextBox targetTextBox, int left, int top, string tooltip)
                 {
                     Button eyeButton = new Button();
-                    eyeButton.Text = "👁";
+                    eyeButton.Text = "ðŸ‘";
                     eyeButton.Left = left;
                     eyeButton.Top = top;
                     eyeButton.Width = 34;
@@ -3832,7 +3832,7 @@ namespace exam_test
                     eyeButton.Click += (s, e) =>
                     {
                         targetTextBox.UseSystemPasswordChar = !targetTextBox.UseSystemPasswordChar;
-                        eyeButton.Text = targetTextBox.UseSystemPasswordChar ? "👁" : "🙈";
+                        eyeButton.Text = targetTextBox.UseSystemPasswordChar ? "ðŸ‘" : "ðŸ™ˆ";
                     };
 
                     return eyeButton;
@@ -4346,24 +4346,204 @@ namespace exam_test
                 return true;
             }
 
+            bool confirmed = false;
+
             string currentAccountText = string.IsNullOrWhiteSpace(connectedGoogleEmail)
-                ? "Unknown"
+                ? "Unknown Google account"
                 : connectedGoogleEmail;
 
-            DialogResult result = MessageBox.Show(
-                "You are about to log out or switch Google accounts." + Environment.NewLine + Environment.NewLine +
-                "Current account: " + currentAccountText + Environment.NewLine + Environment.NewLine +
-                "- Your current vault will be locked." + Environment.NewLine +
-                "- QuickForge vaults are isolated per Google account." + Environment.NewLine +
-                "- A different Google account will show a different vault." + Environment.NewLine +
-                "- Use Sync now before switching if you recently changed anything." + Environment.NewLine + Environment.NewLine +
-                "Continue?",
-                "Before switching accounts",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning
-            );
+            bool syncPending = HasPendingBackgroundVaultSync();
 
-            return result == DialogResult.Yes;
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 650;
+                dialog.Height = 475;
+                dialog.Text = "Logout / switch account";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Log out or switch account?";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 590;
+                titleLabel.Height = 34;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "QuickForge will lock the current vault before changing Google account access.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 590;
+                subtitleLabel.Height = 32;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+
+                Panel accountPanel = new Panel();
+                accountPanel.Left = 24;
+                accountPanel.Top = 105;
+                accountPanel.Width = 590;
+                accountPanel.Height = 82;
+                accountPanel.BackColor = Color.FromArgb(24, 28, 44);
+                accountPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label accountTitleLabel = new Label();
+                accountTitleLabel.Text = "Current Google account";
+                accountTitleLabel.Left = 14;
+                accountTitleLabel.Top = 10;
+                accountTitleLabel.Width = 540;
+                accountTitleLabel.Height = 22;
+                accountTitleLabel.ForeColor = Color.White;
+                accountTitleLabel.BackColor = Color.Transparent;
+                accountTitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label accountTextLabel = new Label();
+                accountTextLabel.Text = currentAccountText;
+                accountTextLabel.Left = 14;
+                accountTextLabel.Top = 38;
+                accountTextLabel.Width = 540;
+                accountTextLabel.Height = 26;
+                accountTextLabel.ForeColor = successColor;
+                accountTextLabel.BackColor = Color.Transparent;
+                accountTextLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                accountPanel.Controls.Add(accountTitleLabel);
+                accountPanel.Controls.Add(accountTextLabel);
+
+                Panel infoPanel = new Panel();
+                infoPanel.Left = 24;
+                infoPanel.Top = 205;
+                infoPanel.Width = 590;
+                infoPanel.Height = 112;
+                infoPanel.BackColor = Color.FromArgb(20, 25, 42);
+                infoPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label infoTitleLabel = new Label();
+                infoTitleLabel.Text = "What happens next";
+                infoTitleLabel.Left = 14;
+                infoTitleLabel.Top = 10;
+                infoTitleLabel.Width = 540;
+                infoTitleLabel.Height = 22;
+                infoTitleLabel.ForeColor = Color.White;
+                infoTitleLabel.BackColor = Color.Transparent;
+                infoTitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label infoTextLabel = new Label();
+                infoTextLabel.Text =
+                    "• Your current vault will be locked." + Environment.NewLine +
+                    "• Each Google account has its own separate QuickForge vault." + Environment.NewLine +
+                    "• A different Google account may show a different or empty vault.";
+                infoTextLabel.Left = 14;
+                infoTextLabel.Top = 36;
+                infoTextLabel.Width = 540;
+                infoTextLabel.Height = 65;
+                infoTextLabel.ForeColor = softTextColor;
+                infoTextLabel.BackColor = Color.Transparent;
+                infoTextLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                infoPanel.Controls.Add(infoTitleLabel);
+                infoPanel.Controls.Add(infoTextLabel);
+
+                Panel syncPanel = new Panel();
+                syncPanel.Left = 24;
+                syncPanel.Top = 335;
+                syncPanel.Width = 590;
+                syncPanel.Height = 54;
+                syncPanel.BackColor = syncPending
+                    ? Color.FromArgb(36, 30, 30)
+                    : Color.FromArgb(20, 30, 25);
+                syncPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label syncTextLabel = new Label();
+                syncTextLabel.Text = syncPending
+                    ? "Sync warning: local changes may still be uploading. Cancel and wait for Sync Active if you recently changed anything."
+                    : "Sync looks safe. No pending background sync was detected.";
+                syncTextLabel.Left = 14;
+                syncTextLabel.Top = 10;
+                syncTextLabel.Width = 550;
+                syncTextLabel.Height = 32;
+                syncTextLabel.ForeColor = syncPending
+                    ? Color.FromArgb(255, 190, 90)
+                    : successColor;
+                syncTextLabel.BackColor = Color.Transparent;
+                syncTextLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                syncPanel.Controls.Add(syncTextLabel);
+
+                CheckBox confirmCheckBox = new CheckBox();
+                confirmCheckBox.Text = "I understand. Lock this vault and continue.";
+                confirmCheckBox.Left = 24;
+                confirmCheckBox.Top = 402;
+                confirmCheckBox.Width = 390;
+                confirmCheckBox.Height = 28;
+                confirmCheckBox.ForeColor = softTextColor;
+                confirmCheckBox.BackColor = Color.Transparent;
+                confirmCheckBox.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 410;
+                cancelButton.Top = 402;
+                cancelButton.Width = 95;
+                cancelButton.Height = 34;
+                cancelButton.DialogResult = DialogResult.Cancel;
+                StyleActionButton(cancelButton);
+
+                Button continueButton = new Button();
+                continueButton.Text = "Continue";
+                continueButton.Left = 520;
+                continueButton.Top = 402;
+                continueButton.Width = 95;
+                continueButton.Height = 34;
+                continueButton.Enabled = false;
+                StyleActionButton(continueButton, true);
+
+                confirmCheckBox.CheckedChanged += (s, e) =>
+                {
+                    continueButton.Enabled = confirmCheckBox.Checked;
+                };
+
+                continueButton.Click += (s, e) =>
+                {
+                    if (!confirmCheckBox.Checked)
+                    {
+                        return;
+                    }
+
+                    confirmed = true;
+                    dialog.DialogResult = DialogResult.OK;
+                    dialog.Close();
+                };
+
+                cancelButton.Click += (s, e) =>
+                {
+                    confirmed = false;
+                    dialog.DialogResult = DialogResult.Cancel;
+                    dialog.Close();
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(accountPanel);
+                dialog.Controls.Add(infoPanel);
+                dialog.Controls.Add(syncPanel);
+                dialog.Controls.Add(confirmCheckBox);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(continueButton);
+
+                dialog.AcceptButton = continueButton;
+                dialog.CancelButton = cancelButton;
+
+                dialog.ShowDialog(this);
+            }
+
+            return confirmed;
         }
 
         private void LogoutButton_Click(object? sender, EventArgs e)
