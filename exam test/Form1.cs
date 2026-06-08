@@ -3238,6 +3238,27 @@ namespace exam_test
             return isNewDevice;
         }
 
+
+        private void SyncDeviceTrustRegistrationAfterUnlockIfNeeded(bool deviceTrustChanged)
+        {
+            if (!deviceTrustChanged ||
+                currentDriveService == null ||
+                currentDataKey == null ||
+                currentEncryptedVaultFile == null)
+            {
+                return;
+            }
+
+            SetSyncStatus("Device Trust sync pending");
+
+            SetPreviewText(
+                "Device Trust updated.",
+                "This device was added to the vault device list.",
+                "QuickForge is syncing this so trusted PCs can review it."
+            );
+
+            QueueBackgroundVaultSync("Device Trust registration updated: " + localDeviceName);
+        }
         private void AddSafetyTimelineEvent(string action, string detail)
         {
             EnsureLocalDeviceIdentity();
@@ -6924,6 +6945,53 @@ if (currentDriveService == null)
 
             return confirmed;
         }
+        private async Task OpenSecurityCenterWithRefreshAsync()
+        {
+            if (isVaultUnlocked &&
+                currentDriveService != null &&
+                currentDataKey != null &&
+                currentEncryptedVaultFile != null &&
+                !HasPendingBackgroundVaultSync() &&
+                editingEntry == null)
+            {
+                try
+                {
+                    securityCenterButton.Enabled = false;
+                    SetSyncStatus("Refreshing security...");
+
+                    selectedPreviewLabel.Text =
+                        "Checking latest Device Trust status from Google Drive..." + Environment.NewLine +
+                        "This helps trusted PCs notice newly opened devices.";
+
+                    await LoadVaultFromCloudAsync();
+
+                    bool deviceTrustRegistrationChanged = RegisterCurrentDeviceForVault(false);
+                    SyncDeviceTrustRegistrationAfterUnlockIfNeeded(deviceTrustRegistrationChanged);
+
+                    ApplyRecoverySettingsToUi();
+                    ApplyPerformanceSettingsToUi();
+                    ApplyDeviceTrustRestrictionsToUi();
+                    ShowRestrictedModeWarningIfNeeded();
+
+                    SetSyncStatus("Security refreshed", success: true);
+                }
+                catch (Exception ex)
+                {
+                    SetSyncStatus("Security refresh skipped", error: true);
+
+                    selectedPreviewLabel.Text =
+                        "Security Center opened with local vault status." + Environment.NewLine +
+                        "Could not refresh Device Trust from cloud first." + Environment.NewLine +
+                        "Error: " + ex.Message;
+                }
+                finally
+                {
+                    securityCenterButton.Enabled = true;
+                }
+            }
+
+            ShowSecurityCenterDialog();
+        }
         private void ShowSecurityCenterDialog()
         {
             int totalEntries = vaultEntries.Count;
@@ -7635,6 +7703,19 @@ if (currentDriveService == null)
                         return;
                     }
 
+                    if (selected.DeviceId == localDeviceId)
+                    {
+                        MessageBox.Show(
+                            "You cannot untrust the device you are currently using." + Environment.NewLine + Environment.NewLine +
+                            "This prevents accidentally locking yourself out of Device Trust management." + Environment.NewLine +
+                            "To remove this device, first trust another device, then manage this one from there.",
+                            "Current device cannot be untrusted",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning
+                        );
+
+                        return;
+                    }
                     if (!ConfirmVaultCodeForDeviceTrust())
                     {
                         return;
@@ -7663,7 +7744,7 @@ if (currentDriveService == null)
                     bool canManageDeviceTrust = !IsRestrictedModeActive();
 
                     trustButton.Enabled = canManageDeviceTrust && selected != null && !selected.IsTrusted;
-                    untrustButton.Enabled = canManageDeviceTrust && selected != null && selected.IsTrusted;
+                    untrustButton.Enabled = canManageDeviceTrust && selected != null && selected.IsTrusted && selected.DeviceId != localDeviceId;
                 }
 
                 deviceList.SelectedIndexChanged += (s, e) => UpdateDeviceTrustActionButtons();
