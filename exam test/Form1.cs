@@ -328,7 +328,13 @@ namespace exam_test
             WindowState = FormWindowState.Normal;
             Activate();
 
-            MarkVaultChangedByCurrentDevice("Streamer mode changed");
+            RestoreConnectedAccountStatus();
+
+            if (isVaultUnlocked)
+            {
+                ApplyStreamerModeToUi();
+            }
+
             UpdateAnimationState();
         }
 
@@ -6963,7 +6969,7 @@ namespace exam_test
         {
             unlockStatusTimer.Stop();
             isVaultUnlocked = true;
-
+            ApplyStreamerModeToUi();
             ApplyRecoverySettingsToUi();
             ApplyPerformanceSettingsToUi();
             MarkVaultChangedByCurrentDevice("Streamer mode changed");
@@ -7899,12 +7905,17 @@ namespace exam_test
 
         private void RestoreConnectedAccountStatus()
         {
-            if (!string.IsNullOrWhiteSpace(connectedGoogleEmail))
+            if (string.IsNullOrWhiteSpace(connectedGoogleEmail))
             {
-                accountStatusLabel.Text = "Connected: " + MaskEmailForStreamer(connectedGoogleEmail);
-                accountStatusLabel.ForeColor = successColor;
+                accountStatusLabel.Text = "Not connected";
+                accountStatusLabel.ForeColor = softTextColor;
+                return;
             }
+
+            accountStatusLabel.Text = "Connected: " + MaskEmailForStreamer(connectedGoogleEmail);
+            accountStatusLabel.ForeColor = successColor;
         }
+
         private async Task<bool> RotateRecoveryKeyAsync()
         {
             if (currentDataKey == null || currentEncryptedVaultFile == null)
@@ -10552,9 +10563,11 @@ if (currentDriveService == null)
                 {
                     visibleVaultEntries.Add(entry);
 
-                    string listText = entry.IsFavorite
-                        ? "\u2605 " + entry.GetDisplayName()
-                        : "  " + entry.GetDisplayName();
+                    string listText = IsStreamerModeEnabled()
+                        ? GetVaultListDisplayName(entry)
+                        : (entry.IsFavorite
+                            ? "\u2605 " + entry.GetDisplayName()
+                            : "  " + entry.GetDisplayName());
 
                     vaultListBox.Items.Add(listText);
                 }
