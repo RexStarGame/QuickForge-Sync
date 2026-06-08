@@ -1576,6 +1576,52 @@ namespace exam_test
 
             return successColor;
         }
+        private void BeginPasswordHealthEntryFix(VaultEntry entry, bool openWebsiteToo)
+        {
+            if (entry == null)
+            {
+                return;
+            }
+
+            List<Form> childForms = Application.OpenForms
+                .Cast<Form>()
+                .Where(openForm => !ReferenceEquals(openForm, this))
+                .ToList();
+
+            foreach (Form childForm in childForms)
+            {
+                childForm.Close();
+            }
+
+            BeginInvoke(new Action(() =>
+            {
+                ShowVaultUi();
+
+                vaultSearchTextBox.Clear();
+                RefreshVaultList();
+
+                int visibleIndex = visibleVaultEntries.IndexOf(entry);
+
+                if (visibleIndex >= 0 && visibleIndex < vaultListBox.Items.Count)
+                {
+                    vaultListBox.SelectedIndex = visibleIndex;
+                }
+
+                if (openWebsiteToo && !string.IsNullOrWhiteSpace(entry.Website))
+                {
+                    OpenWebsite(entry.Website);
+                }
+
+                EditEntryButton_Click(this, EventArgs.Empty);
+
+                selectedPreviewLabel.Text =
+                    "Password Health opened this entry for editing." + Environment.NewLine +
+                    "Update the password/secret, then click Save changes." +
+                    (openWebsiteToo && !string.IsNullOrWhiteSpace(entry.Website)
+                        ? Environment.NewLine + "The website was opened too so you can change the real account password."
+                        : "");
+            }));
+        }
         private void ShowTrustCenterDialog()
         {
             if (!isVaultUnlocked)
@@ -1931,29 +1977,29 @@ namespace exam_test
 
             bool hasIssues = reviewCount > 0;
 
-            Color GetBarColor(int score, bool reused)
+            Color BlendPasswordHealthColor(Color from, Color to, double amount)
             {
-                if (reused)
+                amount = Math.Max(0, Math.Min(1, amount));
+
+                int red = (int)(from.R + (to.R - from.R) * amount);
+                int green = (int)(from.G + (to.G - from.G) * amount);
+                int blue = (int)(from.B + (to.B - from.B) * amount);
+
+                return Color.FromArgb(red, green, blue);
+            }
+
+            Color GetBarColor(int score)
+            {
+                Color red = Color.FromArgb(255, 95, 95);
+                Color amber = Color.FromArgb(255, 190, 90);
+                Color green = successColor;
+
+                if (score <= 50)
                 {
-                    return Color.FromArgb(255, 190, 90);
+                    return BlendPasswordHealthColor(red, amber, score / 50.0);
                 }
 
-                if (score < 20)
-                {
-                    return dangerColor;
-                }
-
-                if (score < 65)
-                {
-                    return Color.FromArgb(255, 190, 90);
-                }
-
-                if (score < 80)
-                {
-                    return Color.FromArgb(120, 220, 140);
-                }
-
-                return successColor;
+                return BlendPasswordHealthColor(amber, green, (score - 50) / 50.0);
             }
 
             string GetSeverityText(int score, bool reused)
@@ -1993,8 +2039,8 @@ namespace exam_test
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 820;
-                dialog.Height = 700;
+                dialog.Width = 840;
+                dialog.Height = 720;
                 dialog.Text = "Password Health";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -2006,7 +2052,7 @@ namespace exam_test
                 titleLabel.Text = hasIssues ? "Password review needed" : "Password health looks good";
                 titleLabel.Left = 24;
                 titleLabel.Top = 18;
-                titleLabel.Width = 740;
+                titleLabel.Width = 760;
                 titleLabel.Height = 34;
                 titleLabel.ForeColor = hasIssues ? Color.FromArgb(255, 190, 90) : successColor;
                 titleLabel.BackColor = Color.Transparent;
@@ -2014,11 +2060,11 @@ namespace exam_test
 
                 Label subtitleLabel = new Label();
                 subtitleLabel.Text = hasIssues
-                    ? "QuickForge shows which saved entries need attention. Passwords are never shown here."
+                    ? "Click an entry to open it directly in QuickForge edit mode. Passwords are never shown here."
                     : "No weak, OK-but-risky, or reused secrets were found in the current vault check.";
                 subtitleLabel.Left = 24;
                 subtitleLabel.Top = 56;
-                subtitleLabel.Width = 750;
+                subtitleLabel.Width = 770;
                 subtitleLabel.Height = 38;
                 subtitleLabel.ForeColor = softTextColor;
                 subtitleLabel.BackColor = Color.Transparent;
@@ -2027,7 +2073,7 @@ namespace exam_test
                 Panel summaryPanel = new Panel();
                 summaryPanel.Left = 24;
                 summaryPanel.Top = 104;
-                summaryPanel.Width = 760;
+                summaryPanel.Width = 780;
                 summaryPanel.Height = 118;
                 summaryPanel.BackColor = Color.FromArgb(24, 28, 44);
                 summaryPanel.BorderStyle = BorderStyle.FixedSingle;
@@ -2036,7 +2082,7 @@ namespace exam_test
                 summaryTitle.Text = "Summary";
                 summaryTitle.Left = 16;
                 summaryTitle.Top = 10;
-                summaryTitle.Width = 720;
+                summaryTitle.Width = 740;
                 summaryTitle.Height = 22;
                 summaryTitle.ForeColor = Color.White;
                 summaryTitle.BackColor = Color.Transparent;
@@ -2050,7 +2096,7 @@ namespace exam_test
                     "Good: " + goodCount + " | Strong: " + strongCount + " | Very strong: " + veryStrongCount;
                 summaryText.Left = 16;
                 summaryText.Top = 36;
-                summaryText.Width = 720;
+                summaryText.Width = 740;
                 summaryText.Height = 72;
                 summaryText.ForeColor = softTextColor;
                 summaryText.BackColor = Color.Transparent;
@@ -2060,10 +2106,10 @@ namespace exam_test
                 summaryPanel.Controls.Add(summaryText);
 
                 Label legendLabel = new Label();
-                legendLabel.Text = "Strength bars: red = urgent, amber = improve, green = acceptable/strong.";
+                legendLabel.Text = "Strength bars: color gradually moves from red to amber to green as the password gets stronger.";
                 legendLabel.Left = 24;
                 legendLabel.Top = 234;
-                legendLabel.Width = 760;
+                legendLabel.Width = 780;
                 legendLabel.Height = 22;
                 legendLabel.ForeColor = softTextColor;
                 legendLabel.BackColor = Color.Transparent;
@@ -2072,8 +2118,8 @@ namespace exam_test
                 FlowLayoutPanel findingsPanel = new FlowLayoutPanel();
                 findingsPanel.Left = 24;
                 findingsPanel.Top = 264;
-                findingsPanel.Width = 760;
-                findingsPanel.Height = 310;
+                findingsPanel.Width = 780;
+                findingsPanel.Height = 330;
                 findingsPanel.AutoScroll = true;
                 findingsPanel.FlowDirection = FlowDirection.TopDown;
                 findingsPanel.WrapContents = false;
@@ -2093,51 +2139,56 @@ namespace exam_test
                     int score = finding.Score;
                     bool reused = finding.Reused;
                     bool needsReview = finding.NeedsReview;
-                    Color barColor = GetBarColor(score, reused);
+                    Color barColor = GetBarColor(score);
 
                     Panel row = new Panel();
-                    row.Width = 720;
-                    row.Height = 108;
+                    row.Width = 740;
+                    row.Height = 150;
                     row.Margin = new Padding(8, 8, 8, 2);
                     row.BackColor = needsReview
                         ? Color.FromArgb(26, 24, 34)
                         : Color.FromArgb(20, 32, 28);
                     row.BorderStyle = BorderStyle.FixedSingle;
+                    row.Cursor = Cursors.Hand;
 
                     Label accountLabel = new Label();
                     accountLabel.Text = platform + "  |  user: " + username;
                     accountLabel.Left = 12;
                     accountLabel.Top = 8;
-                    accountLabel.Width = 520;
+                    accountLabel.Width = 500;
                     accountLabel.Height = 22;
                     accountLabel.ForeColor = Color.White;
                     accountLabel.BackColor = Color.Transparent;
                     accountLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                    accountLabel.Cursor = Cursors.Hand;
 
                     Label levelLabel = new Label();
                     levelLabel.Text = finding.Level + (reused ? " + reused" : "") + "  (" + score + "/100)";
-                    levelLabel.Left = 540;
+                    levelLabel.Left = 520;
                     levelLabel.Top = 8;
-                    levelLabel.Width = 160;
+                    levelLabel.Width = 200;
                     levelLabel.Height = 22;
                     levelLabel.ForeColor = barColor;
                     levelLabel.BackColor = Color.Transparent;
                     levelLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                    levelLabel.Cursor = Cursors.Hand;
 
                     Panel barTrack = new Panel();
                     barTrack.Left = 12;
                     barTrack.Top = 38;
-                    barTrack.Width = 680;
+                    barTrack.Width = 700;
                     barTrack.Height = 14;
                     barTrack.BackColor = Color.FromArgb(45, 50, 68);
                     barTrack.BorderStyle = BorderStyle.FixedSingle;
+                    barTrack.Cursor = Cursors.Hand;
 
                     Panel barFill = new Panel();
                     barFill.Left = 0;
                     barFill.Top = 0;
-                    barFill.Width = Math.Max(4, Math.Min(678, score * 678 / 100));
+                    barFill.Width = Math.Max(4, Math.Min(698, score * 698 / 100));
                     barFill.Height = 12;
                     barFill.BackColor = barColor;
+                    barFill.Cursor = Cursors.Hand;
 
                     barTrack.Controls.Add(barFill);
 
@@ -2145,16 +2196,56 @@ namespace exam_test
                     reasonLabel.Text = GetSeverityText(score, reused) + " " + GetPasswordHealthReason(finding.Entry.Secret, reused);
                     reasonLabel.Left = 12;
                     reasonLabel.Top = 62;
-                    reasonLabel.Width = 680;
+                    reasonLabel.Width = 700;
                     reasonLabel.Height = 36;
                     reasonLabel.ForeColor = needsReview ? Color.FromArgb(255, 210, 150) : softTextColor;
                     reasonLabel.BackColor = Color.Transparent;
                     reasonLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+                    reasonLabel.Cursor = Cursors.Hand;
+
+                    Button fixButton = new Button();
+                    fixButton.Text = "Fix in QuickForge";
+                    fixButton.Left = 12;
+                    fixButton.Top = 108;
+                    fixButton.Width = 140;
+                    fixButton.Height = 30;
+                    StyleActionButton(fixButton, true);
+
+                    Button openSiteButton = new Button();
+                    openSiteButton.Text = string.IsNullOrWhiteSpace(finding.Entry.Website)
+                        ? "No website saved"
+                        : "Open site + edit";
+                    openSiteButton.Left = 165;
+                    openSiteButton.Top = 108;
+                    openSiteButton.Width = 140;
+                    openSiteButton.Height = 30;
+                    openSiteButton.Enabled = !string.IsNullOrWhiteSpace(finding.Entry.Website);
+                    StyleActionButton(openSiteButton);
+
+                    EventHandler fixHandler = (s, e) =>
+                    {
+                        BeginPasswordHealthEntryFix(finding.Entry, false);
+                    };
+
+                    row.Click += fixHandler;
+                    accountLabel.Click += fixHandler;
+                    levelLabel.Click += fixHandler;
+                    barTrack.Click += fixHandler;
+                    barFill.Click += fixHandler;
+                    reasonLabel.Click += fixHandler;
+                    fixButton.Click += fixHandler;
+
+                    openSiteButton.Click += (s, e) =>
+                    {
+                        BeginPasswordHealthEntryFix(finding.Entry, true);
+                    };
 
                     row.Controls.Add(accountLabel);
                     row.Controls.Add(levelLabel);
                     row.Controls.Add(barTrack);
                     row.Controls.Add(reasonLabel);
+                    row.Controls.Add(fixButton);
+                    row.Controls.Add(openSiteButton);
 
                     findingsPanel.Controls.Add(row);
                 }
@@ -2191,8 +2282,8 @@ namespace exam_test
 
                 Panel nextActionPanel = new Panel();
                 nextActionPanel.Left = 24;
-                nextActionPanel.Top = 590;
-                nextActionPanel.Width = 620;
+                nextActionPanel.Top = 610;
+                nextActionPanel.Width = 640;
                 nextActionPanel.Height = 58;
                 nextActionPanel.BackColor = hasIssues
                     ? Color.FromArgb(36, 30, 30)
@@ -2201,12 +2292,12 @@ namespace exam_test
 
                 Label nextActionLabel = new Label();
                 nextActionLabel.Text = hasIssues
-                    ? "Best next action: fix red entries first, then amber entries. Green entries are suggestions only."
+                    ? "Best next action: click a card to edit it in QuickForge. Use Open site + edit only when you need to change the real account password."
                     : "Best next action: keep using unique passwords and create encrypted backups regularly.";
                 nextActionLabel.Left = 14;
-                nextActionLabel.Top = 12;
-                nextActionLabel.Width = 590;
-                nextActionLabel.Height = 38;
+                nextActionLabel.Top = 10;
+                nextActionLabel.Width = 610;
+                nextActionLabel.Height = 42;
                 nextActionLabel.ForeColor = hasIssues ? Color.FromArgb(255, 190, 90) : successColor;
                 nextActionLabel.BackColor = Color.Transparent;
                 nextActionLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
@@ -2215,8 +2306,8 @@ namespace exam_test
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 684;
-                closeButton.Top = 602;
+                closeButton.Left = 704;
+                closeButton.Top = 622;
                 closeButton.Width = 100;
                 closeButton.Height = 34;
                 StyleActionButton(closeButton, true);
