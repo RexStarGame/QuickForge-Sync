@@ -84,6 +84,7 @@ namespace exam_test
         private readonly Label appSubtitleLabel = new Label();
         private readonly Label accountStatusLabel = new Label();
         private readonly Button aboutButton = new Button();
+        private readonly Button settingsButton = new Button();
         private readonly Button logoutButton = new Button();
 
         // Google login card
@@ -368,6 +369,18 @@ namespace exam_test
             accountStatusLabel.Width = 305;
             accountStatusLabel.Height = 22;
 
+            settingsButton.Text = "Settings";
+            settingsButton.Width = 88;
+            settingsButton.Height = 32;
+            settingsButton.Left = 460;
+            settingsButton.Top = 22;
+            settingsButton.Enabled = false;
+            settingsButton.FlatStyle = FlatStyle.Flat;
+            settingsButton.ForeColor = Color.White;
+            settingsButton.BackColor = Color.FromArgb(35, 40, 60);
+            settingsButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
+            settingsButton.Click += (s, e) => ShowSettingsDialog();
+            vaultToolTip.SetToolTip(settingsButton, "Open QuickForge settings for security, sync, privacy, and app options.");
             aboutButton.Text = "About";
             aboutButton.Width = 80;
             aboutButton.Height = 32;
@@ -385,6 +398,7 @@ namespace exam_test
             logoutButton.Left = 655;
             logoutButton.Top = 22;
             logoutButton.Enabled = false;
+            settingsButton.Enabled = false;
             logoutButton.FlatStyle = FlatStyle.Flat;
             logoutButton.ForeColor = Color.White;
             logoutButton.BackColor = Color.FromArgb(35, 40, 60);
@@ -394,6 +408,7 @@ namespace exam_test
             topBarPanel.Controls.Add(appTitleLabel);
             topBarPanel.Controls.Add(appSubtitleLabel);
             topBarPanel.Controls.Add(accountStatusLabel);
+            topBarPanel.Controls.Add(settingsButton);
             topBarPanel.Controls.Add(aboutButton);
             topBarPanel.Controls.Add(logoutButton);
 
@@ -401,6 +416,371 @@ namespace exam_test
             topBarPanel.BringToFront();
         }
 
+        private void ShowSettingsDialog()
+        {
+            if (currentDriveService == null)
+            {
+                MessageBox.Show(
+                    "Connect with Google first before opening Settings.",
+                    "Settings unavailable",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return;
+            }
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 760;
+                dialog.Height = 640;
+                dialog.Text = "QuickForge Settings";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Settings";
+                titleLabel.Left = 22;
+                titleLabel.Top = 18;
+                titleLabel.Width = 500;
+                titleLabel.Height = 32;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "Manage QuickForge security, sync, privacy, and app options.";
+                subtitleLabel.Left = 22;
+                subtitleLabel.Top = 52;
+                subtitleLabel.Width = 690;
+                subtitleLabel.Height = 24;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                TabControl tabs = new TabControl();
+                tabs.Left = 20;
+                tabs.Top = 90;
+                tabs.Width = 705;
+                tabs.Height = 440;
+
+                TabPage securityTab = new TabPage("Security");
+                TabPage syncTab = new TabPage("Sync");
+                TabPage privacyTab = new TabPage("Privacy");
+                TabPage appTab = new TabPage("App");
+
+                securityTab.BackColor = Color.FromArgb(16, 20, 34);
+                syncTab.BackColor = Color.FromArgb(16, 20, 34);
+                privacyTab.BackColor = Color.FromArgb(16, 20, 34);
+                appTab.BackColor = Color.FromArgb(16, 20, 34);
+
+                Panel CreateSettingsCard(
+                    string title,
+                    string status,
+                    string detail,
+                    int left,
+                    int top,
+                    int width,
+                    int height,
+                    string? actionText = null,
+                    Action? action = null,
+                    bool primary = false)
+                {
+                    Panel card = new Panel();
+                    card.Left = left;
+                    card.Top = top;
+                    card.Width = width;
+                    card.Height = height;
+                    card.BackColor = Color.FromArgb(24, 28, 44);
+                    card.BorderStyle = BorderStyle.FixedSingle;
+
+                    Label cardTitle = new Label();
+                    cardTitle.Text = title;
+                    cardTitle.Left = 14;
+                    cardTitle.Top = 12;
+                    cardTitle.Width = width - 28;
+                    cardTitle.Height = 22;
+                    cardTitle.ForeColor = Color.White;
+                    cardTitle.BackColor = Color.Transparent;
+                    cardTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                    Label cardStatus = new Label();
+                    cardStatus.Text = status;
+                    cardStatus.Left = 14;
+                    cardStatus.Top = 38;
+                    cardStatus.Width = width - 28;
+                    cardStatus.Height = 24;
+                    cardStatus.ForeColor = primary ? successColor : Color.FromArgb(255, 190, 90);
+                    cardStatus.BackColor = Color.Transparent;
+                    cardStatus.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                    Label cardDetail = new Label();
+                    cardDetail.Text = detail;
+                    cardDetail.Left = 14;
+                    cardDetail.Top = 66;
+                    cardDetail.Width = width - 28;
+                    cardDetail.Height = actionText == null ? height - 76 : height - 116;
+                    cardDetail.ForeColor = softTextColor;
+                    cardDetail.BackColor = Color.Transparent;
+                    cardDetail.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+
+                    card.Controls.Add(cardTitle);
+                    card.Controls.Add(cardStatus);
+                    card.Controls.Add(cardDetail);
+
+                    if (!string.IsNullOrWhiteSpace(actionText) && action != null)
+                    {
+                        Button actionButton = new Button();
+                        actionButton.Text = actionText;
+                        actionButton.Left = 14;
+                        actionButton.Top = height - 42;
+                        actionButton.Width = 150;
+                        actionButton.Height = 30;
+                        StyleActionButton(actionButton, primary);
+                        actionButton.Click += (s, e) => action();
+
+                        card.Controls.Add(actionButton);
+                    }
+
+                    return card;
+                }
+
+                string autoLockStatus = currentVaultSettings.AutoLockMinutes <= 0
+                    ? "Off"
+                    : currentVaultSettings.AutoLockMinutes + " minutes";
+
+                string autoRefreshStatus = currentVaultSettings.AutoRefreshMinutes <= 0
+                    ? "Off"
+                    : "Every " + currentVaultSettings.AutoRefreshMinutes + " minute(s)";
+
+                string recoveryReminderStatus = currentVaultSettings.RecoveryKeyReminderDays <= 0
+                    ? "Off"
+                    : currentVaultSettings.RecoveryKeyReminderDays + " days";
+
+                securityTab.Controls.Add(CreateSettingsCard(
+                    "Two-step vault unlock",
+                    "Planned for v0.2.1",
+                    "Optional Authenticator Lock will add a 6-digit authenticator-code check after your vault code. It will never be forced.",
+                    16,
+                    18,
+                    320,
+                    150,
+                    "Coming soon",
+                    () =>
+                    {
+                        MessageBox.Show(
+                            "Authenticator Lock is planned for v0.2.1." + Environment.NewLine + Environment.NewLine +
+                            "It will be optional and will support authenticator apps generally, not only Google Authenticator.",
+                            "Authenticator Lock planned",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information
+                        );
+                    }
+                ));
+
+                securityTab.Controls.Add(CreateSettingsCard(
+                    "Auto-lock",
+                    autoLockStatus,
+                    "QuickForge can lock the vault automatically after inactivity. The existing control remains on the main panel for now.",
+                    360,
+                    18,
+                    320,
+                    150
+                ));
+
+                securityTab.Controls.Add(CreateSettingsCard(
+                    "Vault code",
+                    "Available",
+                    "Change your vault code when you suspect reuse, sharing, or device compromise.",
+                    16,
+                    188,
+                    320,
+                    150,
+                    "Change vault code",
+                    () =>
+                    {
+                        dialog.Close();
+                        ChangeVaultCodeButton_Click(this, EventArgs.Empty);
+                    },
+                    true
+                ));
+
+                securityTab.Controls.Add(CreateSettingsCard(
+                    "Recovery key",
+                    "Reminder: " + recoveryReminderStatus,
+                    "Recovery key rotation and reminders help protect long-term access to your vault.",
+                    360,
+                    188,
+                    320,
+                    150,
+                    "New recovery key",
+                    () =>
+                    {
+                        dialog.Close();
+                        RotateRecoveryKeyButton_Click(this, EventArgs.Empty);
+                    }
+                ));
+
+                syncTab.Controls.Add(CreateSettingsCard(
+                    "Google account",
+                    string.IsNullOrWhiteSpace(connectedGoogleEmail) ? "Not connected" : connectedGoogleEmail,
+                    "Google login is used for app-managed Google Drive appDataFolder sync.",
+                    16,
+                    18,
+                    320,
+                    150
+                ));
+
+                syncTab.Controls.Add(CreateSettingsCard(
+                    "Auto-refresh",
+                    autoRefreshStatus,
+                    "Auto-refresh can load cloud/device-trust changes from Google Drive while the vault is open.",
+                    360,
+                    18,
+                    320,
+                    150
+                ));
+
+                syncTab.Controls.Add(CreateSettingsCard(
+                    "Manual refresh",
+                    "Available",
+                    "Load latest encrypted vault and Device Trust status from Google Drive.",
+                    16,
+                    188,
+                    320,
+                    150,
+                    "Refresh now",
+                    () =>
+                    {
+                        dialog.Close();
+                        RefreshCloudButton_Click(this, EventArgs.Empty);
+                    },
+                    true
+                ));
+
+                syncTab.Controls.Add(CreateSettingsCard(
+                    "Manual sync",
+                    hasUnsyncedLocalChanges ? "Pending changes" : "Ready",
+                    "Save local encrypted vault changes to Google Drive now.",
+                    360,
+                    188,
+                    320,
+                    150,
+                    "Sync now",
+                    () =>
+                    {
+                        dialog.Close();
+                        ManualSyncButton_Click(this, EventArgs.Empty);
+                    }
+                ));
+
+                privacyTab.Controls.Add(CreateSettingsCard(
+                    "Clipboard cleanup",
+                    "Active",
+                    "Copied secrets are cleared automatically after a short time. This helps reduce accidental leaks.",
+                    16,
+                    18,
+                    320,
+                    150
+                ));
+
+                privacyTab.Controls.Add(CreateSettingsCard(
+                    "Sensitive previews",
+                    "Hidden by default",
+                    "QuickForge hides saved secrets until you intentionally reveal or copy them.",
+                    360,
+                    18,
+                    320,
+                    150,
+                    "Security check",
+                    () =>
+                    {
+                        dialog.Close();
+                        ShowSecurityCenterDialog();
+                    },
+                    true
+                ));
+
+                privacyTab.Controls.Add(CreateSettingsCard(
+                    "Streamer mode",
+                    "Planned",
+                    "Future privacy mode can hide emails, usernames, device IDs, and preview details while screen sharing.",
+                    16,
+                    188,
+                    320,
+                    150,
+                    "Coming later",
+                    () =>
+                    {
+                        MessageBox.Show(
+                            "Streamer/privacy mode is planned for a later update after v0.2.1 basics are stable.",
+                            "Planned privacy feature",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information
+                        );
+                    }
+                ));
+
+                appTab.Controls.Add(CreateSettingsCard(
+                    "Version",
+                    AppVersion,
+                    "This branch is a development preview. Do not publish it as a public release yet.",
+                    16,
+                    18,
+                    320,
+                    150
+                ));
+
+                appTab.Controls.Add(CreateSettingsCard(
+                    "About QuickForge",
+                    AppDisplayName,
+                    "Encrypted Windows vault with Google Drive appDataFolder sync.",
+                    360,
+                    18,
+                    320,
+                    150,
+                    "About",
+                    () => AboutButton_Click(this, EventArgs.Empty),
+                    true
+                ));
+
+                appTab.Controls.Add(CreateSettingsCard(
+                    "Developer reset",
+                    string.Equals(connectedGoogleEmail, "patrickolsen4@gmail.com", StringComparison.OrdinalIgnoreCase)
+                        ? "Available for this account"
+                        : "Hidden",
+                    "Developer reset remains restricted to the developer account and is not a normal public setting.",
+                    16,
+                    188,
+                    320,
+                    150
+                ));
+
+                tabs.TabPages.Add(securityTab);
+                tabs.TabPages.Add(syncTab);
+                tabs.TabPages.Add(privacyTab);
+                tabs.TabPages.Add(appTab);
+
+                Button closeButton = new Button();
+                closeButton.Text = "Close";
+                closeButton.Left = 625;
+                closeButton.Top = 548;
+                closeButton.Width = 100;
+                closeButton.Height = 34;
+                StyleActionButton(closeButton, true);
+                closeButton.Click += (s, e) => dialog.Close();
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(tabs);
+                dialog.Controls.Add(closeButton);
+
+                dialog.ShowDialog(this);
+            }
+        }
         private void AboutButton_Click(object? sender, EventArgs e)
         {
             MessageBox.Show(
@@ -1419,6 +1799,7 @@ namespace exam_test
                 accountStatusLabel.Text = "Connected: " + email;
                 accountStatusLabel.ForeColor = successColor;
                 logoutButton.Enabled = true;
+                settingsButton.Enabled = true;
 
                 cloudVaultExists = await GoogleDriveVaultService.VaultExistsAsync(currentDriveService);
 
@@ -4616,6 +4997,7 @@ namespace exam_test
                 accountStatusLabel.Text = "Not connected";
                 accountStatusLabel.ForeColor = softTextColor;
                 logoutButton.Enabled = false;
+            settingsButton.Enabled = false;
                 isVaultUnlocked = false;
                 ClearSecretAccessWindow();
                 currentDataKey = null;
@@ -4721,6 +5103,7 @@ namespace exam_test
             vaultAccessPanel.Visible = false;
             vaultPanel.Visible = false;
             logoutButton.Enabled = false;
+            settingsButton.Enabled = false;
             resetTestVaultButton.Visible = false;
             importBackupAccessButton.Visible = false;
 
