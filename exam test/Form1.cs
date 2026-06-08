@@ -495,7 +495,7 @@ namespace exam_test
             {
                 selectedPreviewLabel.Text =
                     "Streamer mode is on." + Environment.NewLine +
-                    "Account details are hidden in lists, preview areas, and QuickFill.";
+                    "Usernames, websites, notes, and secrets are hidden in lists, preview areas, and QuickFill.";
             }
 
             if (quickFillListBox != null && !quickFillListBox.IsDisposed)
@@ -11617,6 +11617,18 @@ if (currentDriveService == null)
 
             if (IsStreamerModeEnabled())
             {
+                string safePlatform = (entry.Platform ?? "").Trim();
+
+                if (!string.IsNullOrWhiteSpace(safePlatform))
+                {
+                    if (safePlatform.Length > 32)
+                    {
+                        safePlatform = safePlatform.Substring(0, 32) + "...";
+                    }
+
+                    return prefix + "Hidden login [" + safePlatform + "]";
+                }
+
                 return prefix + "Hidden saved login #" + hiddenNumber;
             }
 
@@ -11628,6 +11640,7 @@ if (currentDriveService == null)
 
             return prefix + entry.GetDisplayName();
         }
+
         private void ShowQuickFill()
         {
             IntPtr activeWindow = GetForegroundWindow();
@@ -11915,7 +11928,7 @@ if (currentDriveService == null)
             {
                 quickFillListBox.SelectedIndex = 0;
                 SetQuickFillStatus(IsStreamerModeEnabled()
-                    ? "Streamer mode is on. Login names are hidden; copy/fill still works."
+                    ? "Streamer mode is on. Usernames and websites are hidden; app names remain visible."
                     : "Choose a login, then copy or fill.");
             }
             else
