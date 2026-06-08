@@ -10,6 +10,8 @@ using System.Runtime.InteropServices;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using OtpNet;
+using QRCoder;
 
 namespace exam_test
 {
