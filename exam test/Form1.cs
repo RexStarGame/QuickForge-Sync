@@ -495,7 +495,19 @@ namespace exam_test
             {
                 selectedPreviewLabel.Text =
                     "Streamer mode is on." + Environment.NewLine +
-                    "Account details are hidden in lists and preview areas.";
+                    "Account details are hidden in lists, preview areas, and QuickFill.";
+            }
+
+            if (quickFillListBox != null && !quickFillListBox.IsDisposed)
+            {
+                RefreshQuickFillList(quickFillSearchBox?.Text ?? "");
+            }
+
+            if (quickFillForm != null && !quickFillForm.IsDisposed)
+            {
+                quickFillForm.Text = IsStreamerModeEnabled()
+                    ? "QuickFill - Streamer mode"
+                    : "QuickFill";
             }
         }
         private void ShowSettingsDialog(int selectedTabIndex = 0)
@@ -11663,6 +11675,8 @@ if (currentDriveService == null)
 
             RefreshQuickFillList("");
 
+            quickFillForm!.Text = IsStreamerModeEnabled() ? "QuickFill - Streamer mode" : "QuickFill";
+
             quickFillForm!.Show();
             quickFillForm.TopMost = true;
             quickFillForm.Activate();
@@ -11878,6 +11892,8 @@ if (currentDriveService == null)
                 .OrderByDescending(entry => entry.IsFavorite)
                 .ThenBy(entry => entry.GetDisplayName());
 
+            int hiddenNumber = 1;
+
             foreach (VaultEntry entry in orderedEntries)
             {
                 string searchable =
@@ -11886,14 +11902,21 @@ if (currentDriveService == null)
 
                 if (string.IsNullOrWhiteSpace(cleanFilter) || searchable.Contains(cleanFilter))
                 {
-                    quickFillListBox.Items.Add(new QuickFillItem(entry));
+                    quickFillListBox.Items.Add(new QuickFillItem(
+                        entry,
+                        GetQuickFillDisplayText(entry, hiddenNumber)
+                    ));
+
+                    hiddenNumber++;
                 }
             }
 
             if (quickFillListBox.Items.Count > 0)
             {
                 quickFillListBox.SelectedIndex = 0;
-                SetQuickFillStatus(IsStreamerModeEnabled() ? "Streamer mode is on. Login names are hidden; copy/fill still works." : "Choose a login, then copy or fill.");
+                SetQuickFillStatus(IsStreamerModeEnabled()
+                    ? "Streamer mode is on. Login names are hidden; copy/fill still works."
+                    : "Choose a login, then copy or fill.");
             }
             else
             {
@@ -12075,6 +12098,7 @@ if (currentDriveService == null)
                 return displayText;
             }
         }
+
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             try
