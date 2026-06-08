@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -140,17 +141,24 @@ namespace exam_test
 
         public static async Task DeleteVaultAsync(DriveService driveService)
         {
-            DriveFile? file = await FindVaultFileAsync(driveService);
+            IReadOnlyList<DriveFile> files = await FindVaultFilesAsync(driveService);
 
-            if (file == null || string.IsNullOrWhiteSpace(file.Id))
+            foreach (DriveFile file in files)
             {
-                return;
+                if (!string.IsNullOrWhiteSpace(file.Id))
+                {
+                    await driveService.Files.Delete(file.Id).ExecuteAsync();
+                }
             }
-
-            await driveService.Files.Delete(file.Id).ExecuteAsync();
         }
 
         private static async Task<DriveFile?> FindVaultFileAsync(DriveService driveService)
+        {
+            IReadOnlyList<DriveFile> files = await FindVaultFilesAsync(driveService);
+            return files.FirstOrDefault();
+        }
+
+        private static async Task<IReadOnlyList<DriveFile>> FindVaultFilesAsync(DriveService driveService)
         {
             var listRequest = driveService.Files.List();
 
@@ -160,7 +168,7 @@ namespace exam_test
 
             var result = await listRequest.ExecuteAsync();
 
-            return result.Files?.FirstOrDefault();
+            return result.Files?.ToList() ?? new List<DriveFile>();
         }
 
         private static GoogleDriveVaultMetadata CreateMetadata(DriveFile file)
