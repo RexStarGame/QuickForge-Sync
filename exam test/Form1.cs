@@ -724,7 +724,7 @@ namespace exam_test
                     () =>
                     {
                         dialog.Close();
-                        ShowSecurityCenterDialog();
+                        ShowTrustCenterDialog();
                     },
                     true
                 ));
@@ -1351,6 +1351,345 @@ namespace exam_test
                 dialog.Controls.Add(saveButton);
                 dialog.Controls.Add(cancelButton);
                 dialog.Controls.Add(statusLabel);
+
+                dialog.ShowDialog(this);
+            }
+        }
+        private void ShowTrustCenterDialog()
+        {
+            if (!isVaultUnlocked)
+            {
+                MessageBox.Show(
+                    "Unlock your vault before opening Trust Center.",
+                    "Trust Center unavailable",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return;
+            }
+
+            currentVaultSettings.KnownDevices ??= new List<KnownVaultDevice>();
+            currentVaultSettings.SafetyTimeline ??= new List<VaultSafetyEvent>();
+
+            int visibleDevices = currentVaultSettings.KnownDevices.Count(device => !device.IsHiddenFromTrustList);
+            int untrustedDevices = currentVaultSettings.KnownDevices.Count(device =>
+                !device.IsHiddenFromTrustList &&
+                !device.IsTrusted
+            );
+
+            int weakPasswords = vaultEntries.Count(entry =>
+                string.IsNullOrWhiteSpace(entry.Secret) ||
+                entry.Secret.Length < 10
+            );
+
+            int reusedPasswords = vaultEntries
+                .Where(entry => !string.IsNullOrWhiteSpace(entry.Secret))
+                .GroupBy(entry => entry.Secret, StringComparer.Ordinal)
+                .Count(group => group.Count() > 1);
+
+            bool hasRecentBackup =
+                currentVaultSettings.LastBackupAtUtc.HasValue &&
+                (DateTime.UtcNow - currentVaultSettings.LastBackupAtUtc.Value.ToUniversalTime()).TotalDays <= 30;
+
+            bool hasRecentCloudLoad =
+                lastCloudLoadUtc.HasValue &&
+                (DateTime.UtcNow - lastCloudLoadUtc.Value).TotalMinutes <= 60;
+
+            string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
+                ? "Last backup: " + currentVaultSettings.LastBackupAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                : "No backup recorded";
+
+            string syncStatus = lastCloudLoadUtc.HasValue
+                ? "Last cloud load: " + lastCloudLoadUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                : "No cloud load recorded";
+
+            string deviceStatus = untrustedDevices > 0
+                ? untrustedDevices + " device(s) need review"
+                : visibleDevices + " known device(s)";
+
+            string recoveryStatus = currentVaultSettings.RecoveryKeyRotationRequired
+                ? "Rotation required"
+                : "Available";
+
+            string passwordHealthStatus =
+                weakPasswords == 0 && reusedPasswords == 0
+                    ? "Looks good"
+                    : weakPasswords + " weak / " + reusedPasswords + " reused";
+
+            string overallStatus;
+
+            if (untrustedDevices > 0 ||
+                currentVaultSettings.RecoveryKeyRotationRequired ||
+                !hasRecentBackup ||
+                weakPasswords > 0 ||
+                reusedPasswords > 0)
+            {
+                overallStatus = "Review recommended";
+            }
+            else
+            {
+                overallStatus = "Looks safe today";
+            }
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 780;
+                dialog.Height = 700;
+                dialog.Text = "QuickForge Trust Center";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Trust Center";
+                titleLabel.Left = 24;
+                titleLabel.Top = 18;
+                titleLabel.Width = 500;
+                titleLabel.Height = 34;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 16, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "Clear safety overview for your vault, devices, backups, sync, and recovery.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 56;
+                subtitleLabel.Width = 700;
+                subtitleLabel.Height = 24;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Label overallStatusLabel = new Label();
+                overallStatusLabel.Text = overallStatus;
+                overallStatusLabel.Left = 24;
+                overallStatusLabel.Top = 88;
+                overallStatusLabel.Width = 700;
+                overallStatusLabel.Height = 28;
+                overallStatusLabel.ForeColor = overallStatus == "Looks safe today"
+                    ? successColor
+                    : Color.FromArgb(255, 190, 90);
+                overallStatusLabel.BackColor = Color.Transparent;
+                overallStatusLabel.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+
+                Panel CreateTrustCard(
+                    string title,
+                    string status,
+                    string detail,
+                    int left,
+                    int top,
+                    Color statusColor,
+                    string actionText,
+                    Action action,
+                    bool primaryAction = false)
+                {
+                    Panel card = new Panel();
+                    card.Left = left;
+                    card.Top = top;
+                    card.Width = 340;
+                    card.Height = 150;
+                    card.BackColor = Color.FromArgb(24, 28, 44);
+                    card.BorderStyle = BorderStyle.FixedSingle;
+
+                    Label cardTitle = new Label();
+                    cardTitle.Text = title;
+                    cardTitle.Left = 14;
+                    cardTitle.Top = 10;
+                    cardTitle.Width = 310;
+                    cardTitle.Height = 22;
+                    cardTitle.ForeColor = Color.White;
+                    cardTitle.BackColor = Color.Transparent;
+                    cardTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                    Label cardStatus = new Label();
+                    cardStatus.Text = status;
+                    cardStatus.Left = 14;
+                    cardStatus.Top = 36;
+                    cardStatus.Width = 310;
+                    cardStatus.Height = 22;
+                    cardStatus.ForeColor = statusColor;
+                    cardStatus.BackColor = Color.Transparent;
+                    cardStatus.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                    Label cardDetail = new Label();
+                    cardDetail.Text = detail;
+                    cardDetail.Left = 14;
+                    cardDetail.Top = 62;
+                    cardDetail.Width = 310;
+                    cardDetail.Height = 46;
+                    cardDetail.ForeColor = softTextColor;
+                    cardDetail.BackColor = Color.Transparent;
+                    cardDetail.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+
+                    Button actionButton = new Button();
+                    actionButton.Text = actionText;
+                    actionButton.Left = 14;
+                    actionButton.Top = 112;
+                    actionButton.Width = 140;
+                    actionButton.Height = 28;
+                    StyleActionButton(actionButton, primaryAction);
+                    actionButton.Click += (s, e) => action();
+
+                    card.Controls.Add(cardTitle);
+                    card.Controls.Add(cardStatus);
+                    card.Controls.Add(cardDetail);
+                    card.Controls.Add(actionButton);
+
+                    return card;
+                }
+
+                Panel deviceCard = CreateTrustCard(
+                    "Device Trust",
+                    deviceStatus,
+                    "Review which PCs have opened this vault. Unknown devices should stay restricted until trusted.",
+                    24,
+                    130,
+                    untrustedDevices > 0 ? Color.FromArgb(255, 190, 90) : successColor,
+                    "View devices",
+                    () =>
+                    {
+                        MessageBox.Show(
+                            BuildKnownDevicesText(),
+                            "Known devices",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information
+                        );
+                    },
+                    untrustedDevices > 0
+                );
+
+                Panel recoveryCard = CreateTrustCard(
+                    "Recovery",
+                    recoveryStatus,
+                    "Your recovery key protects you if the vault code is forgotten. Keep it separate from backups.",
+                    394,
+                    130,
+                    currentVaultSettings.RecoveryKeyRotationRequired ? Color.FromArgb(255, 190, 90) : successColor,
+                    "Recovery settings",
+                    () =>
+                    {
+                        dialog.Close();
+                        ShowRecoveryReminderSettingsDialog();
+                    },
+                    currentVaultSettings.RecoveryKeyRotationRequired
+                );
+
+                Panel backupCard = CreateTrustCard(
+                    "Backups",
+                    hasRecentBackup ? "Recent backup found" : "Backup recommended",
+                    backupStatus + ". Encrypted backups still require your vault code or recovery key.",
+                    24,
+                    300,
+                    hasRecentBackup ? successColor : Color.FromArgb(255, 190, 90),
+                    "Backup Center",
+                    () =>
+                    {
+                        dialog.Close();
+                        ShowBackupDialog();
+                    },
+                    !hasRecentBackup
+                );
+
+                Panel passwordCard = CreateTrustCard(
+                    "Password Health",
+                    passwordHealthStatus,
+                    "Weak or reused secrets should be changed first. QuickForge only shows safe summary data here.",
+                    394,
+                    300,
+                    weakPasswords == 0 && reusedPasswords == 0 ? successColor : Color.FromArgb(255, 190, 90),
+                    "View summary",
+                    () =>
+                    {
+                        MessageBox.Show(
+                            "Password Health Summary" + Environment.NewLine + Environment.NewLine +
+                            "Saved entries: " + vaultEntries.Count + Environment.NewLine +
+                            "Weak or empty secrets: " + weakPasswords + Environment.NewLine +
+                            "Reused password groups: " + reusedPasswords + Environment.NewLine + Environment.NewLine +
+                            "Tip: fix reused passwords first, then weak passwords.",
+                            "Password Health",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information
+                        );
+                    },
+                    weakPasswords > 0 || reusedPasswords > 0
+                );
+
+                Panel syncCard = CreateTrustCard(
+                    "Sync Safety",
+                    hasRecentCloudLoad ? "Recently checked" : "Refresh recommended",
+                    syncStatus + ". Refresh if another device may have changed the vault.",
+                    24,
+                    470,
+                    hasRecentCloudLoad ? successColor : Color.FromArgb(255, 190, 90),
+                    "Refresh now",
+                    () =>
+                    {
+                        dialog.Close();
+                        RefreshCloudButton_Click(this, EventArgs.Empty);
+                    },
+                    !hasRecentCloudLoad
+                );
+
+                Panel authenticatorCard = CreateTrustCard(
+                    "Authenticator Lock",
+                    "Planned for v0.2.1",
+                    "Optional two-step vault unlock will add a 6-digit authenticator-code check after vault code.",
+                    394,
+                    470,
+                    Color.FromArgb(255, 190, 90),
+                    "Learn more",
+                    () =>
+                    {
+                        MessageBox.Show(
+                            "Authenticator Lock is planned for v0.2.1." + Environment.NewLine + Environment.NewLine +
+                            "It will be optional, never forced, and should work with authenticator apps generally.",
+                            "Authenticator Lock planned",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information
+                        );
+                    }
+                );
+
+                Button legacyReportButton = new Button();
+                legacyReportButton.Text = "Full report";
+                legacyReportButton.Left = 24;
+                legacyReportButton.Top = 635;
+                legacyReportButton.Width = 105;
+                legacyReportButton.Height = 30;
+                StyleActionButton(legacyReportButton);
+                legacyReportButton.Click += (s, e) =>
+                {
+                    MessageBox.Show(
+                        BuildVaultSafetyReport(),
+                        "Full vault safety report",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
+                };
+
+                Button closeButton = new Button();
+                closeButton.Text = "Close";
+                closeButton.Left = 655;
+                closeButton.Top = 635;
+                closeButton.Width = 90;
+                closeButton.Height = 30;
+                StyleActionButton(closeButton, true);
+                closeButton.Click += (s, e) => dialog.Close();
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(overallStatusLabel);
+                dialog.Controls.Add(deviceCard);
+                dialog.Controls.Add(recoveryCard);
+                dialog.Controls.Add(backupCard);
+                dialog.Controls.Add(passwordCard);
+                dialog.Controls.Add(syncCard);
+                dialog.Controls.Add(authenticatorCard);
+                dialog.Controls.Add(legacyReportButton);
+                dialog.Controls.Add(closeButton);
 
                 dialog.ShowDialog(this);
             }
@@ -2086,7 +2425,7 @@ namespace exam_test
             rotateRecoveryKeyButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
             rotateRecoveryKeyButton.Click += RotateRecoveryKeyButton_Click;
 
-            securityCenterButton.Text = "Security check";
+            securityCenterButton.Text = "Trust Center";
             securityCenterButton.Left = 315;
             securityCenterButton.Top = 570;
             securityCenterButton.Width = 105;
@@ -2095,7 +2434,7 @@ namespace exam_test
             securityCenterButton.ForeColor = Color.White;
             securityCenterButton.BackColor = Color.FromArgb(45, 90, 160);
             securityCenterButton.FlatAppearance.BorderColor = borderColor;
-            securityCenterButton.Click += (s, e) => ShowSecurityCenterDialog();
+            securityCenterButton.Click += (s, e) => ShowTrustCenterDialog();
 
             backupButton.Text = "Backup";
             backupButton.Left = 430;
@@ -4251,7 +4590,6 @@ namespace exam_test
                 .Take(MaxSafetyTimelineEvents)
                 .ToList();
         }
-
         private void MarkVaultChangedByCurrentDevice(string action)
         {
             EnsureLocalDeviceIdentity();
@@ -8031,7 +8369,7 @@ if (currentDriveService == null)
                 }
             }
 
-            ShowSecurityCenterDialog();
+            ShowTrustCenterDialog();
         }
         private void ShowSecurityCenterDialog()
         {
