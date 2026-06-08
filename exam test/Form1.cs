@@ -942,12 +942,6 @@ namespace exam_test
                    !string.IsNullOrWhiteSpace(currentVaultSettings.AuthenticatorSecretBase32);
         }
 
-        private bool IsAuthenticatorLockConfigured(VaultSettings settings)
-        {
-            return settings != null &&
-                   settings.AuthenticatorLockEnabled &&
-                   !string.IsNullOrWhiteSpace(settings.AuthenticatorSecretBase32);
-        }
         private string GenerateAuthenticatorSecretBase32()
         {
             byte[] secretBytes = KeyGeneration.GenerateRandomKey(20);
@@ -1079,9 +1073,9 @@ namespace exam_test
             }
         }
 
-        private bool ShowAuthenticatorUnlockDialog(string authenticatorSecretBase32)
+        private bool ShowAuthenticatorUnlockDialog()
         {
-            if (string.IsNullOrWhiteSpace(authenticatorSecretBase32))
+            if (!IsAuthenticatorLockConfigured())
             {
                 return true;
             }
@@ -1090,8 +1084,8 @@ namespace exam_test
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 470;
-                dialog.Height = 260;
+                dialog.Width = 460;
+                dialog.Height = 250;
                 dialog.Text = "Two-step vault unlock";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -1100,31 +1094,28 @@ namespace exam_test
                 dialog.BackColor = Color.FromArgb(16, 20, 34);
 
                 Label titleLabel = new Label();
-                titleLabel.Text = "Vault code accepted";
+                titleLabel.Text = "Authenticator code required";
                 titleLabel.Left = 22;
                 titleLabel.Top = 18;
-                titleLabel.Width = 400;
+                titleLabel.Width = 390;
                 titleLabel.Height = 28;
-                titleLabel.ForeColor = successColor;
+                titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
                 titleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
 
                 Label detailLabel = new Label();
-                detailLabel.Text =
-                    "Now enter the 6-digit code from your authenticator app." +
-                    Environment.NewLine +
-                    "The vault will not open until this check passes.";
+                detailLabel.Text = "Enter the 6-digit code from your authenticator app.";
                 detailLabel.Left = 22;
                 detailLabel.Top = 55;
-                detailLabel.Width = 410;
-                detailLabel.Height = 45;
+                detailLabel.Width = 390;
+                detailLabel.Height = 32;
                 detailLabel.ForeColor = softTextColor;
                 detailLabel.BackColor = Color.Transparent;
                 detailLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
 
                 TextBox codeBox = new TextBox();
                 codeBox.Left = 22;
-                codeBox.Top = 110;
+                codeBox.Top = 95;
                 codeBox.Width = 160;
                 codeBox.Height = 30;
                 codeBox.MaxLength = 6;
@@ -1132,10 +1123,10 @@ namespace exam_test
                 codeBox.Font = new Font("Consolas", 12, FontStyle.Bold);
 
                 Label statusLabel = new Label();
-                statusLabel.Text = "Step 2 of 2: authenticator check.";
+                statusLabel.Text = "";
                 statusLabel.Left = 22;
-                statusLabel.Top = 148;
-                statusLabel.Width = 410;
+                statusLabel.Top = 132;
+                statusLabel.Width = 390;
                 statusLabel.Height = 28;
                 statusLabel.ForeColor = softTextColor;
                 statusLabel.BackColor = Color.Transparent;
@@ -1143,28 +1134,29 @@ namespace exam_test
 
                 Button cancelButton = new Button();
                 cancelButton.Text = "Cancel";
-                cancelButton.Left = 230;
-                cancelButton.Top = 185;
+                cancelButton.Left = 220;
+                cancelButton.Top = 170;
                 cancelButton.Width = 90;
                 cancelButton.Height = 34;
                 StyleActionButton(cancelButton);
                 cancelButton.Click += (s, e) => dialog.Close();
 
                 Button unlockButton = new Button();
-                unlockButton.Text = "Finish unlock";
-                unlockButton.Left = 335;
-                unlockButton.Top = 185;
-                unlockButton.Width = 100;
+                unlockButton.Text = "Unlock";
+                unlockButton.Left = 325;
+                unlockButton.Top = 170;
+                unlockButton.Width = 90;
                 unlockButton.Height = 34;
                 StyleActionButton(unlockButton, true);
 
                 unlockButton.Click += (s, e) =>
                 {
                     if (VerifyAuthenticatorCode(
-                        authenticatorSecretBase32,
+                        currentVaultSettings.AuthenticatorSecretBase32,
                         codeBox.Text,
                         out long timeWindowUsed))
                     {
+                        currentVaultSettings.LastAuthenticatorTimeWindowUsed = timeWindowUsed;
                         verified = true;
                         dialog.Close();
                         return;
@@ -1186,12 +1178,12 @@ namespace exam_test
                 dialog.AcceptButton = unlockButton;
                 dialog.CancelButton = cancelButton;
 
-                codeBox.Focus();
                 dialog.ShowDialog(this);
             }
 
             return verified;
         }
+
         private bool ShowAuthenticatorLockSettingsDialog()
         {
             if (!isVaultUnlocked || currentEncryptedVaultFile == null)
@@ -5173,36 +5165,27 @@ namespace exam_test
                 throw new InvalidOperationException("Vault unlock did not complete.");
             }
 
-            VaultSettings unlockedVaultSettings = vaultData.Settings ?? new VaultSettings();
+            vaultCode = unlockCode;
+            currentVaultSettings = vaultData.Settings ?? new VaultSettings();
+            currentDataKey = dataKey;
+            currentEncryptedVaultFile = decryptedEncryptedVaultFile;
 
-            if (!usedRecoveryKey && IsAuthenticatorLockConfigured(unlockedVaultSettings))
+            if (!usedRecoveryKey && IsAuthenticatorLockConfigured())
             {
-                SetSyncStatus("Vault code accepted - authenticator required");
+                SetSyncStatus("Authenticator required");
                 SetPreviewText(
-                    "Vault code accepted.",
+                    "Two-step vault unlock",
                     "Enter the 6-digit authenticator code to finish unlocking.",
-                    "QuickForge will not open the vault until both checks pass."
+                    "Recovery key can be used as the emergency path if authenticator access is lost."
                 );
 
-                if (!ShowAuthenticatorUnlockDialog(unlockedVaultSettings.AuthenticatorSecretBase32))
+                if (!ShowAuthenticatorUnlockDialog())
                 {
                     vaultCode = "";
                     currentDataKey = null;
                     currentEncryptedVaultFile = null;
                     currentVaultSettings = new VaultSettings();
                     vaultEntries.Clear();
-                    RefreshVaultList();
-                    SetSyncStatus("Authenticator cancelled", error: true);
-                    ClearVaultCodeInputForRetry();
-                    return false;
-                }
-            }
-
-            vaultCode = unlockCode;
-            currentVaultSettings = unlockedVaultSettings;
-            currentDataKey = dataKey;
-            currentEncryptedVaultFile = decryptedEncryptedVaultFile;
-            vaultEntries.Clear();
                     RefreshVaultList();
                     SetSyncStatus("Authenticator cancelled", error: true);
                     ClearVaultCodeInputForRetry();
