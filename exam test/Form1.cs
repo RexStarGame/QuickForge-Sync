@@ -1073,9 +1073,9 @@ namespace exam_test
             }
         }
 
-        private bool ShowAuthenticatorUnlockDialog()
+        private bool ShowAuthenticatorUnlockDialog(string authenticatorSecretBase32)
         {
-            if (!IsAuthenticatorLockConfigured())
+            if (string.IsNullOrWhiteSpace(authenticatorSecretBase32))
             {
                 return true;
             }
@@ -1152,11 +1152,10 @@ namespace exam_test
                 unlockButton.Click += (s, e) =>
                 {
                     if (VerifyAuthenticatorCode(
-                        currentVaultSettings.AuthenticatorSecretBase32,
+                        authenticatorSecretBase32,
                         codeBox.Text,
                         out long timeWindowUsed))
                     {
-                        currentVaultSettings.LastAuthenticatorTimeWindowUsed = timeWindowUsed;
                         verified = true;
                         dialog.Close();
                         return;
@@ -1399,7 +1398,6 @@ namespace exam_test
                         currentVaultSettings.AuthenticatorLockEnabled = true;
                         currentVaultSettings.AuthenticatorSecretBase32 = secretBase32;
                         currentVaultSettings.AuthenticatorEnabledAtUtc = DateTime.UtcNow;
-                        currentVaultSettings.LastAuthenticatorTimeWindowUsed = timeWindowUsed;
 
                         MarkVaultChangedByCurrentDevice("Authenticator Lock enabled");
                         await SaveCurrentVaultToCloudAsync();
@@ -5165,21 +5163,23 @@ namespace exam_test
                 throw new InvalidOperationException("Vault unlock did not complete.");
             }
 
-            vaultCode = unlockCode;
-            currentVaultSettings = vaultData.Settings ?? new VaultSettings();
-            currentDataKey = dataKey;
-            currentEncryptedVaultFile = decryptedEncryptedVaultFile;
+            VaultSettings unlockedVaultSettings = vaultData.Settings ?? new VaultSettings();
 
-            if (!usedRecoveryKey && IsAuthenticatorLockConfigured())
+            bool authenticatorRequired =
+                !usedRecoveryKey &&
+                unlockedVaultSettings.AuthenticatorLockEnabled &&
+                !string.IsNullOrWhiteSpace(unlockedVaultSettings.AuthenticatorSecretBase32);
+
+            if (authenticatorRequired)
             {
-                SetSyncStatus("Authenticator required");
+                SetSyncStatus("Vault code accepted - authenticator required");
                 SetPreviewText(
-                    "Two-step vault unlock",
+                    "Vault code accepted.",
                     "Enter the 6-digit authenticator code to finish unlocking.",
-                    "Recovery key can be used as the emergency path if authenticator access is lost."
+                    "QuickForge will not open the vault until both checks pass."
                 );
 
-                if (!ShowAuthenticatorUnlockDialog())
+                if (!ShowAuthenticatorUnlockDialog(unlockedVaultSettings.AuthenticatorSecretBase32))
                 {
                     vaultCode = "";
                     currentDataKey = null;
@@ -5192,6 +5192,11 @@ namespace exam_test
                     return false;
                 }
             }
+
+            vaultCode = unlockCode;
+            currentVaultSettings = unlockedVaultSettings;
+            currentDataKey = dataKey;
+            currentEncryptedVaultFile = decryptedEncryptedVaultFile;
 
             vaultEntries.Clear();
 
