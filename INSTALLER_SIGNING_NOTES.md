@@ -62,3 +62,30 @@ Before real-data candidate:
 ## Current decision
 
 QuickForge Sync should not be advertised as production-ready while it is unsigned, unreviewed, and still marked as beta.
+
+## Beta ZIP packaging rule
+
+For the current beta ZIP, QuickForge needs the Google OAuth Desktop client configuration so testers can sign in with Google.
+
+OK to include:
+
+- `credentials.json`
+- `QuickForge Sync.exe`
+- release notes / test notes
+
+Never include:
+
+- `token*.json`
+- `*.qfvault`
+- `*.qfbackup`
+- user vault files
+- user backup files
+- user Google session tokens
+
+Reason:
+
+- `credentials.json` identifies the QuickForge OAuth desktop client.
+- User tokens are created locally after each tester signs in with their own Google account.
+- Each user vault is stored in that user's Google Drive appDataFolder.
+- Vault and backup files must stay encrypted and user-controlled.
+

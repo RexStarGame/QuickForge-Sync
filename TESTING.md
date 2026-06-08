@@ -1,4 +1,4 @@
-﻿# QuickForge Sync Test Checklist
+# QuickForge Sync Test Checklist
 
 
 
@@ -274,7 +274,7 @@ Expected result:
 
 
 
-## Current Alpha Verdict
+## Current Beta Testing Verdict
 
 
 
@@ -286,8 +286,49 @@ Only share with testers if:
 
 - All checklist items pass
 
-- Testers use fake data only
+- External testers use fake data only unless a controlled personal beta test was explicitly planned
 
-- No real passwords are stored
+- No critical or only-copy real passwords are stored during beta testing
 
 
+
+---
+
+## v0.2.0 Manual Safety Checks
+
+Run before publishing v0.2.0-beta-preview:
+
+- Fresh install with Google login
+- Existing vault unlock
+- New vault setup
+- Security Center overview
+- Device Trust dialog
+- Backup Center export
+- Restore encrypted backup
+- Change vault code
+- Rotate recovery key
+- Delete entry confirmation
+- Logout and login again
+
+Expected result:
+
+- No text is hidden or overlapping
+- No mojibake/broken characters appear
+- Sensitive actions require the correct confirmation
+- Backups remain encrypted
+- Google Drive cloud vault stays app-managed through appDataFolder
+- User understands what to do without reading technical code comments
+
+## Automated Tests
+
+Run before every beta ZIP:
+
+    dotnet build "exam test\exam test.csproj"
+    dotnet build "exam test\exam test.csproj" -c Release
+    dotnet test "QuickForge.Tests\QuickForge.Tests.csproj" --logger "console;verbosity=normal"
+
+Expected result:
+
+- Debug build succeeds
+- Release build succeeds
+- Automated tests pass: 30/30

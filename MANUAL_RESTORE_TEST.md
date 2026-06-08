@@ -123,6 +123,31 @@ Status:
 - [ ] Passed
 - [ ] Failed
 
+
+## Test 6: Fresh install restore from Google appDataFolder
+
+Steps:
+
+1. Use a clean Windows profile, second PC, VM, or deleted local QuickForge app data folder.
+2. Start QuickForge Sync.
+3. Confirm there are no local vault files available.
+4. Sign in with the same Google account.
+5. Confirm QuickForge detects the app-managed Google Drive appDataFolder vault.
+6. Unlock with the vault code.
+7. Lock and unlock again using the recovery key.
+8. Confirm saved entries, favorites, websites, and settings are restored.
+
+Expected result:
+
+- QuickForge restores from the encrypted cloud vault without needing local files.
+- Passwords are only visible after vault unlock.
+- If the cloud vault is missing, QuickForge clearly offers create vault or import encrypted backup.
+- No plaintext vault data appears in local folders.
+
+Status:
+
+- [ ] Passed
+- [ ] Failed
 ## Release decision
 
 Only release the next beta if all required restore tests pass.
@@ -131,3 +156,4 @@ Final result:
 
 - [ ] Ready for beta release
 - [ ] Not ready
+

@@ -16,7 +16,7 @@
     <PackageReference Include="Google.Apis.Auth" Version="1.74.0" />
     <PackageReference Include="Google.Apis.Drive.v3" Version="1.74.0.4135" />
     <PackageReference Include="Google.Apis.Oauth2.v2" Version="1.74.0.1869" />
-    <PackageReference Include="OpenAI" Version="2.10.0" />
   </ItemGroup>
 </Project>
+
 

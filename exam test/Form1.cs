@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -17,7 +17,7 @@ namespace exam_test
     {
         private const string AppName = "QuickForge Sync";
         private const string AppStatus = "Beta Preview";
-        private const string AppVersion = "v0.1.9-beta-preview";
+        private const string AppVersion = "v0.2.0-beta-preview";
         private const string AppDisplayName = AppName + " " + AppStatus;
 
 
@@ -200,6 +200,7 @@ namespace exam_test
         private readonly ComboBox autoLockComboBox = new ComboBox();
         private readonly Label autoRefreshLabel = new Label();
         private readonly ComboBox autoRefreshComboBox = new ComboBox();
+        private readonly ToolTip vaultToolTip = new ToolTip();
 
         private DateTime lastVaultActivityUtc = DateTime.UtcNow;
         // Colors
@@ -220,6 +221,11 @@ namespace exam_test
             MinimumSize = new Size(800, 790);
             DoubleBuffered = true;
             BackColor = backgroundColor;
+
+            vaultToolTip.AutoPopDelay = 12000;
+            vaultToolTip.InitialDelay = 500;
+            vaultToolTip.ReshowDelay = 100;
+            vaultToolTip.ShowAlways = true;
 
             SetStyle(
                 ControlStyles.AllPaintingInWmPaint |
@@ -393,14 +399,14 @@ namespace exam_test
         {
             MessageBox.Show(
                 AppDisplayName + " " + AppVersion + Environment.NewLine + Environment.NewLine +
-                "Encrypted Windows vault with Google Drive appdata sync." + Environment.NewLine + Environment.NewLine +
+                "Encrypted Windows vault with Google Drive appDataFolder sync." + Environment.NewLine + Environment.NewLine +
                 "Status: Beta Preview" + Environment.NewLine +
                 "QuickForge encrypts vault data before syncing. Keep your vault code and recovery key safe." + Environment.NewLine + Environment.NewLine +
                 "Tested:" + Environment.NewLine +
                 "- Public release ZIP works" + Environment.NewLine +
                 "- Google login works on separate accounts" + Environment.NewLine +
                 "- Vault data is isolated per Google account" + Environment.NewLine +
-                "- 19 automated crypto/backup tests pass",
+                "- 30 automated crypto/backup/restore tests pass",
                 "About QuickForge Sync",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information
@@ -464,7 +470,7 @@ namespace exam_test
             betaWarningLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             betaWarningLabel.AutoSize = true;
             betaWarningLabel.Left = 22;
-            betaWarningLabel.Top = 178;
+            betaWarningLabel.Top = 182;
             betaWarningLabel.Cursor = Cursors.Hand;
             betaWarningLabel.Click += GoogleLoginCard_Click;
 
@@ -524,11 +530,12 @@ namespace exam_test
         }
         private void CreateVaultAccessUi()
         {
-            vaultAccessPanel.Left = 175;
-            vaultAccessPanel.Top = 135;
-            vaultAccessPanel.Width = 450;
-            vaultAccessPanel.Height = 455;
+            vaultAccessPanel.Left = 140;
+            vaultAccessPanel.Top = 130;
+            vaultAccessPanel.Width = 520;
+            vaultAccessPanel.Height = 560;
             vaultAccessPanel.BackColor = Color.FromArgb(16, 20, 34);
+            vaultAccessPanel.BorderStyle = BorderStyle.FixedSingle;
 
             unlockStatusTimer.Interval = 1000;
             unlockStatusTimer.Tick += (s, e) =>
@@ -539,52 +546,85 @@ namespace exam_test
                 }
             };
 
-            vaultAccessTitleLabel.Text = "Create Vault Code";
+            vaultAccessTitleLabel.Text = "Unlock your vault";
             vaultAccessTitleLabel.ForeColor = Color.White;
             vaultAccessTitleLabel.BackColor = Color.Transparent;
-            vaultAccessTitleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
-            vaultAccessTitleLabel.AutoSize = true;
+            vaultAccessTitleLabel.Font = new Font("Segoe UI", 16, FontStyle.Bold);
+            vaultAccessTitleLabel.AutoSize = false;
             vaultAccessTitleLabel.Left = 24;
-            vaultAccessTitleLabel.Top = 20;
+            vaultAccessTitleLabel.Top = 22;
+            vaultAccessTitleLabel.Width = 450;
+            vaultAccessTitleLabel.Height = 34;
 
-            vaultAccessSubtitleLabel.Text = "This code protects reveal/copy actions inside this session.";
+            vaultAccessSubtitleLabel.Text = "Enter your vault code or recovery key to continue.";
             vaultAccessSubtitleLabel.ForeColor = softTextColor;
             vaultAccessSubtitleLabel.BackColor = Color.Transparent;
-            vaultAccessSubtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+            vaultAccessSubtitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
             vaultAccessSubtitleLabel.AutoSize = false;
             vaultAccessSubtitleLabel.Left = 24;
-            vaultAccessSubtitleLabel.Top = 55;
-            vaultAccessSubtitleLabel.Width = 390;
-            vaultAccessSubtitleLabel.Height = 36;
+            vaultAccessSubtitleLabel.Top = 60;
+            vaultAccessSubtitleLabel.Width = 450;
+            vaultAccessSubtitleLabel.Height = 45;
 
-            vaultCodeLabel.Text = "Vault code";
+            Panel accessInfoPanel = new Panel();
+            accessInfoPanel.Left = 24;
+            accessInfoPanel.Top = 112;
+            accessInfoPanel.Width = 470;
+            accessInfoPanel.Height = 70;
+            accessInfoPanel.BackColor = Color.FromArgb(20, 25, 42);
+            accessInfoPanel.BorderStyle = BorderStyle.FixedSingle;
+
+            Label accessInfoTitleLabel = new Label();
+            accessInfoTitleLabel.Text = "Encrypted vault access";
+            accessInfoTitleLabel.Left = 14;
+            accessInfoTitleLabel.Top = 10;
+            accessInfoTitleLabel.Width = 430;
+            accessInfoTitleLabel.Height = 22;
+            accessInfoTitleLabel.ForeColor = Color.White;
+            accessInfoTitleLabel.BackColor = Color.Transparent;
+            accessInfoTitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+            Label accessInfoTextLabel = new Label();
+            accessInfoTextLabel.Text = "Your saved data stays encrypted. Restore Backup helps if your cloud vault is missing.";
+            accessInfoTextLabel.Left = 14;
+            accessInfoTextLabel.Top = 34;
+            accessInfoTextLabel.Width = 430;
+            accessInfoTextLabel.Height = 28;
+            accessInfoTextLabel.ForeColor = softTextColor;
+            accessInfoTextLabel.BackColor = Color.Transparent;
+            accessInfoTextLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+            accessInfoPanel.Controls.Add(accessInfoTitleLabel);
+            accessInfoPanel.Controls.Add(accessInfoTextLabel);
+
+            vaultCodeLabel.Text = "Vault code / recovery key";
             vaultCodeLabel.ForeColor = Color.White;
             vaultCodeLabel.BackColor = Color.Transparent;
             vaultCodeLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             vaultCodeLabel.AutoSize = true;
             vaultCodeLabel.Left = 24;
-            vaultCodeLabel.Top = 92;
+            vaultCodeLabel.Top = 202;
 
             vaultCodeTextBox.Left = 24;
-            vaultCodeTextBox.Top = 114;
-            vaultCodeTextBox.Width = 390;
-            vaultCodeTextBox.Height = 26;
+            vaultCodeTextBox.Top = 224;
+            vaultCodeTextBox.Width = 425;
+            vaultCodeTextBox.Height = 28;
             vaultCodeTextBox.UseSystemPasswordChar = true;
-            vaultCodeTextBox.PlaceholderText = "Create a vault code";
+            vaultCodeTextBox.PlaceholderText = "Enter vault code or recovery key";
             vaultCodeTextBox.TextChanged += (s, e) => UpdateVaultCodeStrengthPreview();
 
             vaultCodeStrengthLabel.Text = "Vault code strength: Not checked yet";
             vaultCodeStrengthLabel.Left = 24;
-            vaultCodeStrengthLabel.Top = 142;
-            vaultCodeStrengthLabel.Width = 390;
-            vaultCodeStrengthLabel.Height = 32;
+            vaultCodeStrengthLabel.Top = 256;
+            vaultCodeStrengthLabel.Width = 450;
+            vaultCodeStrengthLabel.Height = 28;
             vaultCodeStrengthLabel.ForeColor = softTextColor;
             vaultCodeStrengthLabel.BackColor = Color.Transparent;
             vaultCodeStrengthLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
 
             vaultCodeStrengthTrack.Left = 24;
-            vaultCodeStrengthTrack.Top = 174;
-            vaultCodeStrengthTrack.Width = 390;
+            vaultCodeStrengthTrack.Top = 284;
+            vaultCodeStrengthTrack.Width = 425;
             vaultCodeStrengthTrack.Height = 7;
             vaultCodeStrengthTrack.BackColor = Color.FromArgb(35, 40, 60);
 
@@ -602,43 +642,43 @@ namespace exam_test
             confirmVaultCodeLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             confirmVaultCodeLabel.AutoSize = true;
             confirmVaultCodeLabel.Left = 24;
-            confirmVaultCodeLabel.Top = 195;
+            confirmVaultCodeLabel.Top = 300;
 
             confirmVaultCodeTextBox.Left = 24;
-            confirmVaultCodeTextBox.Top = 217;
-            confirmVaultCodeTextBox.Width = 390;
-            confirmVaultCodeTextBox.Height = 26;
+            confirmVaultCodeTextBox.Top = 322;
+            confirmVaultCodeTextBox.Width = 425;
+            confirmVaultCodeTextBox.Height = 28;
             confirmVaultCodeTextBox.UseSystemPasswordChar = true;
             confirmVaultCodeTextBox.PlaceholderText = "Repeat vault code";
 
             vaultUnlockStatusLabel.Text = "";
             vaultUnlockStatusLabel.Left = 24;
-            vaultUnlockStatusLabel.Top = 252;
-            vaultUnlockStatusLabel.Width = 400;
-            vaultUnlockStatusLabel.Height = 130;
+            vaultUnlockStatusLabel.Top = 370;
+            vaultUnlockStatusLabel.Width = 470;
+            vaultUnlockStatusLabel.Height = 70;
             vaultUnlockStatusLabel.ForeColor = softTextColor;
             vaultUnlockStatusLabel.BackColor = Color.FromArgb(20, 25, 42);
             vaultUnlockStatusLabel.BorderStyle = BorderStyle.FixedSingle;
-            vaultUnlockStatusLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
-            vaultUnlockStatusLabel.Padding = new Padding(8, 6, 8, 6);
+            vaultUnlockStatusLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+            vaultUnlockStatusLabel.Padding = new Padding(10, 8, 10, 8);
             vaultUnlockStatusLabel.Visible = false;
 
-            createVaultButton.Text = "Unlock Vault";
+            createVaultButton.Text = "Unlock vault";
             createVaultButton.Left = 24;
-            createVaultButton.Top = 305;
-            createVaultButton.Width = 120;
-            createVaultButton.Height = 32;
+            createVaultButton.Top = 430;
+            createVaultButton.Width = 135;
+            createVaultButton.Height = 36;
             createVaultButton.FlatStyle = FlatStyle.Flat;
             createVaultButton.ForeColor = Color.White;
             createVaultButton.BackColor = Color.FromArgb(45, 90, 160);
             createVaultButton.FlatAppearance.BorderColor = borderColor;
             createVaultButton.Click += CreateVaultButton_Click;
 
-            resetTestVaultButton.Text = "Reset Test Vault";
-            resetTestVaultButton.Left = 155;
-            resetTestVaultButton.Top = 305;
+            resetTestVaultButton.Text = "Developer reset";
+            resetTestVaultButton.Left = 174;
+            resetTestVaultButton.Top = 430;
             resetTestVaultButton.Width = 150;
-            resetTestVaultButton.Height = 32;
+            resetTestVaultButton.Height = 36;
             resetTestVaultButton.FlatStyle = FlatStyle.Flat;
             resetTestVaultButton.ForeColor = Color.White;
             resetTestVaultButton.BackColor = Color.FromArgb(120, 35, 45);
@@ -646,19 +686,26 @@ namespace exam_test
             resetTestVaultButton.Visible = false;
             resetTestVaultButton.Click += ResetTestVaultButton_Click;
 
-            importBackupAccessButton.Text = "Import Backup";
-            importBackupAccessButton.Left = 315;
-            importBackupAccessButton.Top = 305;
-            importBackupAccessButton.Width = 110;
-            importBackupAccessButton.Height = 32;
+            importBackupAccessButton.Text = "Restore Backup";
+            importBackupAccessButton.Left = 340;
+            importBackupAccessButton.Top = 430;
+            importBackupAccessButton.Width = 135;
+            importBackupAccessButton.Height = 36;
             importBackupAccessButton.FlatStyle = FlatStyle.Flat;
             importBackupAccessButton.ForeColor = Color.White;
             importBackupAccessButton.BackColor = Color.FromArgb(35, 40, 60);
             importBackupAccessButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
             importBackupAccessButton.Click += async (s, e) => await ImportEncryptedBackupAsync();
 
+            vaultToolTip.SetToolTip(vaultCodeTextBox, "Enter your vault code, or paste your recovery key if you forgot the code.");
+            vaultToolTip.SetToolTip(createVaultButton, "Unlock or create your encrypted vault.");
+            vaultToolTip.SetToolTip(importBackupAccessButton, "Restore from an encrypted QuickForge backup file.");
+            vaultToolTip.SetToolTip(resetTestVaultButton, "Only visible for the developer account. Deletes the QuickForge cloud vault for testing/reset recovery.");
+            vaultToolTip.SetToolTip(vaultUnlockStatusLabel, "This area explains lockout, recovery, and cloud-vault status.");
+
             vaultAccessPanel.Controls.Add(vaultAccessTitleLabel);
             vaultAccessPanel.Controls.Add(vaultAccessSubtitleLabel);
+            vaultAccessPanel.Controls.Add(accessInfoPanel);
             vaultAccessPanel.Controls.Add(vaultCodeLabel);
             vaultAccessPanel.Controls.Add(vaultCodeTextBox);
             vaultAccessPanel.Controls.Add(vaultCodeStrengthLabel);
@@ -869,8 +916,17 @@ namespace exam_test
             cancelEditButton.Visible = false;
             cancelEditButton.Click += CancelEditButton_Click;
 
+            Label savedAccountsHeaderLabel = new Label();
+            savedAccountsHeaderLabel.Text = "Saved accounts";
+            savedAccountsHeaderLabel.Left = 315;
+            savedAccountsHeaderLabel.Top = 64;
+            savedAccountsHeaderLabel.Width = 120;
+            savedAccountsHeaderLabel.Height = 20;
+            savedAccountsHeaderLabel.ForeColor = Color.White;
+            savedAccountsHeaderLabel.BackColor = Color.Transparent;
+            savedAccountsHeaderLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             vaultSearchTextBox.Left = 315;
-            vaultSearchTextBox.Top = 82;
+            vaultSearchTextBox.Top = 90;
             vaultSearchTextBox.Width = 310;
             vaultSearchTextBox.Height = 26;
             vaultSearchTextBox.PlaceholderText = "Search saved entries...";
@@ -880,22 +936,31 @@ namespace exam_test
             vaultSearchTextBox.TextChanged += (s, e) => RefreshVaultList();
 
             vaultListBox.Left = 315;
-            vaultListBox.Top = 114;
+            vaultListBox.Top = 124;
             vaultListBox.Width = 310;
-            vaultListBox.Height = 106;
+            vaultListBox.Height = 96;
             vaultListBox.BackColor = Color.FromArgb(24, 28, 44);
             vaultListBox.ForeColor = Color.White;
             vaultListBox.BorderStyle = BorderStyle.FixedSingle;
             vaultListBox.SelectedIndexChanged += VaultListBox_SelectedIndexChanged;
 
-            selectedPreviewLabel.Text = "Select an entry to preview it.";
+            Label selectedFeedbackHeaderLabel = new Label();
+            selectedFeedbackHeaderLabel.Text = "Selected account / feedback";
+            selectedFeedbackHeaderLabel.Left = 315;
+            selectedFeedbackHeaderLabel.Top = 230;
+            selectedFeedbackHeaderLabel.Width = 220;
+            selectedFeedbackHeaderLabel.Height = 20;
+            selectedFeedbackHeaderLabel.ForeColor = Color.White;
+            selectedFeedbackHeaderLabel.BackColor = Color.Transparent;
+            selectedFeedbackHeaderLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            selectedPreviewLabel.Text = "Select a saved account to see safe details and action feedback here.";
             selectedPreviewLabel.ForeColor = softTextColor;
             selectedPreviewLabel.BackColor = Color.FromArgb(24, 28, 44);
-            selectedPreviewLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+            selectedPreviewLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
             selectedPreviewLabel.Left = 315;
-            selectedPreviewLabel.Top = 228;
+            selectedPreviewLabel.Top = 252;
             selectedPreviewLabel.Width = 310;
-            selectedPreviewLabel.Height = 92;
+            selectedPreviewLabel.Height = 76;
             selectedPreviewLabel.Multiline = true;
             selectedPreviewLabel.ReadOnly = true;
             selectedPreviewLabel.ScrollBars = ScrollBars.Vertical;
@@ -971,8 +1036,10 @@ namespace exam_test
             vaultPanel.Controls.Add(clearButton);
             vaultPanel.Controls.Add(saveChangesButton);
             vaultPanel.Controls.Add(cancelEditButton);
+            vaultPanel.Controls.Add(savedAccountsHeaderLabel);
             vaultPanel.Controls.Add(vaultSearchTextBox);
             vaultPanel.Controls.Add(vaultListBox);
+            vaultPanel.Controls.Add(selectedFeedbackHeaderLabel);
             vaultPanel.Controls.Add(selectedPreviewLabel);
             vaultPanel.Controls.Add(revealButton);
             vaultPanel.Controls.Add(copySecretButton);
@@ -1068,7 +1135,7 @@ namespace exam_test
             securityCenterButton.ForeColor = Color.White;
             securityCenterButton.BackColor = Color.FromArgb(45, 90, 160);
             securityCenterButton.FlatAppearance.BorderColor = borderColor;
-            securityCenterButton.Click += (s, e) => ShowSecurityCenterDialog();
+            securityCenterButton.Click += async (s, e) => await OpenSecurityCenterWithRefreshAsync();
 
             backupButton.Text = "Backup";
             backupButton.Left = 430;
@@ -1111,6 +1178,16 @@ namespace exam_test
             manualSyncButton.FlatAppearance.BorderColor = borderColor;
             manualSyncButton.Click += ManualSyncButton_Click;
 
+            vaultToolTip.SetToolTip(vaultSearchTextBox, "Search by service, username, website, or note.");
+            vaultToolTip.SetToolTip(vaultListBox, "Select a saved account to preview it and use the action buttons.");
+            vaultToolTip.SetToolTip(selectedPreviewLabel, "This box shows safe details and action feedback. It will not reveal passwords unless you choose Reveal.");
+            vaultToolTip.SetToolTip(saveEntryButton, "Save this account to your encrypted vault.");
+            vaultToolTip.SetToolTip(createPasswordButton, "Generate a stronger password for this saved account.");
+            vaultToolTip.SetToolTip(openAndFillButton, "Open the saved website and fill the selected username/password when possible.");
+            vaultToolTip.SetToolTip(securityCenterButton, "Open Security Center to check vault health, devices, backups, and password issues.");
+            vaultToolTip.SetToolTip(backupButton, "Create or restore encrypted QuickForge backup files.");
+            vaultToolTip.SetToolTip(refreshCloudButton, "Load the latest encrypted vault and device trust status from Google Drive.");
+            vaultToolTip.SetToolTip(manualSyncButton, "Save local changes to Google Drive now.");
             vaultPanel.Controls.Add(securitySettingsLabel);
             vaultPanel.Controls.Add(recoveryReminderLabel);
             vaultPanel.Controls.Add(recoveryReminderComboBox);
@@ -1120,7 +1197,7 @@ namespace exam_test
             vaultPanel.Controls.Add(refreshCloudButton);
             vaultPanel.Controls.Add(manualSyncButton);
 
-            performanceSettingsLabel.Text = "Performance & safety";
+            performanceSettingsLabel.Text = "Performance and safety";
             performanceSettingsLabel.Left = 20;
             performanceSettingsLabel.Top = 445;
             performanceSettingsLabel.Width = 200;
@@ -1498,29 +1575,53 @@ namespace exam_test
         {
             unlockStatusTimer.Stop();
 
-            vaultAccessTitleLabel.Text = "Create Vault Code";
+            vaultAccessPanel.Height = 560;
+
+            vaultAccessTitleLabel.Text = "Set up or restore vault";
+            vaultAccessTitleLabel.Top = 20;
+
             vaultAccessSubtitleLabel.Text =
-                "First-time setup for " + GetConnectedGoogleEmailDisplay() + "." + Environment.NewLine +
-                "This vault is tied to this Google account.";
+                "No encrypted cloud vault was found for " + GetConnectedGoogleEmailDisplay() + "." + Environment.NewLine +
+                "Create a new vault, or restore an encrypted backup if you already have one.";
+            vaultAccessSubtitleLabel.Top = 58;
+
             vaultCodeLabel.Text = "Create vault code";
+            vaultCodeLabel.Top = 190;
+
             vaultCodeTextBox.PlaceholderText = "Create a vault code";
+            vaultCodeTextBox.Top = 212;
+
+            vaultCodeStrengthLabel.Top = 244;
+            vaultCodeStrengthTrack.Top = 274;
 
             confirmVaultCodeLabel.Visible = true;
+            confirmVaultCodeLabel.Top = 300;
+
             confirmVaultCodeTextBox.Visible = true;
+            confirmVaultCodeTextBox.Top = 322;
 
             if (vaultCodeVisibilityButton != null)
             {
                 vaultCodeVisibilityButton.Visible = true;
+                vaultCodeVisibilityButton.Top = vaultCodeTextBox.Top;
             }
 
             if (confirmVaultCodeVisibilityButton != null)
             {
                 confirmVaultCodeVisibilityButton.Visible = true;
+                confirmVaultCodeVisibilityButton.Top = confirmVaultCodeTextBox.Top;
             }
 
-            vaultUnlockStatusLabel.Visible = false;
-            SetVaultAccessButtonRowTop(255);
-            createVaultButton.Text = "Create Vault";
+            vaultUnlockStatusLabel.Visible = true;
+            vaultUnlockStatusLabel.Top = 370;
+            vaultUnlockStatusLabel.Height = 70;
+            vaultUnlockStatusLabel.Text =
+                "No cloud vault was found." + Environment.NewLine +
+                "Create a new vault, or restore an encrypted backup if you already have one.";
+            vaultUnlockStatusLabel.ForeColor = Color.FromArgb(255, 190, 90);
+
+            SetVaultAccessButtonRowTop(465);
+            createVaultButton.Text = "Create vault";
 
             vaultCodeTextBox.Clear();
             confirmVaultCodeTextBox.Clear();
@@ -1531,30 +1632,50 @@ namespace exam_test
         }
         private void ConfigureVaultAccessForUnlock()
         {
-            vaultAccessTitleLabel.Text = "Unlock Vault";
+            vaultAccessPanel.Height = 505;
+
+            vaultAccessTitleLabel.Text = "Unlock your vault";
+            vaultAccessTitleLabel.Top = 22;
+
             vaultAccessSubtitleLabel.Text =
                 "Vault for " + GetConnectedGoogleEmailDisplay() + "." + Environment.NewLine +
-                "Enter your vault code or recovery key.";
+                "Enter your vault code or recovery key to continue.";
+            vaultAccessSubtitleLabel.Top = 60;
+
             vaultCodeLabel.Text = "Vault code / recovery key";
+            vaultCodeLabel.Top = 202;
+
             vaultCodeTextBox.PlaceholderText = "Enter vault code or recovery key";
+            vaultCodeTextBox.Top = 224;
+
+            vaultCodeStrengthLabel.Top = 256;
+            vaultCodeStrengthTrack.Top = 284;
 
             confirmVaultCodeLabel.Visible = false;
+            confirmVaultCodeLabel.Top = 300;
+
             confirmVaultCodeTextBox.Visible = false;
+            confirmVaultCodeTextBox.Top = 322;
 
             if (vaultCodeVisibilityButton != null)
             {
                 vaultCodeVisibilityButton.Visible = true;
+                vaultCodeVisibilityButton.Top = vaultCodeTextBox.Top;
             }
 
             if (confirmVaultCodeVisibilityButton != null)
             {
                 confirmVaultCodeVisibilityButton.Visible = false;
+                confirmVaultCodeVisibilityButton.Top = confirmVaultCodeTextBox.Top;
             }
 
-            SetVaultAccessButtonRowTop(390);
+            vaultUnlockStatusLabel.Top = 300;
+            vaultUnlockStatusLabel.Height = 105;
+
+            SetVaultAccessButtonRowTop(430);
             UpdateVaultUnlockStatusLabel();
             unlockStatusTimer.Start();
-            createVaultButton.Text = "Unlock Vault";
+            createVaultButton.Text = "Unlock vault";
 
             vaultCodeTextBox.Clear();
             confirmVaultCodeTextBox.Clear();
@@ -1564,16 +1685,21 @@ namespace exam_test
         }
         private void UpdateDeveloperTestControls()
         {
-#if DEBUG
-            resetTestVaultButton.Visible =
+            bool isDeveloperAccount =
+                currentDriveService != null &&
                 string.Equals(
                     connectedGoogleEmail,
                     "patrickolsen4@gmail.com",
                     StringComparison.OrdinalIgnoreCase
                 );
-#else
-            resetTestVaultButton.Visible = false;
-#endif
+
+            resetTestVaultButton.Visible = isDeveloperAccount;
+            resetTestVaultButton.Enabled = isDeveloperAccount;
+
+            if (isDeveloperAccount)
+            {
+                resetTestVaultButton.Text = "Developer reset";
+            }
         }
         private void UpdateVaultCodeStrengthPreview()
         {
@@ -1996,7 +2122,7 @@ namespace exam_test
 
             if (string.IsNullOrWhiteSpace(encryptedJson))
             {
-                throw new InvalidOperationException("No encrypted vault was found.");
+                throw new InvalidOperationException("Cloud vault missing. Restore from encrypted backup or create a new vault.");
             }
 
             VaultUnlockAttemptState attemptState =
@@ -3118,6 +3244,27 @@ namespace exam_test
             return isNewDevice;
         }
 
+
+        private void SyncDeviceTrustRegistrationAfterUnlockIfNeeded(bool deviceTrustChanged)
+        {
+            if (!deviceTrustChanged ||
+                currentDriveService == null ||
+                currentDataKey == null ||
+                currentEncryptedVaultFile == null)
+            {
+                return;
+            }
+
+            SetSyncStatus("Device Trust sync pending");
+
+            SetPreviewText(
+                "Device Trust updated.",
+                "This device was added to the vault device list.",
+                "QuickForge is syncing this so trusted PCs can review it."
+            );
+
+            QueueBackgroundVaultSync("Device Trust registration updated: " + localDeviceName);
+        }
         private void AddSafetyTimelineEvent(string action, string detail)
         {
             EnsureLocalDeviceIdentity();
@@ -3235,6 +3382,9 @@ namespace exam_test
             List<string> good = new List<string>();
             List<string> warnings = new List<string>();
 
+            int untrustedKnownDevices = currentVaultSettings.KnownDevices
+                .Count(device => !device.IsHiddenFromTrustList && !device.IsTrusted && device.DeviceId != localDeviceId);
+
             bool backupRecent =
                 currentVaultSettings.LastBackupAtUtc.HasValue &&
                 (DateTime.UtcNow - currentVaultSettings.LastBackupAtUtc.Value).TotalDays <= 7;
@@ -3269,6 +3419,11 @@ namespace exam_test
             {
                 warnings.Add("New device detected this session: " + newDeviceDetectedName);
                 score -= 15;
+            }
+            else if (untrustedKnownDevices > 0)
+            {
+                warnings.Add(untrustedKnownDevices + " untrusted device(s) need review");
+                score -= Math.Min(20, untrustedKnownDevices * 10);
             }
             else
             {
@@ -3451,7 +3606,7 @@ namespace exam_test
 
             if (string.IsNullOrWhiteSpace(encryptedJson))
             {
-                throw new InvalidOperationException("No encrypted vault was found.");
+                throw new InvalidOperationException("Cloud vault missing. Restore from encrypted backup or create a new vault.");
             }
 
             VaultData vaultData;
@@ -3628,56 +3783,520 @@ namespace exam_test
         {
             LockVaultForSafety("Vault locked.");
         }
+        private (bool Confirmed, string CurrentCode, string NewCode) ShowChangeVaultCodeDialog()
+        {
+            bool confirmed = false;
+            string currentCode = "";
+            string newCode = "";
+            string copiedNewCode = "";
+
+            int CalculateVaultCodeScore(string code)
+            {
+                if (string.IsNullOrWhiteSpace(code))
+                {
+                    return 0;
+                }
+
+                int score = 0;
+
+                if (code.Length >= 12) score += 25;
+                if (code.Length >= 16) score += 10;
+                if (code.Any(char.IsLower)) score += 10;
+                if (code.Any(char.IsUpper)) score += 15;
+                if (code.Any(char.IsDigit)) score += 15;
+                if (code.Any(ch => !char.IsLetterOrDigit(ch))) score += 20;
+                if (code.Distinct().Count() >= Math.Min(8, code.Length)) score += 5;
+
+                return Math.Max(0, Math.Min(100, score));
+            }
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 720;
+                dialog.Height = 675;
+                dialog.Text = "Change vault code";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Change vault code";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 640;
+                titleLabel.Height = 34;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "Choose a stronger vault code. Your encrypted vault will be saved to Google Drive after the change.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 650;
+                subtitleLabel.Height = 42;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+
+                Panel inputPanel = new Panel();
+                inputPanel.Left = 24;
+                inputPanel.Top = 115;
+                inputPanel.Width = 660;
+                inputPanel.Height = 245;
+                inputPanel.BackColor = Color.FromArgb(24, 28, 44);
+                inputPanel.BorderStyle = BorderStyle.FixedSingle;
+                Button CreateEyeButton(TextBox targetTextBox, int left, int top, string tooltip)
+                {
+                    Button eyeButton = new Button();
+                    eyeButton.Text = "\U0001F441";
+                    eyeButton.Left = left;
+                    eyeButton.Top = top;
+                    eyeButton.Width = 34;
+                    eyeButton.Height = 28;
+                    eyeButton.FlatStyle = FlatStyle.Flat;
+                    eyeButton.ForeColor = Color.White;
+                    eyeButton.BackColor = Color.FromArgb(35, 40, 60);
+                    eyeButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
+                    eyeButton.TabStop = false;
+
+                    vaultToolTip.SetToolTip(eyeButton, tooltip);
+
+                    eyeButton.Click += (s, e) =>
+                    {
+                        targetTextBox.UseSystemPasswordChar = !targetTextBox.UseSystemPasswordChar;
+                        eyeButton.Text = targetTextBox.UseSystemPasswordChar ? "\U0001F441" : "\U0001F648";
+                    };
+
+                    return eyeButton;
+                }
+
+                Label currentCodeLabel = new Label();
+                currentCodeLabel.Text = "Current vault code or recovery key";
+                currentCodeLabel.Left = 16;
+                currentCodeLabel.Top = 14;
+                currentCodeLabel.Width = 600;
+                currentCodeLabel.Height = 22;
+                currentCodeLabel.ForeColor = Color.White;
+                currentCodeLabel.BackColor = Color.Transparent;
+                currentCodeLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                TextBox currentCodeTextBox = new TextBox();
+                currentCodeTextBox.Left = 16;
+                currentCodeTextBox.Top = 38;
+                currentCodeTextBox.Width = 585;
+                currentCodeTextBox.Height = 28;
+                currentCodeTextBox.UseSystemPasswordChar = true;
+                currentCodeTextBox.PlaceholderText = "Enter current vault code or recovery key";
+
+                Button currentEyeButton = CreateEyeButton(
+                    currentCodeTextBox,
+                    610,
+                    currentCodeTextBox.Top,
+                    "Show or hide the current vault code/recovery key."
+                );
+
+                Label newCodeLabel = new Label();
+                newCodeLabel.Text = "New vault code";
+                newCodeLabel.Left = 16;
+                newCodeLabel.Top = 82;
+                newCodeLabel.Width = 600;
+                newCodeLabel.Height = 22;
+                newCodeLabel.ForeColor = Color.White;
+                newCodeLabel.BackColor = Color.Transparent;
+                newCodeLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                TextBox newCodeTextBox = new TextBox();
+                newCodeTextBox.Left = 16;
+                newCodeTextBox.Top = 106;
+                newCodeTextBox.Width = 585;
+                newCodeTextBox.Height = 28;
+                newCodeTextBox.UseSystemPasswordChar = true;
+                newCodeTextBox.PlaceholderText = "Example style: River-Forge-72#Moon";
+
+                Button newEyeButton = CreateEyeButton(
+                    newCodeTextBox,
+                    610,
+                    newCodeTextBox.Top,
+                    "Show or hide the new vault code."
+                );
+
+                Label strengthLabel = new Label();
+                strengthLabel.Text = "Strength: Not checked yet";
+                strengthLabel.Left = 16;
+                strengthLabel.Top = 138;
+                strengthLabel.Width = 620;
+                strengthLabel.Height = 22;
+                strengthLabel.ForeColor = softTextColor;
+                strengthLabel.BackColor = Color.Transparent;
+                strengthLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+                Panel strengthTrack = new Panel();
+                strengthTrack.Left = 16;
+                strengthTrack.Top = 162;
+                strengthTrack.Width = 620;
+                strengthTrack.Height = 7;
+                strengthTrack.BackColor = Color.FromArgb(35, 40, 60);
+
+                Panel strengthFill = new Panel();
+                strengthFill.Left = 0;
+                strengthFill.Top = 0;
+                strengthFill.Width = 0;
+                strengthFill.Height = 7;
+                strengthFill.BackColor = softTextColor;
+
+                strengthTrack.Controls.Add(strengthFill);
+
+                Label confirmCodeLabel = new Label();
+                confirmCodeLabel.Text = "Confirm new vault code";
+                confirmCodeLabel.Left = 16;
+                confirmCodeLabel.Top = 180;
+                confirmCodeLabel.Width = 600;
+                confirmCodeLabel.Height = 22;
+                confirmCodeLabel.ForeColor = Color.White;
+                confirmCodeLabel.BackColor = Color.Transparent;
+                confirmCodeLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                TextBox confirmCodeTextBox = new TextBox();
+                confirmCodeTextBox.Left = 16;
+                confirmCodeTextBox.Top = 204;
+                confirmCodeTextBox.Width = 585;
+                confirmCodeTextBox.Height = 28;
+                confirmCodeTextBox.UseSystemPasswordChar = true;
+                confirmCodeTextBox.PlaceholderText = "Repeat new vault code";
+
+                Button confirmEyeButton = CreateEyeButton(
+                    confirmCodeTextBox,
+                    610,
+                    confirmCodeTextBox.Top,
+                    "Show or hide the repeated new vault code."
+                );
+
+                inputPanel.Controls.Add(currentCodeLabel);
+                inputPanel.Controls.Add(currentCodeTextBox);
+                inputPanel.Controls.Add(currentEyeButton);
+                inputPanel.Controls.Add(newCodeLabel);
+                inputPanel.Controls.Add(newCodeTextBox);
+                inputPanel.Controls.Add(newEyeButton);
+                inputPanel.Controls.Add(strengthLabel);
+                inputPanel.Controls.Add(strengthTrack);
+                inputPanel.Controls.Add(confirmCodeLabel);
+                inputPanel.Controls.Add(confirmCodeTextBox);
+                inputPanel.Controls.Add(confirmEyeButton);
+
+                Panel warningPanel = new Panel();
+                warningPanel.Left = 24;
+                warningPanel.Top = 380;
+                warningPanel.Width = 660;
+                warningPanel.Height = 92;
+                warningPanel.BackColor = Color.FromArgb(36, 30, 30);
+                warningPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label warningTitle = new Label();
+                warningTitle.Text = "Before you change it";
+                warningTitle.Left = 14;
+                warningTitle.Top = 10;
+                warningTitle.Width = 620;
+                warningTitle.Height = 22;
+                warningTitle.ForeColor = Color.FromArgb(255, 190, 90);
+                warningTitle.BackColor = Color.Transparent;
+                warningTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label warningText = new Label();
+                warningText.Text =
+                    "After this, your old vault code will stop working." + Environment.NewLine +
+                    "Copy the new vault code first, then store it safely with your recovery key.";
+                warningText.Left = 14;
+                warningText.Top = 36;
+                warningText.Width = 620;
+                warningText.Height = 45;
+                warningText.ForeColor = softTextColor;
+                warningText.BackColor = Color.Transparent;
+                warningText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                warningPanel.Controls.Add(warningTitle);
+                warningPanel.Controls.Add(warningText);
+                Button copyNewCodeButton = new Button();
+                copyNewCodeButton.Text = "Copy new code";
+                copyNewCodeButton.Left = 24;
+                copyNewCodeButton.Top = 495;
+                copyNewCodeButton.Width = 135;
+                copyNewCodeButton.Height = 34;
+                copyNewCodeButton.Enabled = false;
+                StyleActionButton(copyNewCodeButton, true);
+                vaultToolTip.SetToolTip(copyNewCodeButton, "Copy the new vault code before changing it. Clipboard clears after 60 seconds.");
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "Enter your current code and choose a strong new vault code.";
+                statusLabel.Left = 175;
+                statusLabel.Top = 492;
+                statusLabel.Width = 505;
+                statusLabel.Height = 42;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+                statusLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 455;
+                cancelButton.Top = 575;
+                cancelButton.Width = 100;
+                cancelButton.Height = 34;
+                cancelButton.DialogResult = DialogResult.Cancel;
+                StyleActionButton(cancelButton);
+
+                Button confirmButton = new Button();
+                confirmButton.Text = "Change code";
+                confirmButton.Left = 570;
+                confirmButton.Top = 575;
+                confirmButton.Width = 110;
+                confirmButton.Height = 34;
+                confirmButton.Enabled = false;
+                StyleActionButton(confirmButton, true);
+
+                void UpdateState()
+                {
+                    string current = currentCodeTextBox.Text.Trim();
+                    string next = newCodeTextBox.Text.Trim();
+                    string confirm = confirmCodeTextBox.Text.Trim();
+
+                    int score = CalculateVaultCodeScore(next);
+                    strengthFill.Width = (int)(strengthTrack.Width * (score / 100.0));
+
+                    bool strong = VaultCodePolicy.IsStrongEnough(next, out string warning);
+                    bool matches = !string.IsNullOrWhiteSpace(next) && next == confirm;
+                    bool copiedCurrentCode = copiedNewCode == next;
+
+                    if (!copiedCurrentCode && !string.IsNullOrWhiteSpace(copiedNewCode))
+                    {
+                        copiedNewCode = "";
+                        copyNewCodeButton.Text = "Copy new code";
+                    }
+
+                    if (string.IsNullOrWhiteSpace(next))
+                    {
+                        strengthLabel.Text = "Strength: Not checked yet";
+                        strengthLabel.ForeColor = softTextColor;
+                        strengthFill.BackColor = softTextColor;
+                    }
+                    else if (!strong)
+                    {
+                        strengthLabel.Text = "Strength: Weak - " + warning;
+                        strengthLabel.ForeColor = dangerColor;
+                        strengthFill.BackColor = dangerColor;
+                    }
+                    else if (score >= 85)
+                    {
+                        strengthLabel.Text = "Strength: Strong";
+                        strengthLabel.ForeColor = successColor;
+                        strengthFill.BackColor = successColor;
+                    }
+                    else
+                    {
+                        strengthLabel.Text = "Strength: Good - longer is safer";
+                        strengthLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                        strengthFill.BackColor = Color.FromArgb(255, 190, 90);
+                    }
+
+                    copyNewCodeButton.Enabled = strong && matches;
+
+                    if (string.IsNullOrWhiteSpace(current))
+                    {
+                        statusLabel.Text = "Enter your current vault code or recovery key.";
+                        statusLabel.ForeColor = softTextColor;
+                        confirmButton.Enabled = false;
+                        return;
+                    }
+
+                    if (!strong)
+                    {
+                        statusLabel.Text = "Choose a stronger new vault code.";
+                        statusLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                        confirmButton.Enabled = false;
+                        return;
+                    }
+
+                    if (!matches)
+                    {
+                        statusLabel.Text = "New vault codes do not match yet.";
+                        statusLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                        confirmButton.Enabled = false;
+                        return;
+                    }
+
+                    if (!copiedCurrentCode)
+                    {
+                        statusLabel.Text = "Copy the new vault code before changing it.";
+                        statusLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                        confirmButton.Enabled = false;
+                        return;
+                    }
+
+                    statusLabel.Text = "Ready. QuickForge will sync the new vault code after confirmation.";
+                    statusLabel.ForeColor = successColor;
+                    confirmButton.Enabled = true;
+                }
+
+                currentCodeTextBox.TextChanged += (s, e) => UpdateState();
+                newCodeTextBox.TextChanged += (s, e) => UpdateState();
+                confirmCodeTextBox.TextChanged += (s, e) => UpdateState();
+
+                
+                copyNewCodeButton.Click += (s, e) =>
+                {
+                    string next = newCodeTextBox.Text.Trim();
+                    string confirm = confirmCodeTextBox.Text.Trim();
+
+                    if (!VaultCodePolicy.IsStrongEnough(next, out string warning))
+                    {
+                        statusLabel.Text = "New vault code is too weak: " + warning;
+                        statusLabel.ForeColor = dangerColor;
+                        return;
+                    }
+
+                    if (next != confirm)
+                    {
+                        statusLabel.Text = "New vault codes do not match yet.";
+                        statusLabel.ForeColor = dangerColor;
+                        return;
+                    }
+
+                    Clipboard.SetText(next);
+                    copiedNewCode = next;
+                    copyNewCodeButton.Text = "Copied";
+                    statusLabel.Text = "Copied. Store it safely. Clipboard clears in 60 seconds.";
+                    statusLabel.ForeColor = successColor;
+                    _ = ClearClipboardLaterAsync(next, 60000);
+                    UpdateState();
+                };
+                confirmButton.Click += (s, e) =>
+                {
+                    string next = newCodeTextBox.Text.Trim();
+
+                    if (copiedNewCode != next)
+                    {
+                        statusLabel.Text = "Copy the new vault code before changing it.";
+                        statusLabel.ForeColor = dangerColor;
+                        return;
+                    }
+                    if (!VaultCodePolicy.IsStrongEnough(newCodeTextBox.Text.Trim(), out string warning))
+                    {
+                        statusLabel.Text = "New vault code is too weak: " + warning;
+                        statusLabel.ForeColor = dangerColor;
+                        return;
+                    }
+
+                    if (newCodeTextBox.Text.Trim() != confirmCodeTextBox.Text.Trim())
+                    {
+                        statusLabel.Text = "New vault codes do not match.";
+                        statusLabel.ForeColor = dangerColor;
+                        return;
+                    }
+
+                    if (currentEncryptedVaultFile == null ||
+                        !VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, currentCodeTextBox.Text.Trim()))
+                    {
+                        statusLabel.Text = "Current vault code or recovery key is wrong.";
+                        statusLabel.ForeColor = dangerColor;
+                        return;
+                    }
+
+                    confirmed = true;
+                    currentCode = currentCodeTextBox.Text.Trim();
+                    newCode = next;
+
+                    currentCodeTextBox.Clear();
+                    newCodeTextBox.Clear();
+                    confirmCodeTextBox.Clear();
+
+                    dialog.DialogResult = DialogResult.OK;
+                    dialog.Close();
+                };
+
+                cancelButton.Click += (s, e) =>
+                {
+                    confirmed = false;
+
+                    currentCodeTextBox.Clear();
+                    newCodeTextBox.Clear();
+                    confirmCodeTextBox.Clear();
+
+                    dialog.DialogResult = DialogResult.Cancel;
+                    dialog.Close();
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(inputPanel);
+                dialog.Controls.Add(warningPanel);
+                dialog.Controls.Add(copyNewCodeButton);
+                dialog.Controls.Add(statusLabel);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(confirmButton);
+
+                dialog.AcceptButton = confirmButton;
+                dialog.CancelButton = cancelButton;
+
+                UpdateState();
+                dialog.ShowDialog(this);
+            }
+
+            return (confirmed, currentCode, newCode);
+        }
+
         private async void ChangeVaultCodeButton_Click(object? sender, EventArgs e)
         {
-            
             if (!RequireTrustedDeviceForSensitiveAction("Change vault code"))
             {
                 return;
             }
-if (currentDriveService == null)
+
+            if (currentDriveService == null)
             {
-                MessageBox.Show("Google Drive is not connected.");
+                MessageBox.Show(
+                    "Google Drive is not connected. Log in with Google before changing your vault code.",
+                    "Google Drive not connected",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
                 return;
             }
 
             if (currentDataKey == null || currentEncryptedVaultFile == null)
             {
-                MessageBox.Show("Unlock the vault first.");
+                MessageBox.Show(
+                    "Unlock your vault before changing the vault code.",
+                    "Vault locked",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
                 return;
             }
 
-            string? oldCode = ShowPasswordPrompt("Change Vault Code","Enter your current vault code or recovery key:");
+            var changeRequest = ShowChangeVaultCodeDialog();
 
-            if (
-                oldCode == null ||
-                currentEncryptedVaultFile == null ||
-                !VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, oldCode)
-            )
+            if (!changeRequest.Confirmed)
             {
-                MessageBox.Show("Wrong vault code or recovery key.");
+                selectedPreviewLabel.Text = "Vault code change cancelled.";
                 return;
             }
 
-            string? newCode = ShowPasswordPrompt("Change Vault Code", "Enter new vault code:");
-
-            if (string.IsNullOrWhiteSpace(newCode))
+            if (!VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, changeRequest.CurrentCode))
             {
-                MessageBox.Show("New vault code cannot be empty.");
+                MessageBox.Show(
+                    "Current vault code or recovery key is wrong.",
+                    "Change vault code blocked",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
                 return;
             }
 
-            if (!VaultCodePolicy.IsStrongEnough(newCode, out string vaultCodeWarning))
+            if (!VaultCodePolicy.IsStrongEnough(changeRequest.NewCode, out string vaultCodeWarning))
             {
                 ShowVaultCodeStrengthMessage(vaultCodeWarning);
-                return;
-            }
-
-            string? confirmNewCode = ShowPasswordPrompt("Change Vault Code", "Confirm new vault code:");
-
-            if (newCode != confirmNewCode)
-            {
-                MessageBox.Show("New vault codes do not match.");
                 return;
             }
 
@@ -3686,19 +4305,33 @@ if (currentDriveService == null)
                 VaultCryptoService.ChangeVaultCode(
                     currentEncryptedVaultFile,
                     currentDataKey,
-                    newCode
+                    changeRequest.NewCode
                 );
 
-                vaultCode = newCode;
+                vaultCode = changeRequest.NewCode;
 
                 await SaveCurrentVaultToCloudAsync();
 
-                selectedPreviewLabel.Text = "Vault code changed and synced.";
-                MessageBox.Show("Vault code changed successfully.");
+                selectedPreviewLabel.Text =
+                    "Vault code changed and synced." + Environment.NewLine +
+                    "Your old vault code will no longer unlock this vault.";
+
+                MessageBox.Show(
+                    "Vault code changed successfully." + Environment.NewLine + Environment.NewLine +
+                    "Use the new vault code next time you unlock QuickForge.",
+                    "Vault code changed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Could not change vault code: " + ex.Message);
+                MessageBox.Show(
+                    "Could not change vault code: " + ex.Message,
+                    "Change vault code failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
             }
         }
 
@@ -3748,24 +4381,204 @@ if (currentDriveService == null)
                 return true;
             }
 
+            bool confirmed = false;
+
             string currentAccountText = string.IsNullOrWhiteSpace(connectedGoogleEmail)
-                ? "Unknown"
+                ? "Unknown Google account"
                 : connectedGoogleEmail;
 
-            DialogResult result = MessageBox.Show(
-                "You are about to log out or switch Google accounts." + Environment.NewLine + Environment.NewLine +
-                "Current account: " + currentAccountText + Environment.NewLine + Environment.NewLine +
-                "- Your current vault will be locked." + Environment.NewLine +
-                "- QuickForge vaults are isolated per Google account." + Environment.NewLine +
-                "- A different Google account will show a different vault." + Environment.NewLine +
-                "- Use Sync now before switching if you recently changed anything." + Environment.NewLine + Environment.NewLine +
-                "Continue?",
-                "Before switching accounts",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning
-            );
+            bool syncPending = HasPendingBackgroundVaultSync();
 
-            return result == DialogResult.Yes;
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 690;
+                dialog.Height = 525;
+                dialog.Text = "Log out";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Log out from this account?";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 630;
+                titleLabel.Height = 34;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "QuickForge will lock this vault and sign out from the current Google account.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 630;
+                subtitleLabel.Height = 32;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+
+                Panel accountPanel = new Panel();
+                accountPanel.Left = 24;
+                accountPanel.Top = 105;
+                accountPanel.Width = 630;
+                accountPanel.Height = 82;
+                accountPanel.BackColor = Color.FromArgb(24, 28, 44);
+                accountPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label accountTitleLabel = new Label();
+                accountTitleLabel.Text = "Current Google account";
+                accountTitleLabel.Left = 14;
+                accountTitleLabel.Top = 10;
+                accountTitleLabel.Width = 590;
+                accountTitleLabel.Height = 22;
+                accountTitleLabel.ForeColor = Color.White;
+                accountTitleLabel.BackColor = Color.Transparent;
+                accountTitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label accountTextLabel = new Label();
+                accountTextLabel.Text = currentAccountText;
+                accountTextLabel.Left = 14;
+                accountTextLabel.Top = 38;
+                accountTextLabel.Width = 590;
+                accountTextLabel.Height = 26;
+                accountTextLabel.ForeColor = successColor;
+                accountTextLabel.BackColor = Color.Transparent;
+                accountTextLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                accountPanel.Controls.Add(accountTitleLabel);
+                accountPanel.Controls.Add(accountTextLabel);
+
+                Panel infoPanel = new Panel();
+                infoPanel.Left = 24;
+                infoPanel.Top = 205;
+                infoPanel.Width = 630;
+                infoPanel.Height = 112;
+                infoPanel.BackColor = Color.FromArgb(20, 25, 42);
+                infoPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label infoTitleLabel = new Label();
+                infoTitleLabel.Text = "What happens after logout";
+                infoTitleLabel.Left = 14;
+                infoTitleLabel.Top = 10;
+                infoTitleLabel.Width = 590;
+                infoTitleLabel.Height = 22;
+                infoTitleLabel.ForeColor = Color.White;
+                infoTitleLabel.BackColor = Color.Transparent;
+                infoTitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label infoTextLabel = new Label();
+                infoTextLabel.Text =
+                    "- Your current vault will be locked." + Environment.NewLine +
+                    "- This Google account will be signed out locally." + Environment.NewLine +
+                    "- To use another Google account, log in again after logout.";
+                infoTextLabel.Left = 14;
+                infoTextLabel.Top = 36;
+                infoTextLabel.Width = 590;
+                infoTextLabel.Height = 65;
+                infoTextLabel.ForeColor = softTextColor;
+                infoTextLabel.BackColor = Color.Transparent;
+                infoTextLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                infoPanel.Controls.Add(infoTitleLabel);
+                infoPanel.Controls.Add(infoTextLabel);
+
+                Panel syncPanel = new Panel();
+                syncPanel.Left = 24;
+                syncPanel.Top = 335;
+                syncPanel.Width = 630;
+                syncPanel.Height = 60;
+                syncPanel.BackColor = syncPending
+                    ? Color.FromArgb(36, 30, 30)
+                    : Color.FromArgb(20, 30, 25);
+                syncPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label syncTextLabel = new Label();
+                syncTextLabel.Text = syncPending
+                    ? "Sync warning: local changes may still be uploading. Cancel and wait for Sync Active if you recently changed anything."
+                    : "Sync looks safe. No pending background sync was detected.";
+                syncTextLabel.Left = 14;
+                syncTextLabel.Top = 10;
+                syncTextLabel.Width = 590;
+                syncTextLabel.Height = 38;
+                syncTextLabel.ForeColor = syncPending
+                    ? Color.FromArgb(255, 190, 90)
+                    : successColor;
+                syncTextLabel.BackColor = Color.Transparent;
+                syncTextLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                syncPanel.Controls.Add(syncTextLabel);
+
+                CheckBox confirmCheckBox = new CheckBox();
+                confirmCheckBox.Text = "I understand. Lock this vault and log out.";
+                confirmCheckBox.Left = 24;
+                confirmCheckBox.Top = 445;
+                confirmCheckBox.Width = 380;
+                confirmCheckBox.Height = 28;
+                confirmCheckBox.ForeColor = softTextColor;
+                confirmCheckBox.BackColor = Color.Transparent;
+                confirmCheckBox.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 455;
+                cancelButton.Top = 445;
+                cancelButton.Width = 95;
+                cancelButton.Height = 34;
+                cancelButton.DialogResult = DialogResult.Cancel;
+                StyleActionButton(cancelButton);
+
+                Button continueButton = new Button();
+                continueButton.Text = "Log out";
+                continueButton.Left = 565;
+                continueButton.Top = 445;
+                continueButton.Width = 95;
+                continueButton.Height = 34;
+                continueButton.Enabled = false;
+                StyleActionButton(continueButton, true);
+
+                confirmCheckBox.CheckedChanged += (s, e) =>
+                {
+                    continueButton.Enabled = confirmCheckBox.Checked;
+                };
+
+                continueButton.Click += (s, e) =>
+                {
+                    if (!confirmCheckBox.Checked)
+                    {
+                        return;
+                    }
+
+                    confirmed = true;
+                    dialog.DialogResult = DialogResult.OK;
+                    dialog.Close();
+                };
+
+                cancelButton.Click += (s, e) =>
+                {
+                    confirmed = false;
+                    dialog.DialogResult = DialogResult.Cancel;
+                    dialog.Close();
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(accountPanel);
+                dialog.Controls.Add(infoPanel);
+                dialog.Controls.Add(syncPanel);
+                dialog.Controls.Add(confirmCheckBox);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(continueButton);
+
+                dialog.AcceptButton = continueButton;
+                dialog.CancelButton = cancelButton;
+
+                dialog.ShowDialog(this);
+            }
+
+            return confirmed;
         }
 
         private void LogoutButton_Click(object? sender, EventArgs e)
@@ -3822,11 +4635,14 @@ if (currentDriveService == null)
             }
 
             DialogResult firstConfirm = MessageBox.Show(
-                "This will delete the QuickForge test vault for:" + Environment.NewLine + Environment.NewLine +
+                "Developer reset for:" + Environment.NewLine + Environment.NewLine +
                 connectedGoogleEmail + Environment.NewLine + Environment.NewLine +
-                "This only deletes the encrypted QuickForge vault file in Google Drive app data. It does not delete your Google account." + Environment.NewLine + Environment.NewLine +
+                "This deletes the encrypted QuickForge cloud vault from Google Drive appDataFolder." + Environment.NewLine +
+                "It does NOT delete your Google account." + Environment.NewLine +
+                "It does NOT delete local Windows files outside QuickForge." + Environment.NewLine + Environment.NewLine +
+                "Use this only for testing, recovery from a broken beta vault, or starting clean." + Environment.NewLine + Environment.NewLine +
                 "Continue?",
-                "Reset test vault",
+                "Developer vault reset",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning
             );
@@ -3873,15 +4689,17 @@ if (currentDriveService == null)
                 ShowVaultAccessUi();
 
                 MessageBox.Show(
-                    "Test vault reset complete. You can now create a fresh vault for this Google account.",
-                    "Test vault reset",
+                    "Developer reset complete." + Environment.NewLine + Environment.NewLine +
+                    "The QuickForge cloud vault was deleted for this Google account." + Environment.NewLine +
+                    "You can now create a fresh vault or restore an encrypted backup.",
+                    "Developer reset complete"
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information
                 );
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Could not reset test vault: " + ex.Message);
+                MessageBox.Show("Could not complete developer reset: " + ex.Message);
             }
         }
         private void ShowLoggedOutUi()
@@ -4167,7 +4985,16 @@ if (currentDriveService == null)
 
             if (entry == null)
             {
-                selectedPreviewLabel.Text = "Select an entry to preview it.";
+                Label selectedFeedbackHeaderLabel = new Label();
+            selectedFeedbackHeaderLabel.Text = "Selected account / feedback";
+            selectedFeedbackHeaderLabel.Left = 315;
+            selectedFeedbackHeaderLabel.Top = 230;
+            selectedFeedbackHeaderLabel.Width = 220;
+            selectedFeedbackHeaderLabel.Height = 20;
+            selectedFeedbackHeaderLabel.ForeColor = Color.White;
+            selectedFeedbackHeaderLabel.BackColor = Color.Transparent;
+            selectedFeedbackHeaderLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            selectedPreviewLabel.Text = "Select a saved account to see safe details and action feedback here.";
                 UpdateFavoriteButtonText();
                 return;
             }
@@ -4388,11 +5215,28 @@ if (currentDriveService == null)
         {
             bool confirmed = false;
 
+            string ShortenForDialog(string value, int maxLength)
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    return "Not saved";
+                }
+
+                string clean = value.Trim();
+
+                if (clean.Length <= maxLength)
+                {
+                    return clean;
+                }
+
+                return clean.Substring(0, Math.Max(0, maxLength - 3)) + "...";
+            }
+
             using (Form dialog = new Form())
             {
-                dialog.Width = 430;
-                dialog.Height = 230;
-                dialog.Text = "Delete entry";
+                dialog.Width = 580;
+                dialog.Height = 430;
+                dialog.Text = "Delete saved entry";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialog.MaximizeBox = false;
@@ -4400,40 +5244,118 @@ if (currentDriveService == null)
                 dialog.BackColor = Color.FromArgb(16, 20, 34);
 
                 Label titleLabel = new Label();
-                titleLabel.Text = "Delete this entry?";
-                titleLabel.Left = 20;
-                titleLabel.Top = 18;
-                titleLabel.Width = 360;
-                titleLabel.Height = 28;
+                titleLabel.Text = "Delete saved entry?";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 500;
+                titleLabel.Height = 34;
                 titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
-                titleLabel.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
 
-                Label entryLabel = new Label();
-                entryLabel.Text = entry.GetDisplayName();
-                entryLabel.Left = 20;
-                entryLabel.Top = 55;
-                entryLabel.Width = 360;
-                entryLabel.Height = 24;
-                entryLabel.ForeColor = Color.White;
-                entryLabel.BackColor = Color.Transparent;
-                entryLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "QuickForge will remove this saved account from your vault and sync the deletion.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 515;
+                subtitleLabel.Height = 32;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
 
-                Label warningLabel = new Label();
-                warningLabel.Text = "This action cannot be undone after sync.";
-                warningLabel.Left = 20;
-                warningLabel.Top = 90;
-                warningLabel.Width = 360;
-                warningLabel.Height = 30;
-                warningLabel.ForeColor = dangerColor;
-                warningLabel.BackColor = Color.Transparent;
+                Panel entryPanel = new Panel();
+                entryPanel.Left = 24;
+                entryPanel.Top = 105;
+                entryPanel.Width = 515;
+                entryPanel.Height = 95;
+                entryPanel.BackColor = Color.FromArgb(24, 28, 44);
+                entryPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label entryTitleLabel = new Label();
+                entryTitleLabel.Text = "Entry selected for deletion";
+                entryTitleLabel.Left = 14;
+                entryTitleLabel.Top = 10;
+                entryTitleLabel.Width = 470;
+                entryTitleLabel.Height = 22;
+                entryTitleLabel.ForeColor = Color.White;
+                entryTitleLabel.BackColor = Color.Transparent;
+                entryTitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label entryInfoLabel = new Label();
+                entryInfoLabel.Text =
+                    "Service: " + ShortenForDialog(entry.GetDisplayName(), 52) + Environment.NewLine +
+                    "Username/email: " + ShortenForDialog(entry.Username, 48) + Environment.NewLine +
+                    "Website: " + ShortenForDialog(entry.Website, 52);
+                entryInfoLabel.Left = 14;
+                entryInfoLabel.Top = 36;
+                entryInfoLabel.Width = 470;
+                entryInfoLabel.Height = 52;
+                entryInfoLabel.ForeColor = softTextColor;
+                entryInfoLabel.BackColor = Color.Transparent;
+                entryInfoLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                entryPanel.Controls.Add(entryTitleLabel);
+                entryPanel.Controls.Add(entryInfoLabel);
+
+                Panel warningPanel = new Panel();
+                warningPanel.Left = 24;
+                warningPanel.Top = 220;
+                warningPanel.Width = 515;
+                warningPanel.Height = 92;
+                warningPanel.BackColor = Color.FromArgb(36, 30, 30);
+                warningPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label warningTitleLabel = new Label();
+                warningTitleLabel.Text = "Before you delete";
+                warningTitleLabel.Left = 14;
+                warningTitleLabel.Top = 10;
+                warningTitleLabel.Width = 470;
+                warningTitleLabel.Height = 22;
+                warningTitleLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                warningTitleLabel.BackColor = Color.Transparent;
+                warningTitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label warningTextLabel = new Label();
+                warningTextLabel.Text =
+                    "This cannot be undone after sync." + Environment.NewLine +
+                    "If you only want to change this entry, cancel and use Edit instead.";
+                warningTextLabel.Left = 14;
+                warningTextLabel.Top = 36;
+                warningTextLabel.Width = 470;
+                warningTextLabel.Height = 45;
+                warningTextLabel.ForeColor = softTextColor;
+                warningTextLabel.BackColor = Color.Transparent;
+                warningTextLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                warningPanel.Controls.Add(warningTitleLabel);
+                warningPanel.Controls.Add(warningTextLabel);
+
+                CheckBox confirmCheckBox = new CheckBox();
+                confirmCheckBox.Text = "I understand. Delete this saved entry.";
+                confirmCheckBox.Left = 24;
+                confirmCheckBox.Top = 330;
+                confirmCheckBox.Width = 360;
+                confirmCheckBox.Height = 28;
+                confirmCheckBox.ForeColor = softTextColor;
+                confirmCheckBox.BackColor = Color.Transparent;
+                confirmCheckBox.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 330;
+                cancelButton.Top = 365;
+                cancelButton.Width = 95;
+                cancelButton.Height = 34;
+                cancelButton.DialogResult = DialogResult.Cancel;
+                StyleActionButton(cancelButton);
 
                 Button deleteButton = new Button();
-                deleteButton.Text = "Delete";
-                deleteButton.Left = 190;
-                deleteButton.Top = 145;
-                deleteButton.Width = 95;
+                deleteButton.Text = "Delete entry";
+                deleteButton.Left = 440;
+                deleteButton.Top = 365;
+                deleteButton.Width = 100;
                 deleteButton.Height = 34;
+                deleteButton.Enabled = false;
                 deleteButton.FlatStyle = FlatStyle.Flat;
                 deleteButton.UseVisualStyleBackColor = false;
                 deleteButton.ForeColor = Color.White;
@@ -4442,31 +5364,37 @@ if (currentDriveService == null)
                 deleteButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(150, 45, 55);
                 deleteButton.FlatAppearance.MouseDownBackColor = Color.FromArgb(90, 25, 35);
 
-                Button cancelButton = new Button();
-                cancelButton.Text = "Cancel";
-                cancelButton.Left = 295;
-                cancelButton.Top = 145;
-                cancelButton.Width = 95;
-                cancelButton.Height = 34;
-                StyleActionButton(cancelButton);
+                confirmCheckBox.CheckedChanged += (s, e) =>
+                {
+                    deleteButton.Enabled = confirmCheckBox.Checked;
+                };
 
                 deleteButton.Click += (s, e) =>
                 {
+                    if (!confirmCheckBox.Checked)
+                    {
+                        return;
+                    }
+
                     confirmed = true;
+                    dialog.DialogResult = DialogResult.OK;
                     dialog.Close();
                 };
 
                 cancelButton.Click += (s, e) =>
                 {
                     confirmed = false;
+                    dialog.DialogResult = DialogResult.Cancel;
                     dialog.Close();
                 };
 
                 dialog.Controls.Add(titleLabel);
-                dialog.Controls.Add(entryLabel);
-                dialog.Controls.Add(warningLabel);
-                dialog.Controls.Add(deleteButton);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(entryPanel);
+                dialog.Controls.Add(warningPanel);
+                dialog.Controls.Add(confirmCheckBox);
                 dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(deleteButton);
 
                 dialog.CancelButton = cancelButton;
 
@@ -4839,8 +5767,8 @@ if (currentDriveService == null)
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 520;
-                dialog.Height = 330;
+                dialog.Width = 660;
+                dialog.Height = 570;
                 dialog.Text = "Save Recovery Key";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -4849,78 +5777,135 @@ if (currentDriveService == null)
                 dialog.BackColor = Color.FromArgb(16, 20, 34);
 
                 Label titleLabel = new Label();
-                titleLabel.Text = "Your recovery key";
-                titleLabel.Left = 20;
-                titleLabel.Top = 18;
-                titleLabel.Width = 460;
-                titleLabel.Height = 24;
+                titleLabel.Text = "Save your recovery key";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 580;
+                titleLabel.Height = 34;
                 titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
-                titleLabel.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
 
-                Label infoLabel = new Label();
-                infoLabel.Text = "Save this key somewhere safe. It can unlock your vault if you forget your vault code.";
-                infoLabel.Left = 20;
-                infoLabel.Top = 45;
-                infoLabel.Width = 460;
-                infoLabel.Height = 35;
-                infoLabel.ForeColor = softTextColor;
-                infoLabel.BackColor = Color.Transparent;
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "This key can unlock your vault if you forget your vault code. Copy it and store it somewhere safe.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 590;
+                subtitleLabel.Height = 45;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+
+                Panel keyPanel = new Panel();
+                keyPanel.Left = 24;
+                keyPanel.Top = 115;
+                keyPanel.Width = 590;
+                keyPanel.Height = 105;
+                keyPanel.BackColor = Color.FromArgb(24, 28, 44);
+                keyPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label keyLabel = new Label();
+                keyLabel.Text = "Recovery key";
+                keyLabel.Left = 14;
+                keyLabel.Top = 12;
+                keyLabel.Width = 540;
+                keyLabel.Height = 22;
+                keyLabel.ForeColor = Color.White;
+                keyLabel.BackColor = Color.Transparent;
+                keyLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
 
                 TextBox keyTextBox = new TextBox();
-                keyTextBox.Left = 20;
-                keyTextBox.Top = 85;
-                keyTextBox.Width = 460;
-                keyTextBox.Height = 26;
+                keyTextBox.Left = 14;
+                keyTextBox.Top = 44;
+                keyTextBox.Width = 555;
+                keyTextBox.Height = 28;
                 keyTextBox.ReadOnly = true;
                 keyTextBox.Text = recoveryKey;
-                keyTextBox.BackColor = Color.FromArgb(24, 28, 44);
+                keyTextBox.BackColor = Color.FromArgb(16, 20, 34);
                 keyTextBox.ForeColor = Color.White;
                 keyTextBox.BorderStyle = BorderStyle.FixedSingle;
+                keyTextBox.Font = new Font("Consolas", 10, FontStyle.Regular);
 
-                Label warningLabel = new Label();
-                warningLabel.Left = 20;
-                warningLabel.Top = 120;
-                warningLabel.Width = 460;
-                warningLabel.Height = 55;
-                warningLabel.Text =
-                    "For safety, QuickForge will not download this as a plain text file.\n" +
-                    "Copy it and store it somewhere safe outside this app.";
-                warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
-                warningLabel.BackColor = Color.Transparent;
+                Label copyStatusLabel = new Label();
+                copyStatusLabel.Text = "Not copied yet.";
+                copyStatusLabel.Left = 14;
+                copyStatusLabel.Top = 76;
+                copyStatusLabel.Width = 555;
+                copyStatusLabel.Height = 20;
+                copyStatusLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                copyStatusLabel.BackColor = Color.Transparent;
+                copyStatusLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+                keyPanel.Controls.Add(keyLabel);
+                keyPanel.Controls.Add(keyTextBox);
+                keyPanel.Controls.Add(copyStatusLabel);
+
+                Panel warningPanel = new Panel();
+                warningPanel.Left = 24;
+                warningPanel.Top = 240;
+                warningPanel.Width = 590;
+                warningPanel.Height = 95;
+                warningPanel.BackColor = Color.FromArgb(36, 30, 30);
+                warningPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label warningTitle = new Label();
+                warningTitle.Text = "Important";
+                warningTitle.Left = 14;
+                warningTitle.Top = 10;
+                warningTitle.Width = 540;
+                warningTitle.Height = 22;
+                warningTitle.ForeColor = Color.FromArgb(255, 190, 90);
+                warningTitle.BackColor = Color.Transparent;
+                warningTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label warningText = new Label();
+                warningText.Text =
+                    "QuickForge will not save this as a plain text file." + Environment.NewLine +
+                    "Keep your recovery key separate from your encrypted backup file.";
+                warningText.Left = 14;
+                warningText.Top = 36;
+                warningText.Width = 540;
+                warningText.Height = 45;
+                warningText.ForeColor = softTextColor;
+                warningText.BackColor = Color.Transparent;
+                warningText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                warningPanel.Controls.Add(warningTitle);
+                warningPanel.Controls.Add(warningText);
 
                 Button copyButton = new Button();
                 copyButton.Text = "Copy recovery key";
-                copyButton.Left = 20;
-                copyButton.Top = 185;
+                copyButton.Left = 24;
+                copyButton.Top = 360;
                 copyButton.Width = 160;
-                copyButton.Height = 32;
+                copyButton.Height = 36;
                 StyleActionButton(copyButton, true);
 
                 CheckBox savedCheckBox = new CheckBox();
-                savedCheckBox.Text = "I have saved this recovery key safely";
-                savedCheckBox.Left = 20;
-                savedCheckBox.Top = 230;
-                savedCheckBox.Width = 330;
+                savedCheckBox.Text = "I have saved this recovery key somewhere safe";
+                savedCheckBox.Left = 24;
+                savedCheckBox.Top = 410;
+                savedCheckBox.Width = 380;
                 savedCheckBox.Height = 28;
                 savedCheckBox.ForeColor = softTextColor;
                 savedCheckBox.BackColor = Color.Transparent;
+                savedCheckBox.Font = new Font("Segoe UI", 9, FontStyle.Regular);
 
                 Button cancelButton = new Button();
                 cancelButton.Text = "Cancel setup";
-                cancelButton.Left = 230;
-                cancelButton.Top = 270;
-                cancelButton.Width = 110;
-                cancelButton.Height = 32;
+                cancelButton.Left = 375;
+                cancelButton.Top = 450;
+                cancelButton.Width = 115;
+                cancelButton.Height = 34;
                 cancelButton.DialogResult = DialogResult.Cancel;
                 StyleActionButton(cancelButton);
 
                 Button continueButton = new Button();
                 continueButton.Text = "Continue";
-                continueButton.Left = 355;
-                continueButton.Top = 270;
-                continueButton.Width = 125;
-                continueButton.Height = 32;
+                continueButton.Left = 505;
+                continueButton.Top = 450;
+                continueButton.Width = 110;
+                continueButton.Height = 34;
                 continueButton.Enabled = false;
                 StyleActionButton(continueButton, true);
 
@@ -4934,6 +5919,8 @@ if (currentDriveService == null)
                     Clipboard.SetText(recoveryKey);
                     copied = true;
                     copyButton.Text = "Copied";
+                    copyStatusLabel.Text = "Copied. Store it somewhere safe outside QuickForge.";
+                    copyStatusLabel.ForeColor = successColor;
                     _ = ClearClipboardLaterAsync(recoveryKey, 60000);
                     UpdateContinueState();
                 };
@@ -4952,9 +5939,9 @@ if (currentDriveService == null)
                 };
 
                 dialog.Controls.Add(titleLabel);
-                dialog.Controls.Add(infoLabel);
-                dialog.Controls.Add(keyTextBox);
-                dialog.Controls.Add(warningLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(keyPanel);
+                dialog.Controls.Add(warningPanel);
                 dialog.Controls.Add(copyButton);
                 dialog.Controls.Add(savedCheckBox);
                 dialog.Controls.Add(cancelButton);
@@ -4975,8 +5962,8 @@ if (currentDriveService == null)
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 520;
-                dialog.Height = 320;
+                dialog.Width = 660;
+                dialog.Height = 590;
                 dialog.Text = "Rotate Recovery Key";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -4986,68 +5973,135 @@ if (currentDriveService == null)
 
                 Label titleLabel = new Label();
                 titleLabel.Text = "New recovery key";
-                titleLabel.Left = 20;
-                titleLabel.Top = 18;
-                titleLabel.Width = 460;
-                titleLabel.Height = 24;
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 580;
+                titleLabel.Height = 34;
                 titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
-                titleLabel.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "Copy this new key and store it safely. After rotation, your old recovery key will stop working.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 590;
+                subtitleLabel.Height = 45;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+
+                Panel keyPanel = new Panel();
+                keyPanel.Left = 24;
+                keyPanel.Top = 115;
+                keyPanel.Width = 590;
+                keyPanel.Height = 105;
+                keyPanel.BackColor = Color.FromArgb(24, 28, 44);
+                keyPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label keyLabel = new Label();
+                keyLabel.Text = "New recovery key";
+                keyLabel.Left = 14;
+                keyLabel.Top = 12;
+                keyLabel.Width = 540;
+                keyLabel.Height = 22;
+                keyLabel.ForeColor = Color.White;
+                keyLabel.BackColor = Color.Transparent;
+                keyLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
 
                 TextBox keyTextBox = new TextBox();
-                keyTextBox.Left = 20;
-                keyTextBox.Top = 55;
-                keyTextBox.Width = 460;
-                keyTextBox.Height = 26;
+                keyTextBox.Left = 14;
+                keyTextBox.Top = 44;
+                keyTextBox.Width = 555;
+                keyTextBox.Height = 28;
                 keyTextBox.ReadOnly = true;
                 keyTextBox.Text = newRecoveryKey;
-                keyTextBox.BackColor = Color.FromArgb(24, 28, 44);
+                keyTextBox.BackColor = Color.FromArgb(16, 20, 34);
                 keyTextBox.ForeColor = Color.White;
                 keyTextBox.BorderStyle = BorderStyle.FixedSingle;
+                keyTextBox.Font = new Font("Consolas", 10, FontStyle.Regular);
 
-                Label warningLabel = new Label();
-                warningLabel.Left = 20;
-                warningLabel.Top = 95;
-                warningLabel.Width = 460;
-                warningLabel.Height = 65;
-                warningLabel.Text =
-                    "For safety, QuickForge will not download this as a plain text file.\n" +
-                    "Copy it and store it somewhere safe. After rotation, the old recovery key will stop working.";
-                warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
-                warningLabel.BackColor = Color.Transparent;
+                Label copyStatusLabel = new Label();
+                copyStatusLabel.Text = "Not copied yet.";
+                copyStatusLabel.Left = 14;
+                copyStatusLabel.Top = 76;
+                copyStatusLabel.Width = 555;
+                copyStatusLabel.Height = 20;
+                copyStatusLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                copyStatusLabel.BackColor = Color.Transparent;
+                copyStatusLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+                keyPanel.Controls.Add(keyLabel);
+                keyPanel.Controls.Add(keyTextBox);
+                keyPanel.Controls.Add(copyStatusLabel);
+
+                Panel warningPanel = new Panel();
+                warningPanel.Left = 24;
+                warningPanel.Top = 240;
+                warningPanel.Width = 590;
+                warningPanel.Height = 115;
+                warningPanel.BackColor = Color.FromArgb(36, 30, 30);
+                warningPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label warningTitle = new Label();
+                warningTitle.Text = "Before you confirm";
+                warningTitle.Left = 14;
+                warningTitle.Top = 10;
+                warningTitle.Width = 540;
+                warningTitle.Height = 22;
+                warningTitle.ForeColor = Color.FromArgb(255, 190, 90);
+                warningTitle.BackColor = Color.Transparent;
+                warningTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label warningText = new Label();
+                warningText.Text =
+                    "Save the new key before continuing." + Environment.NewLine +
+                    "After rotation, the old recovery key will no longer unlock this vault." + Environment.NewLine +
+                    "Keep your recovery key separate from your encrypted backup file.";
+                warningText.Left = 14;
+                warningText.Top = 36;
+                warningText.Width = 540;
+                warningText.Height = 65;
+                warningText.ForeColor = softTextColor;
+                warningText.BackColor = Color.Transparent;
+                warningText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                warningPanel.Controls.Add(warningTitle);
+                warningPanel.Controls.Add(warningText);
 
                 Button copyButton = new Button();
                 copyButton.Text = "Copy recovery key";
-                copyButton.Left = 20;
-                copyButton.Top = 170;
+                copyButton.Left = 24;
+                copyButton.Top = 380;
                 copyButton.Width = 160;
-                copyButton.Height = 32;
+                copyButton.Height = 36;
                 StyleActionButton(copyButton, true);
 
                 CheckBox savedCheckBox = new CheckBox();
-                savedCheckBox.Text = "I have saved this recovery key safely";
-                savedCheckBox.Left = 20;
-                savedCheckBox.Top = 215;
-                savedCheckBox.Width = 330;
+                savedCheckBox.Text = "I have saved this new recovery key safely";
+                savedCheckBox.Left = 24;
+                savedCheckBox.Top = 430;
+                savedCheckBox.Width = 380;
                 savedCheckBox.Height = 28;
                 savedCheckBox.ForeColor = softTextColor;
                 savedCheckBox.BackColor = Color.Transparent;
+                savedCheckBox.Font = new Font("Segoe UI", 9, FontStyle.Regular);
 
                 Button cancelButton = new Button();
                 cancelButton.Text = "Cancel";
-                cancelButton.Left = 230;
-                cancelButton.Top = 255;
-                cancelButton.Width = 95;
-                cancelButton.Height = 32;
+                cancelButton.Left = 370;
+                cancelButton.Top = 470;
+                cancelButton.Width = 110;
+                cancelButton.Height = 34;
                 cancelButton.DialogResult = DialogResult.Cancel;
                 StyleActionButton(cancelButton);
 
                 Button confirmButton = new Button();
                 confirmButton.Text = "Confirm rotation";
-                confirmButton.Left = 340;
-                confirmButton.Top = 255;
-                confirmButton.Width = 140;
-                confirmButton.Height = 32;
+                confirmButton.Left = 495;
+                confirmButton.Top = 470;
+                confirmButton.Width = 120;
+                confirmButton.Height = 34;
                 confirmButton.Enabled = false;
                 StyleActionButton(confirmButton, true);
 
@@ -5061,6 +6115,8 @@ if (currentDriveService == null)
                     Clipboard.SetText(newRecoveryKey);
                     copied = true;
                     copyButton.Text = "Copied";
+                    copyStatusLabel.Text = "Copied. Save it before confirming rotation.";
+                    copyStatusLabel.ForeColor = successColor;
                     _ = ClearClipboardLaterAsync(newRecoveryKey, 60000);
                     UpdateConfirmState();
                 };
@@ -5079,8 +6135,9 @@ if (currentDriveService == null)
                 };
 
                 dialog.Controls.Add(titleLabel);
-                dialog.Controls.Add(keyTextBox);
-                dialog.Controls.Add(warningLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(keyPanel);
+                dialog.Controls.Add(warningPanel);
                 dialog.Controls.Add(copyButton);
                 dialog.Controls.Add(savedCheckBox);
                 dialog.Controls.Add(confirmButton);
@@ -5139,11 +6196,15 @@ if (currentDriveService == null)
         }
         private void ShowBackupDialog()
         {
+            string backupStatusText = currentVaultSettings.LastBackupAtUtc.HasValue
+                ? "Last backup: " + currentVaultSettings.LastBackupAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                : "No encrypted backup recorded yet";
+
             using (Form dialog = new Form())
             {
-                dialog.Width = 500;
-                dialog.Height = 280;
-                dialog.Text = "Encrypted Backup";
+                dialog.Width = 720;
+                dialog.Height = 570;
+                dialog.Text = "Backup Center";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialog.MaximizeBox = false;
@@ -5151,75 +6212,172 @@ if (currentDriveService == null)
                 dialog.BackColor = Color.FromArgb(16, 20, 34);
 
                 Label titleLabel = new Label();
-                titleLabel.Text = "Encrypted backup";
-                titleLabel.Left = 20;
-                titleLabel.Top = 18;
-                titleLabel.Width = 420;
-                titleLabel.Height = 30;
+                titleLabel.Text = "Backup Center";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 600;
+                titleLabel.Height = 34;
                 titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
-                titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+                titleLabel.Font = new Font("Segoe UI", 16, FontStyle.Bold);
 
-                Label infoLabel = new Label();
-                infoLabel.Text =
-                    "Export a safe encrypted backup, or import one if Google sync has a problem.";
-                infoLabel.Left = 20;
-                infoLabel.Top = 52;
-                infoLabel.Width = 430;
-                infoLabel.Height = 40;
-                infoLabel.ForeColor = softTextColor;
-                infoLabel.BackColor = Color.Transparent;
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "Create an encrypted backup or restore your vault if something goes wrong.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 650;
+                subtitleLabel.Height = 26;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
 
-                Label warningLabel = new Label();
-                warningLabel.Text =
-                    "Backup files are encrypted. You still need your vault code or recovery key to open them.";
-                warningLabel.Left = 20;
-                warningLabel.Top = 95;
-                warningLabel.Width = 430;
-                warningLabel.Height = 45;
-                warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
-                warningLabel.BackColor = Color.Transparent;
+                Label statusLabel = new Label();
+                statusLabel.Text = backupStatusText;
+                statusLabel.Left = 24;
+                statusLabel.Top = 92;
+                statusLabel.Width = 650;
+                statusLabel.Height = 26;
+                statusLabel.ForeColor = currentVaultSettings.LastBackupAtUtc.HasValue ? successColor : Color.FromArgb(255, 190, 90);
+                statusLabel.BackColor = Color.Transparent;
+                statusLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Panel CreateActionCard(string title, string mainText, string detailText, int left, int top)
+                {
+                    Panel card = new Panel();
+                    card.Left = left;
+                    card.Top = top;
+                    card.Width = 315;
+                    card.Height = 190;
+                    card.BackColor = Color.FromArgb(24, 28, 44);
+                    card.BorderStyle = BorderStyle.FixedSingle;
+
+                    Label cardTitle = new Label();
+                    cardTitle.Text = title;
+                    cardTitle.Left = 16;
+                    cardTitle.Top = 14;
+                    cardTitle.Width = 280;
+                    cardTitle.Height = 24;
+                    cardTitle.ForeColor = Color.White;
+                    cardTitle.BackColor = Color.Transparent;
+                    cardTitle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+
+                    Label cardMain = new Label();
+                    cardMain.Text = mainText;
+                    cardMain.Left = 16;
+                    cardMain.Top = 48;
+                    cardMain.Width = 280;
+                    cardMain.Height = 48;
+                    cardMain.ForeColor = softTextColor;
+                    cardMain.BackColor = Color.Transparent;
+                    cardMain.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                    Label cardDetail = new Label();
+                    cardDetail.Text = detailText;
+                    cardDetail.Left = 16;
+                    cardDetail.Top = 100;
+                    cardDetail.Width = 280;
+                    cardDetail.Height = 54;
+                    cardDetail.ForeColor = Color.FromArgb(255, 190, 90);
+                    cardDetail.BackColor = Color.Transparent;
+                    cardDetail.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+
+                    card.Controls.Add(cardTitle);
+                    card.Controls.Add(cardMain);
+                    card.Controls.Add(cardDetail);
+
+                    return card;
+                }
+
+                Panel exportCard = CreateActionCard(
+                    "Create encrypted backup",
+                    "Save a copy of your encrypted vault file so you can restore later.",
+                    "Keep it safe. You still need your vault code or recovery key to restore it.",
+                    24,
+                    135
+                );
 
                 Button exportButton = new Button();
-                exportButton.Text = "Export encrypted backup";
-                exportButton.Left = 20;
-                exportButton.Top = 155;
-                exportButton.Width = 190;
-                exportButton.Height = 36;
+                exportButton.Text = "Create backup";
+                exportButton.Left = 16;
+                exportButton.Top = 150;
+                exportButton.Width = 130;
+                exportButton.Height = 34;
                 StyleActionButton(exportButton, true);
                 exportButton.Click += (s, e) =>
                 {
                     dialog.Close();
                     ExportEncryptedBackup();
                 };
+                exportCard.Controls.Add(exportButton);
+
+                Panel restoreCard = CreateActionCard(
+                    "Restore from backup",
+                    "Use this if your cloud vault is missing, damaged, or you are setting up a new PC.",
+                    "Only import QuickForge backup files you trust.",
+                    370,
+                    135
+                );
 
                 Button importButton = new Button();
-                importButton.Text = "Import encrypted backup";
-                importButton.Left = 225;
-                importButton.Top = 155;
-                importButton.Width = 190;
-                importButton.Height = 36;
+                importButton.Text = "Restore backup";
+                importButton.Left = 16;
+                importButton.Top = 150;
+                importButton.Width = 135;
+                importButton.Height = 34;
                 StyleActionButton(importButton);
                 importButton.Click += async (s, e) =>
                 {
                     dialog.Close();
                     await ImportEncryptedBackupAsync();
                 };
+                restoreCard.Controls.Add(importButton);
+
+                Panel safetyPanel = new Panel();
+                safetyPanel.Left = 24;
+                safetyPanel.Top = 345;
+                safetyPanel.Width = 660;
+                safetyPanel.Height = 82;
+                safetyPanel.BackColor = Color.FromArgb(20, 25, 42);
+                safetyPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label safetyTitle = new Label();
+                safetyTitle.Text = "Safety note";
+                safetyTitle.Left = 14;
+                safetyTitle.Top = 10;
+                safetyTitle.Width = 620;
+                safetyTitle.Height = 22;
+                safetyTitle.ForeColor = Color.White;
+                safetyTitle.BackColor = Color.Transparent;
+                safetyTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label safetyText = new Label();
+                safetyText.Text = "Vault files are not meant to be opened directly. Use QuickForge to unlock, export, import, or restore."; 
+                safetyText.Left = 14;
+                safetyText.Top = 36;
+                safetyText.Width = 620;
+                safetyText.Height = 34;
+                safetyText.ForeColor = softTextColor;
+                safetyText.BackColor = Color.Transparent;
+                safetyText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                safetyPanel.Controls.Add(safetyTitle);
+                safetyPanel.Controls.Add(safetyText);
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 360;
-                closeButton.Top = 210;
-                closeButton.Width = 95;
-                closeButton.Height = 32;
-                StyleActionButton(closeButton);
+                closeButton.Left = 585;
+                closeButton.Top = 445;
+                closeButton.Width = 100;
+                closeButton.Height = 34;
+                StyleActionButton(closeButton, true);
                 closeButton.Click += (s, e) => dialog.Close();
 
                 dialog.Controls.Add(titleLabel);
-                dialog.Controls.Add(infoLabel);
-                dialog.Controls.Add(warningLabel);
-                dialog.Controls.Add(exportButton);
-                dialog.Controls.Add(importButton);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(statusLabel);
+                dialog.Controls.Add(exportCard);
+                dialog.Controls.Add(restoreCard);
+                dialog.Controls.Add(safetyPanel);
                 dialog.Controls.Add(closeButton);
 
                 dialog.ShowDialog(this);
@@ -5276,6 +6434,47 @@ if (currentDriveService == null)
             return encryptedJson;
         }
 
+        private string GetDefaultEncryptedBackupFolder()
+        {
+            string documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+            if (string.IsNullOrWhiteSpace(documentsFolder))
+            {
+                documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            }
+
+            string backupFolder = Path.Combine(documentsFolder, "QuickForge Encrypted Backups");
+            Directory.CreateDirectory(backupFolder);
+
+            return backupFolder;
+        }
+
+        private string CreateDefaultEncryptedBackupFileName()
+        {
+            return "QuickForge-Encrypted-Backup-" + DateTime.Now.ToString("dd-MMMM-yyyy_'at'_HH'h'mm", System.Globalization.CultureInfo.InvariantCulture) + ".qfvault";
+        }
+
+        private void OpenFolderInExplorer(string folderPath)
+        {
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            {
+                return;
+            }
+
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = folderPath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not open backup folder: " + ex.Message);
+            }
+        }
+
         private void ExportEncryptedBackup()
         {
             if (!isVaultUnlocked)
@@ -5286,38 +6485,60 @@ if (currentDriveService == null)
 
             try
             {
-                string encryptedJson = CreateCurrentEncryptedVaultJson();
+                string defaultBackupFolder = GetDefaultEncryptedBackupFolder();
 
                 using (SaveFileDialog saveDialog = new SaveFileDialog())
                 {
-                    saveDialog.Title = "Export encrypted backup";
-                    saveDialog.FileName = "QuickForge-Backup.qfvault";
-                    saveDialog.Filter = "QuickForge encrypted backup (*.qfvault)|*.qfvault|JSON files (*.json)|*.json|All files (*.*)|*.*";
+                    saveDialog.Title = "Export encrypted QuickForge backup";
+                    saveDialog.InitialDirectory = defaultBackupFolder;
+                    saveDialog.FileName = CreateDefaultEncryptedBackupFileName();
+                    saveDialog.DefaultExt = "qfvault";
+                    saveDialog.AddExtension = true;
+                    saveDialog.OverwritePrompt = true;
+                    saveDialog.Filter = "QuickForge encrypted backup (*.qfvault)|*.qfvault|All files (*.*)|*.*";
 
                     if (saveDialog.ShowDialog(this) != DialogResult.OK)
                     {
                         return;
                     }
 
-                    File.WriteAllText(saveDialog.FileName, encryptedJson);
+                    string encryptedJson = CreateCurrentEncryptedVaultJson();
+                    File.WriteAllText(saveDialog.FileName, encryptedJson, Encoding.UTF8);
+
+                    string backupFileName = Path.GetFileName(saveDialog.FileName);
+                    string backupFolder = Path.GetDirectoryName(saveDialog.FileName) ?? defaultBackupFolder;
+
+                    MarkBackupCreatedByCurrentDevice(backupFileName);
+                    QueueBackgroundVaultSync("Encrypted backup exported: " + backupFileName);
 
                     SetPreviewText(
                         "Encrypted backup exported.",
-                        "Store this backup somewhere safe outside this app.",
-                        "You still need your vault code or recovery key to open it."
+                        "File: " + backupFileName,
+                        "Folder: " + backupFolder,
+                        "You still need your vault code or recovery key to restore it."
                     );
 
                     backupButton.BackColor = Color.FromArgb(35, 40, 60);
                     backupButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
 
-                    MessageBox.Show(
+                    DialogResult openFolder = MessageBox.Show(
                         "Encrypted backup exported successfully." + Environment.NewLine + Environment.NewLine +
-                        "Store it somewhere safe, such as an external drive or secure cloud folder." + Environment.NewLine +
-                        "Do not store your recovery key and backup file in the exact same place.",
+                        "Saved as:" + Environment.NewLine +
+                        backupFileName + Environment.NewLine + Environment.NewLine +
+                        "Default backup folder:" + Environment.NewLine +
+                        backupFolder + Environment.NewLine + Environment.NewLine +
+                        "Anyone can delete this backup file from Windows, but they cannot read your passwords without your vault code or recovery key." + Environment.NewLine +
+                        "Do not store your recovery key and backup file in the exact same place." + Environment.NewLine + Environment.NewLine +
+                        "Open backup folder now?",
                         "Backup exported",
-                        MessageBoxButtons.OK,
+                        MessageBoxButtons.YesNo,
                         MessageBoxIcon.Information
                     );
+
+                    if (openFolder == DialogResult.Yes)
+                    {
+                        OpenFolderInExplorer(backupFolder);
+                    }
                 }
             }
             catch (Exception ex)
@@ -5596,9 +6817,9 @@ if (currentDriveService == null)
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 560;
-                dialog.Height = 365;
-                dialog.Text = "Import encrypted backup";
+                dialog.Width = 680;
+                dialog.Height = 570;
+                dialog.Text = "Restore encrypted backup";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialog.MaximizeBox = false;
@@ -5606,58 +6827,109 @@ if (currentDriveService == null)
                 dialog.BackColor = Color.FromArgb(16, 20, 34);
 
                 Label titleLabel = new Label();
-                titleLabel.Text = "Encrypted backup verified";
-                titleLabel.Left = 22;
-                titleLabel.Top = 18;
-                titleLabel.Width = 500;
-                titleLabel.Height = 28;
-                titleLabel.ForeColor = Color.White;
+                titleLabel.Text = "Backup verified";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 600;
+                titleLabel.Height = 32;
+                titleLabel.ForeColor = successColor;
                 titleLabel.BackColor = Color.Transparent;
-                titleLabel.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "QuickForge can read this encrypted backup. Review it before restoring."; 
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 600;
+                subtitleLabel.Height = 26;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+
+                Panel summaryPanel = new Panel();
+                summaryPanel.Left = 24;
+                summaryPanel.Top = 100;
+                summaryPanel.Width = 625;
+                summaryPanel.Height = 150;
+                summaryPanel.BackColor = Color.FromArgb(24, 28, 44);
+                summaryPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label summaryTitle = new Label();
+                summaryTitle.Text = "Backup contents";
+                summaryTitle.Left = 16;
+                summaryTitle.Top = 12;
+                summaryTitle.Width = 580;
+                summaryTitle.Height = 24;
+                summaryTitle.ForeColor = Color.White;
+                summaryTitle.BackColor = Color.Transparent;
+                summaryTitle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
 
                 Label summaryLabel = new Label();
                 summaryLabel.Text =
-                    "This backup contains:" + Environment.NewLine + Environment.NewLine +
                     "Saved entries: " + totalEntries + Environment.NewLine +
                     "Favorites: " + favoriteEntries + Environment.NewLine +
                     "Missing website links: " + missingWebsiteLinks + Environment.NewLine +
                     "Last updated: " + updatedText;
-                summaryLabel.Left = 22;
-                summaryLabel.Top = 58;
-                summaryLabel.Width = 500;
-                summaryLabel.Height = 120;
+                summaryLabel.Left = 16;
+                summaryLabel.Top = 45;
+                summaryLabel.Width = 580;
+                summaryLabel.Height = 90;
                 summaryLabel.ForeColor = softTextColor;
                 summaryLabel.BackColor = Color.Transparent;
-                summaryLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+                summaryLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+
+                summaryPanel.Controls.Add(summaryTitle);
+                summaryPanel.Controls.Add(summaryLabel);
+
+                Panel warningPanel = new Panel();
+                warningPanel.Left = 24;
+                warningPanel.Top = 270;
+                warningPanel.Width = 625;
+                warningPanel.Height = 105;
+                warningPanel.BackColor = Color.FromArgb(36, 30, 30);
+                warningPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label warningTitle = new Label();
+                warningTitle.Text = "Before you restore";
+                warningTitle.Left = 16;
+                warningTitle.Top = 12;
+                warningTitle.Width = 580;
+                warningTitle.Height = 24;
+                warningTitle.ForeColor = Color.FromArgb(255, 190, 90);
+                warningTitle.BackColor = Color.Transparent;
+                warningTitle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
 
                 Label warningLabel = new Label();
                 warningLabel.Text =
-                    "Importing this backup will replace your current cloud vault after upload." +
-                    Environment.NewLine +
-                    "Cancel now if this is not the backup you expected.";
-                warningLabel.Left = 22;
-                warningLabel.Top = 190;
-                warningLabel.Width = 500;
-                warningLabel.Height = 55;
-                warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                    "Only restore QuickForge backup files you trust." + Environment.NewLine +
+                    "This will upload the backup as your current encrypted cloud vault." + Environment.NewLine +
+                    "Cancel now if this is not the backup you expected."; 
+                warningLabel.Left = 16;
+                warningLabel.Top = 42;
+                warningLabel.Width = 580;
+                warningLabel.Height = 56;
+                warningLabel.ForeColor = softTextColor;
                 warningLabel.BackColor = Color.Transparent;
-                warningLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                warningLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                warningPanel.Controls.Add(warningTitle);
+                warningPanel.Controls.Add(warningLabel);
 
                 Button cancelButton = new Button();
                 cancelButton.Text = "Cancel";
-                cancelButton.Left = 285;
-                cancelButton.Top = 275;
-                cancelButton.Width = 95;
-                cancelButton.Height = 34;
+                cancelButton.Left = 390;
+                cancelButton.Top = 405;
+                cancelButton.Width = 100;
+                cancelButton.Height = 36;
                 cancelButton.DialogResult = DialogResult.Cancel;
                 StyleActionButton(cancelButton);
 
                 Button importButton = new Button();
-                importButton.Text = "Import and replace vault";
-                importButton.Left = 395;
-                importButton.Top = 275;
-                importButton.Width = 135;
-                importButton.Height = 34;
+                importButton.Text = "Restore backup";
+                importButton.Left = 505;
+                importButton.Top = 405;
+                importButton.Width = 145;
+                importButton.Height = 36;
                 StyleActionButton(importButton, true);
 
                 importButton.Click += (s, e) =>
@@ -5675,8 +6947,9 @@ if (currentDriveService == null)
                 };
 
                 dialog.Controls.Add(titleLabel);
-                dialog.Controls.Add(summaryLabel);
-                dialog.Controls.Add(warningLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(summaryPanel);
+                dialog.Controls.Add(warningPanel);
                 dialog.Controls.Add(cancelButton);
                 dialog.Controls.Add(importButton);
 
@@ -5688,15 +6961,60 @@ if (currentDriveService == null)
 
             return confirmed;
         }
+        private async Task OpenSecurityCenterWithRefreshAsync()
+        {
+            if (isVaultUnlocked &&
+                currentDriveService != null &&
+                currentDataKey != null &&
+                currentEncryptedVaultFile != null &&
+                !HasPendingBackgroundVaultSync() &&
+                editingEntry == null)
+            {
+                try
+                {
+                    securityCenterButton.Enabled = false;
+                    SetSyncStatus("Refreshing security...");
+
+                    selectedPreviewLabel.Text =
+                        "Checking latest Device Trust status from Google Drive..." + Environment.NewLine +
+                        "This helps trusted PCs notice newly opened devices.";
+
+                    await LoadVaultFromCloudAsync();
+
+                    bool deviceTrustRegistrationChanged = RegisterCurrentDeviceForVault(false);
+                    SyncDeviceTrustRegistrationAfterUnlockIfNeeded(deviceTrustRegistrationChanged);
+
+                    ApplyRecoverySettingsToUi();
+                    ApplyPerformanceSettingsToUi();
+                    ApplyDeviceTrustRestrictionsToUi();
+                    ShowRestrictedModeWarningIfNeeded();
+
+                    SetSyncStatus("Security refreshed", success: true);
+                }
+                catch (Exception ex)
+                {
+                    SetSyncStatus("Security refresh skipped", error: true);
+
+                    selectedPreviewLabel.Text =
+                        "Security Center opened with local vault status." + Environment.NewLine +
+                        "Could not refresh Device Trust from cloud first." + Environment.NewLine +
+                        "Error: " + ex.Message;
+                }
+                finally
+                {
+                    securityCenterButton.Enabled = true;
+                }
+            }
+
+            ShowSecurityCenterDialog();
+        }
         private void ShowSecurityCenterDialog()
         {
             int totalEntries = vaultEntries.Count;
             int favoriteEntries = vaultEntries.Count(entry => entry.IsFavorite);
             int weakPasswords = CountWeakPasswords();
             int reusedPasswordEntries = CountReusedPasswordEntries();
-            int missingWebsiteLinks = vaultEntries.Count(entry =>
-                string.IsNullOrWhiteSpace(entry.Website)
-            );
+            int missingWebsiteLinks = vaultEntries.Count(entry => string.IsNullOrWhiteSpace(entry.Website));
 
             string autoLockText = currentVaultSettings.AutoLockMinutes <= 0
                 ? "Off"
@@ -5706,25 +7024,187 @@ if (currentDriveService == null)
                 ? "Never"
                 : currentVaultSettings.RecoveryKeyReminderDays + " days";
 
-            string summary;
+            string fullSafetyReport = BuildVaultSafetyReport(totalEntries, weakPasswords, reusedPasswordEntries, missingWebsiteLinks);
 
-            if (totalEntries == 0)
+            int safetyScore = 100;
+            string firstReportLine = fullSafetyReport.Split(new[] { Environment.NewLine }, StringSplitOptions.None).FirstOrDefault() ?? "";
+            string scorePrefix = "Vault Safety Score: ";
+
+            if (firstReportLine.StartsWith(scorePrefix))
             {
-                summary = "Your vault is ready. Add your first login.";
+                string scorePart = firstReportLine.Substring(scorePrefix.Length).Split('/')[0].Trim();
+                int.TryParse(scorePart, out safetyScore);
             }
-            else if (weakPasswords == 0 && reusedPasswordEntries == 0)
+
+            bool backupRecent =
+                currentVaultSettings.LastBackupAtUtc.HasValue &&
+                (DateTime.UtcNow - currentVaultSettings.LastBackupAtUtc.Value).TotalDays <= 7;
+
+            bool recoveryKeyExists = currentEncryptedVaultFile?.RecoveryKeyWrapper != null;
+            bool deviceTrusted = IsCurrentDeviceTrusted();
+            bool syncConnected = currentDriveService != null;
+            bool pendingSync = HasPendingBackgroundVaultSync();
+
+            string BuildEntryIssueName(VaultEntry entry)
             {
-                summary = "Your vault looks good.";
+                string serviceName = string.IsNullOrWhiteSpace(entry.Platform)
+                    ? entry.GetDisplayName()
+                    : entry.Platform.Trim();
+
+                if (string.IsNullOrWhiteSpace(serviceName))
+                {
+                    serviceName = "Unnamed saved account";
+                }
+
+                string usernameText = string.IsNullOrWhiteSpace(entry.Username)
+                    ? "No username/email saved"
+                    : entry.Username.Trim();
+
+                return "- Saved account: " + serviceName + Environment.NewLine +
+                       "  Username/email: " + usernameText;
+            }
+
+            string BuildIssueListText(List<VaultEntry> entries)
+            {
+                if (entries.Count == 0)
+                {
+                    return "- No saved account found";
+                }
+
+                return string.Join(Environment.NewLine, entries.Select(BuildEntryIssueName));
+            }
+
+            List<VaultEntry> weakPasswordIssueEntries = vaultEntries
+                .Where(entry =>
+                    !string.IsNullOrWhiteSpace(entry.Secret) &&
+                    IsWeakPasswordForSecurityCenter(entry.Secret, entry.Platform)
+                )
+                .Take(4)
+                .ToList();
+
+            List<VaultEntry> reusedPasswordIssueEntries = vaultEntries
+                .Where(entry => !string.IsNullOrWhiteSpace(entry.Secret))
+                .GroupBy(entry => entry.Secret)
+                .Where(group => group.Count() > 1)
+                .SelectMany(group => group.Take(3))
+                .Take(4)
+                .ToList();
+
+            int untrustedDeviceCount = currentVaultSettings.KnownDevices
+                .Count(device => !device.IsHiddenFromTrustList && !device.IsTrusted);
+
+            bool deviceNeedsAttention =
+                !deviceTrusted ||
+                newDeviceDetectedThisSession ||
+                untrustedDeviceCount > 0;
+
+            string deviceTrustStatus = deviceNeedsAttention ? "Attention" : "Trusted";
+
+            string deviceTrustDetail;
+
+            if (newDeviceDetectedThisSession)
+            {
+                deviceTrustDetail = "New device detected: " + newDeviceDetectedName + ". Open Device Trust to review it.";
+            }
+            else if (!deviceTrusted)
+            {
+                deviceTrustDetail = "This device is untrusted. Sensitive actions are restricted.";
+            }
+            else if (untrustedDeviceCount > 0)
+            {
+                deviceTrustDetail = "Untrusted device(s): " + untrustedDeviceCount + ". Open Device Trust to review.";
             }
             else
             {
-                summary = "Some passwords need attention.";
+                deviceTrustDetail = "Sensitive actions are allowed.";
             }
+
+            Color deviceTrustColor = deviceNeedsAttention ? dangerColor : successColor;
+
+            Color scoreColor = safetyScore >= 80
+                ? successColor
+                : safetyScore >= 60 ? Color.FromArgb(255, 190, 90) : dangerColor;
+
+            string headline;
+
+            if (!cloudVaultExists)
+            {
+                headline = "Cloud vault needs attention.";
+            }
+            else if (deviceNeedsAttention)
+            {
+                headline = deviceTrusted ? "Device Trust needs review." : "This device is not trusted yet.";
+            }
+            else if (!backupRecent)
+            {
+                headline = "Create an encrypted backup soon.";
+            }
+            else if (weakPasswords > 0 || reusedPasswordEntries > 0)
+            {
+                headline = "Some saved passwords need attention.";
+            }
+            else
+            {
+                headline = "Your vault looks good.";
+            }
+
+            string nextAction;
+
+            if (!cloudVaultExists)
+            {
+                nextAction = "Restore from encrypted backup or create a new vault for this Google account.";
+            }
+            else if (deviceNeedsAttention)
+            {
+                nextAction = deviceTrustDetail;
+            }
+            else if (!backupRecent)
+            {
+                nextAction = "Export an encrypted backup and keep it separate from your recovery key.";
+            }
+            else if (reusedPasswordEntries > 0)
+            {
+                nextAction = (reusedPasswordIssueEntries.Count == 1 ? "This saved account uses a password that is also used somewhere else. Change it:" : "These saved accounts reuse the same password. Change them one by one:") + Environment.NewLine + BuildIssueListText(reusedPasswordIssueEntries);
+            }
+            else if (weakPasswords > 0)
+            {
+                nextAction = (weakPasswordIssueEntries.Count == 1 ? "This saved account has a weak password. Make it stronger:" : "These saved accounts have weak passwords. Make them stronger:") + Environment.NewLine + BuildIssueListText(weakPasswordIssueEntries);
+            }
+            else if (missingWebsiteLinks > 0)
+            {
+                nextAction = "Optional: add website links to make Open + Fill and QuickFill smoother.";
+            }
+            else
+            {
+                nextAction = "No urgent action needed. Keep backups updated and continue normal use.";
+            }
+
+            string fullDetails =
+                fullSafetyReport +
+                Environment.NewLine + Environment.NewLine +
+                "Vault/session:" + Environment.NewLine +
+                "- Vault: " + (isVaultUnlocked ? "Unlocked" : "Locked") + Environment.NewLine +
+                "- Google sync: " + (syncConnected ? "Connected" : "Not connected") + Environment.NewLine +
+                "- Cloud vault storage: App-managed Google Drive appDataFolder" + Environment.NewLine +
+                "- Cloud vault status: " + (cloudVaultExists ? "Detected" : "Cloud vault missing. Restore from encrypted backup or create a new vault.") + Environment.NewLine +
+                "- Auto-lock: " + autoLockText + Environment.NewLine +
+                "- Clipboard cleanup: Active" + Environment.NewLine +
+                "- Recovery key reminder: " + recoveryReminderText + Environment.NewLine +
+                Environment.NewLine +
+                "Vault files:" + Environment.NewLine +
+                "- Not meant to be opened directly." + Environment.NewLine +
+                "- Use QuickForge to unlock, export, import, or restore." + Environment.NewLine +
+                Environment.NewLine +
+                "Still required before public/stable release:" + Environment.NewLine +
+                "- Repeated multi-device testing" + Environment.NewLine +
+                "- Fresh install restore testing" + Environment.NewLine +
+                "- External code/security review" + Environment.NewLine +
+                "- Installer/signing decision";
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 520;
-                dialog.Height = 520;
+                dialog.Width = 780;
+                dialog.Height = 720;
                 dialog.Text = "Security Center";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -5734,142 +7214,240 @@ if (currentDriveService == null)
 
                 Label titleLabel = new Label();
                 titleLabel.Text = "Security Center";
-                titleLabel.Left = 20;
+                titleLabel.Left = 22;
                 titleLabel.Top = 18;
-                titleLabel.Width = 440;
+                titleLabel.Width = 520;
                 titleLabel.Height = 30;
                 titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
-                titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
 
-                Label summaryLabel = new Label();
-                summaryLabel.Text = summary;
-                summaryLabel.Left = 20;
-                summaryLabel.Top = 52;
-                summaryLabel.Width = 440;
-                summaryLabel.Height = 28;
-                summaryLabel.ForeColor =
-                    weakPasswords == 0 && reusedPasswordEntries == 0
-                        ? successColor
-                        : Color.FromArgb(255, 190, 90);
-                summaryLabel.BackColor = Color.Transparent;
-                summaryLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+                Label headlineLabel = new Label();
+                headlineLabel.Text = headline;
+                headlineLabel.Left = 22;
+                headlineLabel.Top = 52;
+                headlineLabel.Width = 700;
+                headlineLabel.Height = 28;
+                headlineLabel.ForeColor = scoreColor;
+                headlineLabel.BackColor = Color.Transparent;
+                headlineLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
 
-                TextBox statusBox = new TextBox();
-                statusBox.Left = 20;
-                statusBox.Top = 90;
-                statusBox.Width = 460;
-                statusBox.Height = 300;
-                statusBox.Multiline = true;
-                statusBox.ReadOnly = true;
-                statusBox.WordWrap = true;
-                statusBox.ScrollBars = ScrollBars.Vertical;
-                statusBox.TabStop = false;
-                statusBox.BackColor = Color.FromArgb(24, 28, 44);
-                statusBox.ForeColor = Color.White;
-                statusBox.BorderStyle = BorderStyle.FixedSingle;
+                TabControl tabs = new TabControl();
+                tabs.Left = 20;
+                tabs.Top = 92;
+                tabs.Width = 725;
+                tabs.Height = 480;
 
-                statusBox.Text =
-                    BuildVaultSafetyReport(totalEntries, weakPasswords, reusedPasswordEntries, missingWebsiteLinks) +
-                    Environment.NewLine + Environment.NewLine +
-                    "Vault: " + (isVaultUnlocked ? "Unlocked" : "Locked") + Environment.NewLine +
-                    "Google sync: " + (currentDriveService != null ? "Connected" : "Not connected") + Environment.NewLine +
-                    "Auto-lock: " + autoLockText + Environment.NewLine +
-                    "Clipboard cleanup: Active" + Environment.NewLine +
-                    Environment.NewLine +
-                    "Saved entries: " + totalEntries + Environment.NewLine +
-                    "Favorites: " + favoriteEntries + Environment.NewLine +
-                    "Weak passwords: " + weakPasswords + Environment.NewLine +
-                    "Reused passwords: " + reusedPasswordEntries + Environment.NewLine +
-                    "Missing website links: " + missingWebsiteLinks + Environment.NewLine +
-                    "Recovery key reminder: " + recoveryReminderText + Environment.NewLine +
-                    Environment.NewLine +
-                    "Real-data status: Controlled personal beta use supported" + Environment.NewLine +
-                    Environment.NewLine +
-                    "Completed:" + Environment.NewLine +
-                    "- Strong vault code policy" + Environment.NewLine +
-                    "- Recovery key" + Environment.NewLine +
-                    "- Encrypted backup" + Environment.NewLine +
-                    "- Cloud conflict protection" + Environment.NewLine +
-                    "- Manual Sync and Refresh" + Environment.NewLine +
-                    Environment.NewLine +
-                    "Still required:" + Environment.NewLine +
-                    "- Repeated multi-device testing" + Environment.NewLine +
-                    "- Fresh install restore testing" + Environment.NewLine +
-                    "- External code/security review" + Environment.NewLine +
-                    "- Installer/signing decision";
+                TabPage overviewTab = new TabPage("Overview");
+                overviewTab.BackColor = Color.FromArgb(16, 20, 34);
 
-                Label adviceLabel = new Label();
-                adviceLabel.Left = 20;
-                adviceLabel.Top = 400;
-                adviceLabel.Width = 460;
-                adviceLabel.Height = 40;
-                adviceLabel.ForeColor = softTextColor;
-                adviceLabel.BackColor = Color.Transparent;
+                TabPage detailsTab = new TabPage("Details");
+                detailsTab.BackColor = Color.FromArgb(16, 20, 34);
 
-                if (reusedPasswordEntries > 0)
+                Panel CreateCard(string title, string status, string detail, Color statusColor, int left, int top, int width, int height)
                 {
-                    adviceLabel.Text = "Best next step: replace reused passwords first.";
-                }
-                else if (weakPasswords > 0)
-                {
-                    adviceLabel.Text = "Best next step: generate stronger passwords for weak entries.";
-                }
-                else if (totalEntries > 0 && favoriteEntries == 0)
-                {
-                    adviceLabel.Text = "Tip: add favorites to make QuickFill faster.";
-                }
-                else if (missingWebsiteLinks > 0)
-                {
-                    adviceLabel.Text = "Optional: add website links to make QuickFill smoother.";
-                }
-                else
-                {
-                    adviceLabel.Text = "No urgent action needed.";
+                    Panel card = new Panel();
+                    card.Left = left;
+                    card.Top = top;
+                    card.Width = width;
+                    card.Height = height;
+                    card.BackColor = Color.FromArgb(24, 28, 44);
+                    card.BorderStyle = BorderStyle.FixedSingle;
+
+                    Label cardTitle = new Label();
+                    cardTitle.Text = title;
+                    cardTitle.Left = 12;
+                    cardTitle.Top = 10;
+                    cardTitle.Width = width - 24;
+                    cardTitle.Height = 20;
+                    cardTitle.ForeColor = softTextColor;
+                    cardTitle.BackColor = Color.Transparent;
+                    cardTitle.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+                    Label cardStatus = new Label();
+                    cardStatus.Text = status;
+                    cardStatus.Left = 12;
+                    cardStatus.Top = 34;
+                    cardStatus.Width = width - 24;
+                    cardStatus.Height = 26;
+                    cardStatus.ForeColor = statusColor;
+                    cardStatus.BackColor = Color.Transparent;
+                    cardStatus.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+
+                    Label cardDetail = new Label();
+                    cardDetail.Text = detail;
+                    cardDetail.Left = 12;
+                    cardDetail.Top = 64;
+                    cardDetail.Width = width - 24;
+                    cardDetail.Height = height - 70;
+                    cardDetail.ForeColor = softTextColor;
+                    cardDetail.BackColor = Color.Transparent;
+                    cardDetail.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+
+                    card.Controls.Add(cardTitle);
+                    card.Controls.Add(cardStatus);
+                    card.Controls.Add(cardDetail);
+
+                    return card;
                 }
 
+                overviewTab.Controls.Add(CreateCard(
+                    "VAULT SCORE",
+                    safetyScore + "/100",
+                    safetyScore >= 80 ? "Strong overall status." : "Review warnings and next action.",
+                    scoreColor,
+                    18,
+                    18,
+                    210,
+                    112
+                ));
+
+                overviewTab.Controls.Add(CreateCard(
+                    "CLOUD VAULT",
+                    cloudVaultExists ? "Detected" : "Missing",
+                    "Storage: Google Drive appDataFolder.",
+                    cloudVaultExists ? successColor : Color.FromArgb(255, 190, 90),
+                    248,
+                    18,
+                    210,
+                    112
+                ));
+
+                overviewTab.Controls.Add(CreateCard(
+                    "DEVICE TRUST",
+                    deviceTrustStatus,
+                    deviceTrustDetail,
+                    deviceTrustColor,
+                    478,
+                    18,
+                    210,
+                    112
+                ));
+
+                overviewTab.Controls.Add(CreateCard(
+                    "BACKUP",
+                    backupRecent ? "Recent" : "Needed",
+                    backupRecent ? "Encrypted backup was created recently." : "Export an encrypted backup soon.",
+                    backupRecent ? successColor : Color.FromArgb(255, 190, 90),
+                    18,
+                    148,
+                    210,
+                    112
+                ));
+
+                overviewTab.Controls.Add(CreateCard(
+                    "PASSWORD HEALTH",
+                    weakPasswords == 0 && reusedPasswordEntries == 0 ? "Good" : "Review",
+                    "Weak: " + weakPasswords + " | Reused: " + reusedPasswordEntries + " | Details below.",
+                    weakPasswords == 0 && reusedPasswordEntries == 0 ? successColor : Color.FromArgb(255, 190, 90),
+                    248,
+                    148,
+                    210,
+                    112
+                ));
+
+                overviewTab.Controls.Add(CreateCard(
+                    "SESSION SAFETY",
+                    pendingSync ? "Sync pending" : "Protected",
+                    "Vault: " + (isVaultUnlocked ? "Unlocked" : "Locked") + " | Auto-lock: " + autoLockText,
+                    pendingSync ? Color.FromArgb(255, 190, 90) : successColor,
+                    478,
+                    148,
+                    210,
+                    112
+                ));
+
+                Panel nextActionPanel = new Panel();
+                nextActionPanel.Left = 18;
+                nextActionPanel.Top = 285;
+                nextActionPanel.Width = 670;
+                nextActionPanel.Height = 155;
+                nextActionPanel.BackColor = Color.FromArgb(20, 25, 42);
+                nextActionPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label nextActionTitle = new Label();
+                nextActionTitle.Text = "Best next action";
+                nextActionTitle.Left = 14;
+                nextActionTitle.Top = 12;
+                nextActionTitle.Width = 620;
+                nextActionTitle.Height = 22;
+                nextActionTitle.ForeColor = Color.White;
+                nextActionTitle.BackColor = Color.Transparent;
+                nextActionTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label nextActionText = new Label();
+                nextActionText.Text = nextAction;
+                nextActionText.Left = 14;
+                nextActionText.Top = 40;
+                nextActionText.Width = 635;
+                nextActionText.Height = 108;
+                nextActionText.ForeColor = softTextColor;
+                nextActionText.BackColor = Color.Transparent;
+                nextActionText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                nextActionPanel.Controls.Add(nextActionTitle);
+                nextActionPanel.Controls.Add(nextActionText);
+                overviewTab.Controls.Add(nextActionPanel);
+
+                TextBox detailsBox = new TextBox();
+                detailsBox.Left = 12;
+                detailsBox.Top = 12;
+                detailsBox.Width = 680;
+                detailsBox.Height = 410;
+                detailsBox.Multiline = true;
+                detailsBox.ReadOnly = true;
+                detailsBox.WordWrap = true;
+                detailsBox.ScrollBars = ScrollBars.Vertical;
+                detailsBox.TabStop = false;
+                detailsBox.BackColor = Color.FromArgb(24, 28, 44);
+                detailsBox.ForeColor = Color.White;
+                detailsBox.BorderStyle = BorderStyle.FixedSingle;
+                detailsBox.Text = fullDetails;
+
+                detailsTab.Controls.Add(detailsBox);
+
+                tabs.TabPages.Add(overviewTab);
+                tabs.TabPages.Add(detailsTab);
 
                 Button deviceTrustButton = new Button();
                 deviceTrustButton.Text = "Device Trust";
-                deviceTrustButton.Left = 90;
-                deviceTrustButton.Top = 445;
+                deviceTrustButton.Left = 185;
+                deviceTrustButton.Top = 600;
                 deviceTrustButton.Width = 130;
-                deviceTrustButton.Height = 32;
+                deviceTrustButton.Height = 34;
                 StyleActionButton(deviceTrustButton);
                 deviceTrustButton.Enabled = true;
                 deviceTrustButton.Click += (s, e) => ShowDeviceTrustDialog();
 
                 Button selfCheckButton = new Button();
                 selfCheckButton.Text = "Vault self-check";
-                selfCheckButton.Left = 235;
-                selfCheckButton.Top = 445;
-                selfCheckButton.Width = 130;
-                selfCheckButton.Height = 32;
+                selfCheckButton.Left = 330;
+                selfCheckButton.Top = 600;
+                selfCheckButton.Width = 135;
+                selfCheckButton.Height = 34;
                 StyleActionButton(selfCheckButton);
                 selfCheckButton.Click += (s, e) => ShowVaultSelfCheckDialog();
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 380;
-                closeButton.Top = 445;
+                closeButton.Left = 480;
+                closeButton.Top = 425;
                 closeButton.Width = 100;
-                closeButton.Height = 32;
+                closeButton.Height = 34;
                 StyleActionButton(closeButton, true);
                 closeButton.Click += (s, e) => dialog.Close();
 
                 dialog.Controls.Add(titleLabel);
-                dialog.Controls.Add(summaryLabel);
-                dialog.Controls.Add(statusBox);
-                dialog.Controls.Add(adviceLabel);
+                dialog.Controls.Add(headlineLabel);
+                dialog.Controls.Add(tabs);
                 dialog.Controls.Add(deviceTrustButton);
                 dialog.Controls.Add(selfCheckButton);
                 dialog.Controls.Add(closeButton);
 
-
                 dialog.Shown += (s, e) =>
                 {
-                    statusBox.SelectionStart = 0;
-                    statusBox.SelectionLength = 0;
+                    detailsBox.SelectionStart = 0;
+                    detailsBox.SelectionLength = 0;
                     closeButton.Focus();
                 };
 
@@ -5939,8 +7517,8 @@ if (currentDriveService == null)
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 720;
-                dialog.Height = 520;
+                dialog.Width = 960;
+                dialog.Height = 700;
                 dialog.Text = "Device Trust";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -5953,10 +7531,10 @@ if (currentDriveService == null)
                 titleLabel.Left = 20;
                 titleLabel.Top = 18;
                 titleLabel.Width = 650;
-                titleLabel.Height = 28;
+                titleLabel.Height = 34;
                 titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
-                titleLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
 
                 Label introLabel = new Label();
                 introLabel.Text =
@@ -5964,16 +7542,16 @@ if (currentDriveService == null)
                     "First device is trusted automatically. New devices start untrusted until approved from a trusted device.";
                 introLabel.Left = 20;
                 introLabel.Top = 52;
-                introLabel.Width = 660;
-                introLabel.Height = 42;
+                introLabel.Width = 900;
+                introLabel.Height = 50;
                 introLabel.ForeColor = softTextColor;
                 introLabel.BackColor = Color.Transparent;
-                introLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+                introLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
 
                 ListBox deviceList = new ListBox();
                 deviceList.Left = 20;
-                deviceList.Top = 105;
-                deviceList.Width = 660;
+                deviceList.Top = 115;
+                deviceList.Width = 900;
                 deviceList.Height = 190;
                 deviceList.BackColor = Color.FromArgb(24, 28, 44);
                 deviceList.ForeColor = Color.White;
@@ -5982,12 +7560,12 @@ if (currentDriveService == null)
 
                 Label detailLabel = new Label();
                 detailLabel.Left = 20;
-                detailLabel.Top = 305;
-                detailLabel.Width = 660;
-                detailLabel.Height = 75;
+                detailLabel.Top = 318;
+                detailLabel.Width = 900;
+                detailLabel.Height = 160;
                 detailLabel.ForeColor = softTextColor;
                 detailLabel.BackColor = Color.Transparent;
-                detailLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+                detailLabel.Font = new Font("Segoe UI", 10, FontStyle.Regular);
 
                 void RefreshDeviceList()
                 {
@@ -6002,11 +7580,24 @@ if (currentDriveService == null)
                     {
                         string trustText = device.IsTrusted ? "TRUSTED" : "UNTRUSTED";
                         string currentText = device.DeviceId == localDeviceId ? " | THIS DEVICE" : "";
+                        string shortListId = device.DeviceId.Length <= 14
+                            ? device.DeviceId
+                            : device.DeviceId.Substring(0, 14);
+
+                        string listDeviceName = string.IsNullOrWhiteSpace(device.DeviceName)
+                            ? "Unknown device"
+                            : device.DeviceName.Trim();
+
+                        if (listDeviceName.Length > 18)
+                        {
+                            listDeviceName = listDeviceName.Substring(0, 15) + "...";
+                        }
 
                         deviceList.Items.Add(
                             trustText.PadRight(10) +
-                            " | " + device.DeviceName.PadRight(22) +
-                            " | last seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
+                            " | Device ID " + shortListId.PadRight(14) +
+                            " | " + listDeviceName.PadRight(18) +
+                            " | seen " + device.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
                             currentText
                         );
                     }
@@ -6047,18 +7638,18 @@ if (currentDriveService == null)
                         return;
                     }
 
-                    string shortId = selected.DeviceId.Length <= 10
+                    string shortId = selected.DeviceId.Length <= 14
                         ? selected.DeviceId
-                        : selected.DeviceId.Substring(0, 10);
+                        : selected.DeviceId.Substring(0, 14);
 
                     detailLabel.Text =
-                        "Device: " + selected.DeviceName + Environment.NewLine +
+                        "Device name: " + selected.DeviceName + Environment.NewLine +
                         "Status: " + (selected.IsTrusted ? "Trusted" : "Untrusted") + Environment.NewLine +
-                        "First seen: " + selected.FirstSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") +
-                        " | Last seen: " + selected.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + Environment.NewLine +
+                        "Device ID: " + shortId + Environment.NewLine +
+                        "First seen: " + selected.FirstSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + Environment.NewLine +
+                        "Last seen: " + selected.LastSeenAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + Environment.NewLine +
                         "Sync count: " + selected.SyncCount +
-                        " | ID: " + shortId +
-                        (selected.DeviceId == localDeviceId ? " | This device" : "");
+                        (selected.DeviceId == localDeviceId ? Environment.NewLine + "This is your current device." : "");
                 }
 
                 deviceList.SelectedIndexChanged += (s, e) => UpdateDetail();
@@ -6067,7 +7658,7 @@ if (currentDriveService == null)
                 Button untrustButton = new Button();
                 trustButton.Text = "Trust";
                 trustButton.Left = 20;
-                trustButton.Top = 395;
+                trustButton.Top = 515;
                 trustButton.Width = 110;
                 trustButton.Height = 34;
                 StyleActionButton(trustButton, true);
@@ -6110,7 +7701,7 @@ if (currentDriveService == null)
 
                 untrustButton.Text = "Untrust";
                 untrustButton.Left = 145;
-                untrustButton.Top = 395;
+                untrustButton.Top = 515;
                 untrustButton.Width = 110;
                 untrustButton.Height = 34;
                 StyleActionButton(untrustButton);
@@ -6128,6 +7719,19 @@ if (currentDriveService == null)
                         return;
                     }
 
+                    if (selected.DeviceId == localDeviceId)
+                    {
+                        MessageBox.Show(
+                            "You cannot untrust the device you are currently using." + Environment.NewLine + Environment.NewLine +
+                            "This prevents accidentally locking yourself out of Device Trust management." + Environment.NewLine +
+                            "To remove this device, first trust another device, then manage this one from there.",
+                            "Current device cannot be untrusted",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning
+                        );
+
+                        return;
+                    }
                     if (!ConfirmVaultCodeForDeviceTrust())
                     {
                         return;
@@ -6156,15 +7760,15 @@ if (currentDriveService == null)
                     bool canManageDeviceTrust = !IsRestrictedModeActive();
 
                     trustButton.Enabled = canManageDeviceTrust && selected != null && !selected.IsTrusted;
-                    untrustButton.Enabled = canManageDeviceTrust && selected != null && selected.IsTrusted;
+                    untrustButton.Enabled = canManageDeviceTrust && selected != null && selected.IsTrusted && selected.DeviceId != localDeviceId;
                 }
 
                 deviceList.SelectedIndexChanged += (s, e) => UpdateDeviceTrustActionButtons();
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 570;
-                closeButton.Top = 395;
+                closeButton.Left = 820;
+                closeButton.Top = 515;
                 closeButton.Width = 110;
                 closeButton.Height = 34;
                 StyleActionButton(closeButton, true);
@@ -6172,15 +7776,15 @@ if (currentDriveService == null)
 
                 Label warningLabel = new Label();
                 warningLabel.Left = 20;
-                warningLabel.Top = 440;
-                warningLabel.Width = 660;
-                warningLabel.Height = 42;
+                warningLabel.Top = 565;
+                warningLabel.Width = 900;
+                warningLabel.Height = 80;
                 warningLabel.ForeColor = Color.FromArgb(255, 190, 90);
                 warningLabel.BackColor = Color.Transparent;
-                warningLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+                warningLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
                 warningLabel.Text = IsRestrictedModeActive()
                     ? "Device Trust is read-only on this untrusted device. To regain full access, approve this device from another trusted device. If this device is suspicious, check your Google Account security first."
-                    : "Trusted devices have full vault access and can approve other devices. Only trust devices you own and control. If you see an unknown device, untrust it, check your Google Account security, then rotate your QuickForge vault code and recovery key.";
+                    : "Only trust devices you own and control. If you see a device name or Device ID you do not recognize, untrust it, check your Google Account security, then rotate your QuickForge vault code and recovery key.";
 
                 dialog.Controls.Add(titleLabel);
                 dialog.Controls.Add(introLabel);
@@ -6755,8 +8359,8 @@ if (currentDriveService == null)
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 460;
-                dialog.Height = 330;
+                dialog.Width = 480;
+                dialog.Height = 365;
                 dialog.Text = "Generate password";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -7487,29 +9091,87 @@ if (currentDriveService == null)
 
             double idleMinutes = (DateTime.UtcNow - lastVaultActivityUtc).TotalMinutes;
 
-            if (idleMinutes >= minutes)
+            if (idleMinutes < minutes)
             {
-                LockVaultForSafety("Vault locked for safety.");
+                return;
             }
+
+            if (backgroundVaultSyncRunning || backgroundVaultSyncRequested || hasUnsyncedLocalChanges)
+            {
+                SetSyncStatus("Auto-lock waiting for sync", error: true);
+
+                selectedPreviewLabel.Text =
+                    "Auto-lock is ready, but QuickForge is waiting for pending sync to finish." + Environment.NewLine +
+                    "Use Sync pending or wait for background sync before locking." + Environment.NewLine +
+                    "This avoids losing local changes before they are encrypted and synced.";
+
+                return;
+            }
+
+            LockVaultForSafety("Vault locked for safety.");
+        }
+
+        private void SecurelyClearCurrentDataKey()
+        {
+            if (currentDataKey == null)
+            {
+                return;
+            }
+
+            try
+            {
+                CryptographicOperations.ZeroMemory(currentDataKey);
+            }
+            catch
+            {
+                Array.Clear(currentDataKey, 0, currentDataKey.Length);
+            }
+
+            currentDataKey = null;
+        }
+
+        private void ClearUnlockedVaultSessionSecrets()
+        {
+            quickFillForm?.Hide();
+            ClearSecretAccessWindow();
+
+            vaultCode = "";
+
+            try
+            {
+                vaultCodeTextBox.Clear();
+                confirmVaultCodeTextBox.Clear();
+                secretTextBox.Clear();
+            }
+            catch
+            {
+                // Ignore UI clear errors during lock.
+            }
+
+            SecurelyClearCurrentDataKey();
+            currentEncryptedVaultFile = null;
+
+            vaultEntries.Clear();
+            visibleVaultEntries.Clear();
+
+            editingEntry = null;
+            editingEntryIndex = -1;
         }
 
         private void LockVaultForSafety(string message)
         {
-            quickFillForm?.Hide();
+            autoRefreshTimer.Stop();
 
             isVaultUnlocked = false;
-            ClearSecretAccessWindow();
+            ClearUnlockedVaultSessionSecrets();
 
-            vaultCode = "";
-            currentDataKey = null;
-            currentEncryptedVaultFile = null;
-
-            vaultEntries.Clear();
             RefreshVaultList();
             ClearEntryInputs();
             SetEntryEditMode(false);
 
-            selectedPreviewLabel.Text = message;
+            selectedPreviewLabel.Text =
+                message + Environment.NewLine +
+                "Unlocked vault secrets were cleared from this session.";
 
             try
             {
@@ -8245,9 +9907,6 @@ if (currentDriveService == null)
         }
     }
 }
-
-
-
 
 
 

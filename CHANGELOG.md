@@ -1,4 +1,34 @@
-﻿# Changelog
+# Changelog
+
+## v0.2.0-beta-preview (development branch)
+
+### Focus
+
+- Vault hardening
+- Restore safety
+- Backup clarity
+- Security/status wording cleanup
+- Broader automated backup/restore testing
+
+### Improved
+
+- Added clearer Google Drive appDataFolder vault storage wording.
+- Added clearer cloud-vault-missing recovery screen.
+- Improved encrypted backup export folder and filename.
+- Improved encrypted backup export success warning.
+- Improved security dialog spacing.
+- Improved About and README wording for the current test count and v0.2.0 branch.
+
+### Testing
+
+- Automated test suite expanded to 30 passing tests.
+- Added backup/restore hardening tests for empty backup content, random JSON, preserved settings, preserved entry details, and no vault-code/recovery-key leakage.
+
+### Status
+
+- Active development branch.
+- Not released as a ZIP yet.
+- Keep collecting feedback before publishing v0.2.0.
 
 ## v0.1.7-beta-preview
 
@@ -281,3 +311,18 @@ This is not a stable/final password manager release yet.
 
 
 
+
+---
+
+## v0.2.0 Final Development Notes
+
+- Improved Backup Center layout and restore wording.
+- Improved Security Center overview, password health feedback, and device-trust readability.
+- Improved recovery-key creation and rotation dialogs.
+- Improved vault unlock/setup layout for both existing users and new users.
+- Improved delete-entry confirmation safety.
+- Improved change-vault-code dialog with field visibility buttons, live strength feedback, and copy-before-change protection.
+- Improved logout confirmation wording and removed misleading direct switch-account wording.
+- Fixed mojibake text issues in logout/change-vault-code UI strings.
+- UI polish is paused unless a real bug is found.
+- Automated tests pass: 30/30.
