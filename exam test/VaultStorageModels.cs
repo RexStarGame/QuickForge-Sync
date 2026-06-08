@@ -21,7 +21,8 @@ namespace exam_test
         public bool AuthenticatorLockEnabled { get; set; } = false;
         public string AuthenticatorSecretBase32 { get; set; } = "";
         public DateTime? AuthenticatorEnabledAtUtc { get; set; } = null;
-        public long? LastAuthenticatorTimeWindowUsed { get; set; } = null;public int AutoLockMinutes { get; set; } = 10;
+        public long? LastAuthenticatorTimeWindowUsed { get; set; } = null;
+        public int AutoLockMinutes { get; set; } = 10;
         public int AutoRefreshMinutes { get; set; } = 5;
 
         public List<KnownVaultDevice> KnownDevices { get; set; } = new List<KnownVaultDevice>();
