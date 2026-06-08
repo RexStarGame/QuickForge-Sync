@@ -14,7 +14,11 @@ It focuses on being fast to use, easy to understand, and safer than storing secr
 
 The easiest way to test QuickForge Sync is through GitHub Releases:
 
+Warning: Older versions may have issues. Please use the latest release.
+
 [Download QuickForge Sync Beta Preview](https://github.com/RexStarGame/QuickForge-Sync/releases)
+
+Warning: Older versions may have issues. Please use the latest release.
 
 For normal testers:
 
