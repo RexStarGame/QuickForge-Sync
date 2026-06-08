@@ -416,6 +416,28 @@ namespace exam_test
             topBarPanel.BringToFront();
         }
 
+        private void HideMainPanelSettingsForV021()
+        {
+            Control[] oldMainSettingsControls = new Control[]
+            {
+                securitySettingsLabel,
+                recoveryReminderLabel,
+                recoveryReminderComboBox,
+                rotateRecoveryKeyButton,
+                performanceSettingsLabel,
+                animationEnabledCheckBox,
+                autoLockLabel,
+                autoLockComboBox,
+                autoRefreshLabel,
+                autoRefreshComboBox
+            };
+
+            foreach (Control control in oldMainSettingsControls)
+            {
+                control.Visible = false;
+                control.Enabled = false;
+            }
+        }
         private void ShowSettingsDialog()
         {
             if (currentDriveService == null)
