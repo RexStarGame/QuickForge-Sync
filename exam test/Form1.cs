@@ -3420,6 +3420,11 @@ namespace exam_test
                 warnings.Add("New device detected this session: " + newDeviceDetectedName);
                 score -= 15;
             }
+            else if (untrustedKnownDevices > 0)
+            {
+                warnings.Add(untrustedKnownDevices + " untrusted device(s) need review");
+                score -= Math.Min(20, untrustedKnownDevices * 10);
+            }
             else
             {
                 good.Add("No unknown device detected this session");
@@ -4630,11 +4635,14 @@ namespace exam_test
             }
 
             DialogResult firstConfirm = MessageBox.Show(
-                "This will delete the QuickForge test vault for:" + Environment.NewLine + Environment.NewLine +
+                "Developer reset for:" + Environment.NewLine + Environment.NewLine +
                 connectedGoogleEmail + Environment.NewLine + Environment.NewLine +
-                "This only deletes the encrypted QuickForge vault file in Google Drive app data. It does not delete your Google account." + Environment.NewLine + Environment.NewLine +
+                "This deletes the encrypted QuickForge cloud vault from Google Drive appDataFolder." + Environment.NewLine +
+                "It does NOT delete your Google account." + Environment.NewLine +
+                "It does NOT delete local Windows files outside QuickForge." + Environment.NewLine + Environment.NewLine +
+                "Use this only for testing, recovery from a broken beta vault, or starting clean." + Environment.NewLine + Environment.NewLine +
                 "Continue?",
-                "Reset test vault",
+                "Developer vault reset",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning
             );
@@ -4681,8 +4689,10 @@ namespace exam_test
                 ShowVaultAccessUi();
 
                 MessageBox.Show(
-                    "Test vault reset complete. You can now create a fresh vault for this Google account.",
-                    "Test vault reset",
+                    "Developer reset complete." + Environment.NewLine + Environment.NewLine +
+                    "The QuickForge cloud vault was deleted for this Google account." + Environment.NewLine +
+                    "You can now create a fresh vault or restore an encrypted backup.",
+                    "Developer reset complete"
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information
                 );
