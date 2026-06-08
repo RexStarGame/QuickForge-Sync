@@ -1663,7 +1663,7 @@ namespace exam_test
                 legacyReportButton.Click += (s, e) =>
                 {
                     MessageBox.Show(
-                        BuildVaultSafetyReport(),
+                        BuildVaultSafetyReport(vaultEntries.Count, weakPasswords, reusedPasswords, untrustedDevices),
                         "Full vault safety report",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information
