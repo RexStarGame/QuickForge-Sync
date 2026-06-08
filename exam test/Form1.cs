@@ -696,7 +696,8 @@ namespace exam_test
                     () =>
                     {
                                                 ManualSyncButton_Click(this, EventArgs.Empty);
-                    }
+                    },
+                    true
                 ));
 
                 privacyTab.Controls.Add(CreateSettingsCard(
@@ -1591,16 +1592,7 @@ namespace exam_test
                     "View issues",
                     () =>
                     {
-                        MessageBox.Show(
-                            "Password Health Summary" + Environment.NewLine + Environment.NewLine +
-                            "Saved entries: " + vaultEntries.Count + Environment.NewLine +
-                            "Weak or empty secrets: " + weakPasswords + Environment.NewLine +
-                            "Reused password groups: " + reusedPasswords + Environment.NewLine + Environment.NewLine +
-                            "Tip: fix reused passwords first, then weak passwords.",
-                            "Password Health",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information
-                        );
+                        ShowPasswordHealthDialog(weakPasswords, reusedPasswords);
                     },
                     weakPasswords > 0 || reusedPasswords > 0
                 );
@@ -3761,7 +3753,15 @@ namespace exam_test
 
             if (error)
             {
-                syncStatusLabel.ForeColor = dangerColor;
+                bool reviewState =
+                    status.Contains("Conflict", StringComparison.OrdinalIgnoreCase) ||
+                    status.Contains("retry", StringComparison.OrdinalIgnoreCase) ||
+                    status.Contains("pending", StringComparison.OrdinalIgnoreCase) ||
+                    status.Contains("skipped", StringComparison.OrdinalIgnoreCase);
+
+                syncStatusLabel.ForeColor = reviewState
+                    ? Color.FromArgb(255, 190, 90)
+                    : dangerColor;
             }
             else if (success)
             {
@@ -9236,6 +9236,7 @@ if (currentDriveService == null)
 
                 Button trustButton = new Button();
                 Button untrustButton = new Button();
+                Button forgetCurrentPcButton = new Button();
                 trustButton.Text = "Trust";
                 trustButton.Left = 20;
                 trustButton.Top = 515;
@@ -9333,6 +9334,19 @@ if (currentDriveService == null)
                     RefreshDeviceList();
                     UpdateDetail();
                     UpdateDeviceTrustActionButtons();
+                };                forgetCurrentPcButton.Text = "Forget this PC";
+                forgetCurrentPcButton.Left = 270;
+                forgetCurrentPcButton.Top = 515;
+                forgetCurrentPcButton.Width = 135;
+                forgetCurrentPcButton.Height = 34;
+                forgetCurrentPcButton.Visible = string.Equals(connectedGoogleEmail, "patrickolsen4@gmail.com", StringComparison.OrdinalIgnoreCase);
+                StyleActionButton(forgetCurrentPcButton);
+                forgetCurrentPcButton.Click += async (s, e) =>
+                {
+                    await ForgetCurrentPcForDeveloperTestingAsync();
+                    RefreshDeviceList();
+                    UpdateDetail();
+                    UpdateDeviceTrustActionButtons();
                 };
                 void UpdateDeviceTrustActionButtons()
                 {
@@ -9341,6 +9355,7 @@ if (currentDriveService == null)
 
                     trustButton.Enabled = canManageDeviceTrust && selected != null && !selected.IsTrusted;
                     untrustButton.Enabled = canManageDeviceTrust && selected != null && selected.IsTrusted && selected.DeviceId != localDeviceId;
+                    forgetCurrentPcButton.Enabled = canManageDeviceTrust && selected != null && selected.DeviceId == localDeviceId && string.Equals(connectedGoogleEmail, "patrickolsen4@gmail.com", StringComparison.OrdinalIgnoreCase);
                 }
 
                 deviceList.SelectedIndexChanged += (s, e) => UpdateDeviceTrustActionButtons();
@@ -9372,6 +9387,7 @@ if (currentDriveService == null)
                 dialog.Controls.Add(detailLabel);
                 dialog.Controls.Add(trustButton);
                 dialog.Controls.Add(untrustButton);
+                dialog.Controls.Add(forgetCurrentPcButton);
                 dialog.Controls.Add(closeButton);
                 dialog.Controls.Add(warningLabel);
 
