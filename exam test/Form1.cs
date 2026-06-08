@@ -627,8 +627,7 @@ namespace exam_test
                     "Change vault code",
                     () =>
                     {
-                        dialog.Close();
-                        ChangeVaultCodeButton_Click(this, EventArgs.Empty);
+                                                ChangeVaultCodeButton_Click(this, EventArgs.Empty);
                     },
                     true
                 ));
@@ -680,8 +679,7 @@ namespace exam_test
                     "Refresh vault",
                     () =>
                     {
-                        dialog.Close();
-                        RefreshCloudButton_Click(this, EventArgs.Empty);
+                                                RefreshCloudButton_Click(this, EventArgs.Empty);
                     },
                     true
                 ));
@@ -697,8 +695,7 @@ namespace exam_test
                     "Sync now",
                     () =>
                     {
-                        dialog.Close();
-                        ManualSyncButton_Click(this, EventArgs.Empty);
+                                                ManualSyncButton_Click(this, EventArgs.Empty);
                     }
                 ));
 
@@ -723,8 +720,7 @@ namespace exam_test
                     "Security check",
                     () =>
                     {
-                        dialog.Close();
-                        ShowTrustCenterDialog();
+                                                ShowTrustCenterDialog();
                     },
                     true
                 ));
@@ -1233,8 +1229,7 @@ namespace exam_test
 
                 rotateButton.Click += (s, e) =>
                 {
-                    dialog.Close();
-                    RotateRecoveryKeyButton_Click(this, EventArgs.Empty);
+                                        RotateRecoveryKeyButton_Click(this, EventArgs.Empty);
                 };
 
                 dialog.Controls.Add(titleLabel);
@@ -1434,8 +1429,8 @@ namespace exam_test
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 780;
-                dialog.Height = 700;
+                dialog.Width = 860;
+                dialog.Height = 790;
                 dialog.Text = "QuickForge Trust Center";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -1489,8 +1484,8 @@ namespace exam_test
                     Panel card = new Panel();
                     card.Left = left;
                     card.Top = top;
-                    card.Width = 340;
-                    card.Height = 150;
+                    card.Width = 365;
+                    card.Height = 155;
                     card.BackColor = Color.FromArgb(24, 28, 44);
                     card.BorderStyle = BorderStyle.FixedSingle;
 
@@ -1544,19 +1539,14 @@ namespace exam_test
                 Panel deviceCard = CreateTrustCard(
                     "Device Trust",
                     deviceStatus,
-                    "Review which PCs have opened this vault. Unknown devices should stay restricted until trusted.",
+                    "Approve, trust, or untrust devices that have opened this vault.",
                     24,
                     130,
                     untrustedDevices > 0 ? Color.FromArgb(255, 190, 90) : successColor,
-                    "View devices",
+                    "Manage devices",
                     () =>
                     {
-                        MessageBox.Show(
-                            BuildKnownDevicesText(),
-                            "Known devices",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information
-                        );
+                        ShowDeviceTrustDialog();
                     },
                     untrustedDevices > 0
                 );
@@ -1571,8 +1561,7 @@ namespace exam_test
                     "Recovery options",
                     () =>
                     {
-                        dialog.Close();
-                        ShowRecoveryReminderSettingsDialog();
+                                                ShowRecoveryReminderSettingsDialog();
                     },
                     currentVaultSettings.RecoveryKeyRotationRequired
                 );
@@ -1587,8 +1576,7 @@ namespace exam_test
                     "Create backup",
                     () =>
                     {
-                        dialog.Close();
-                        ShowBackupDialog();
+                                                ShowBackupDialog();
                     },
                     !hasRecentBackup
                 );
@@ -1627,8 +1615,7 @@ namespace exam_test
                     "Refresh vault",
                     () =>
                     {
-                        dialog.Close();
-                        RefreshCloudButton_Click(this, EventArgs.Empty);
+                                                RefreshCloudButton_Click(this, EventArgs.Empty);
                     },
                     !hasRecentCloudLoad
                 );
@@ -1656,7 +1643,7 @@ namespace exam_test
                 Button legacyReportButton = new Button();
                 legacyReportButton.Text = "Full report";
                 legacyReportButton.Left = 24;
-                legacyReportButton.Top = 700;
+                legacyReportButton.Top = 720;
                 legacyReportButton.Width = 120;
                 legacyReportButton.Height = 30;
                 StyleActionButton(legacyReportButton);
@@ -1672,8 +1659,8 @@ namespace exam_test
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 715;
-                closeButton.Top = 700;
+                closeButton.Left = 735;
+                closeButton.Top = 720;
                 closeButton.Width = 100;
                 closeButton.Height = 30;
                 StyleActionButton(closeButton, true);
