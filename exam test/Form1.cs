@@ -815,7 +815,16 @@ namespace exam_test
                     320,
                     150,
                     "Change privacy",
-                    () => ShowStreamerModeSettingsDialog(),
+                    () =>
+                    {
+                        bool saved = ShowStreamerModeSettingsDialog();
+
+                        if (saved)
+                        {
+                            dialog.Close();
+                            BeginInvoke(new Action(() => ShowSettingsDialog()));
+                        }
+                    },
                     true
                 ));
 
@@ -876,8 +885,10 @@ namespace exam_test
                 dialog.ShowDialog(this);
             }
         }
-        private void ShowStreamerModeSettingsDialog()
+        private bool ShowStreamerModeSettingsDialog()
         {
+            bool saved = false;
+
             using (Form dialog = new Form())
             {
                 dialog.Width = 560;
@@ -996,17 +1007,37 @@ namespace exam_test
                         ApplyStreamerModeToUi();
                         MarkVaultChangedByCurrentDevice("Streamer mode changed");
 
-                        await SaveCurrentVaultToCloudAsync();
-
                         selectedPreviewLabel.Text = currentVaultSettings.PrivacyModeEnabled
                             ? "Streamer mode enabled." + Environment.NewLine + "Safe preview areas now hide account details."
                             : "Streamer mode disabled." + Environment.NewLine + "Normal account details are visible again.";
 
+                        saved = true;
                         dialog.Close();
+
+                        try
+                        {
+                            await SaveCurrentVaultToCloudAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            SetSyncStatus("Streamer mode sync failed", error: true);
+
+                            MessageBox.Show(
+                                "Streamer mode changed locally, but QuickForge could not sync it to Google Drive yet." +
+                                Environment.NewLine + Environment.NewLine +
+                                "Try Manual sync from Settings later." +
+                                Environment.NewLine + Environment.NewLine +
+                                "Details: " + ex.Message,
+                                "Streamer mode sync warning",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning
+                            );
+                        }
                     }
                     catch (Exception ex)
                     {
                         statusLabel.Text = "Could not save Streamer mode.";
+
                         MessageBox.Show(
                             "Could not save Streamer mode: " + ex.Message,
                             "Streamer mode failed",
@@ -1026,6 +1057,8 @@ namespace exam_test
 
                 dialog.ShowDialog(this);
             }
+        
+            return saved;
         }
         private void ShowAutoLockSettingsDialog()
         {
