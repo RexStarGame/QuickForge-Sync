@@ -674,7 +674,7 @@ namespace exam_test
             createVaultButton.FlatAppearance.BorderColor = borderColor;
             createVaultButton.Click += CreateVaultButton_Click;
 
-            resetTestVaultButton.Text = "Reset Test Vault";
+            resetTestVaultButton.Text = "Developer reset";
             resetTestVaultButton.Left = 174;
             resetTestVaultButton.Top = 430;
             resetTestVaultButton.Width = 150;
@@ -700,6 +700,7 @@ namespace exam_test
             vaultToolTip.SetToolTip(vaultCodeTextBox, "Enter your vault code, or paste your recovery key if you forgot the code.");
             vaultToolTip.SetToolTip(createVaultButton, "Unlock or create your encrypted vault.");
             vaultToolTip.SetToolTip(importBackupAccessButton, "Restore from an encrypted QuickForge backup file.");
+            vaultToolTip.SetToolTip(resetTestVaultButton, "Only visible for the developer account. Deletes the QuickForge cloud vault for testing/reset recovery.");
             vaultToolTip.SetToolTip(vaultUnlockStatusLabel, "This area explains lockout, recovery, and cloud-vault status.");
 
             vaultAccessPanel.Controls.Add(vaultAccessTitleLabel);
@@ -1684,16 +1685,21 @@ namespace exam_test
         }
         private void UpdateDeveloperTestControls()
         {
-#if DEBUG
-            resetTestVaultButton.Visible =
+            bool isDeveloperAccount =
+                currentDriveService != null &&
                 string.Equals(
                     connectedGoogleEmail,
                     "patrickolsen4@gmail.com",
                     StringComparison.OrdinalIgnoreCase
                 );
-#else
-            resetTestVaultButton.Visible = false;
-#endif
+
+            resetTestVaultButton.Visible = isDeveloperAccount;
+            resetTestVaultButton.Enabled = isDeveloperAccount;
+
+            if (isDeveloperAccount)
+            {
+                resetTestVaultButton.Text = "Developer reset";
+            }
         }
         private void UpdateVaultCodeStrengthPreview()
         {
@@ -4683,7 +4689,7 @@ namespace exam_test
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Could not reset test vault: " + ex.Message);
+                MessageBox.Show("Could not complete developer reset: " + ex.Message);
             }
         }
         private void ShowLoggedOutUi()
