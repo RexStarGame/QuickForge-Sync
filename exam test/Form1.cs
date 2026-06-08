@@ -3816,7 +3816,7 @@ namespace exam_test
                 Button CreateEyeButton(TextBox targetTextBox, int left, int top, string tooltip)
                 {
                     Button eyeButton = new Button();
-                    eyeButton.Text = "ðŸ‘";
+                    eyeButton.Text = "Ã°Å¸â€˜Â";
                     eyeButton.Left = left;
                     eyeButton.Top = top;
                     eyeButton.Width = 34;
@@ -3832,7 +3832,7 @@ namespace exam_test
                     eyeButton.Click += (s, e) =>
                     {
                         targetTextBox.UseSystemPasswordChar = !targetTextBox.UseSystemPasswordChar;
-                        eyeButton.Text = targetTextBox.UseSystemPasswordChar ? "ðŸ‘" : "ðŸ™ˆ";
+                        eyeButton.Text = targetTextBox.UseSystemPasswordChar ? "Ã°Å¸â€˜Â" : "Ã°Å¸â„¢Ë†";
                     };
 
                     return eyeButton;
@@ -4356,8 +4356,8 @@ namespace exam_test
 
             using (Form dialog = new Form())
             {
-                dialog.Width = 650;
-                dialog.Height = 475;
+                dialog.Width = 690;
+                dialog.Height = 525;
                 dialog.Text = "Logout / switch account";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -4369,7 +4369,7 @@ namespace exam_test
                 titleLabel.Text = "Log out or switch account?";
                 titleLabel.Left = 24;
                 titleLabel.Top = 20;
-                titleLabel.Width = 590;
+                titleLabel.Width = 630;
                 titleLabel.Height = 34;
                 titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
@@ -4379,7 +4379,7 @@ namespace exam_test
                 subtitleLabel.Text = "QuickForge will lock the current vault before changing Google account access.";
                 subtitleLabel.Left = 24;
                 subtitleLabel.Top = 58;
-                subtitleLabel.Width = 590;
+                subtitleLabel.Width = 630;
                 subtitleLabel.Height = 32;
                 subtitleLabel.ForeColor = softTextColor;
                 subtitleLabel.BackColor = Color.Transparent;
@@ -4388,7 +4388,7 @@ namespace exam_test
                 Panel accountPanel = new Panel();
                 accountPanel.Left = 24;
                 accountPanel.Top = 105;
-                accountPanel.Width = 590;
+                accountPanel.Width = 630;
                 accountPanel.Height = 82;
                 accountPanel.BackColor = Color.FromArgb(24, 28, 44);
                 accountPanel.BorderStyle = BorderStyle.FixedSingle;
@@ -4397,7 +4397,7 @@ namespace exam_test
                 accountTitleLabel.Text = "Current Google account";
                 accountTitleLabel.Left = 14;
                 accountTitleLabel.Top = 10;
-                accountTitleLabel.Width = 540;
+                accountTitleLabel.Width = 590;
                 accountTitleLabel.Height = 22;
                 accountTitleLabel.ForeColor = Color.White;
                 accountTitleLabel.BackColor = Color.Transparent;
@@ -4407,7 +4407,7 @@ namespace exam_test
                 accountTextLabel.Text = currentAccountText;
                 accountTextLabel.Left = 14;
                 accountTextLabel.Top = 38;
-                accountTextLabel.Width = 540;
+                accountTextLabel.Width = 590;
                 accountTextLabel.Height = 26;
                 accountTextLabel.ForeColor = successColor;
                 accountTextLabel.BackColor = Color.Transparent;
@@ -4419,7 +4419,7 @@ namespace exam_test
                 Panel infoPanel = new Panel();
                 infoPanel.Left = 24;
                 infoPanel.Top = 205;
-                infoPanel.Width = 590;
+                infoPanel.Width = 630;
                 infoPanel.Height = 112;
                 infoPanel.BackColor = Color.FromArgb(20, 25, 42);
                 infoPanel.BorderStyle = BorderStyle.FixedSingle;
@@ -4428,7 +4428,7 @@ namespace exam_test
                 infoTitleLabel.Text = "What happens next";
                 infoTitleLabel.Left = 14;
                 infoTitleLabel.Top = 10;
-                infoTitleLabel.Width = 540;
+                infoTitleLabel.Width = 590;
                 infoTitleLabel.Height = 22;
                 infoTitleLabel.ForeColor = Color.White;
                 infoTitleLabel.BackColor = Color.Transparent;
@@ -4436,12 +4436,12 @@ namespace exam_test
 
                 Label infoTextLabel = new Label();
                 infoTextLabel.Text =
-                    "• Your current vault will be locked." + Environment.NewLine +
-                    "• Each Google account has its own separate QuickForge vault." + Environment.NewLine +
-                    "• A different Google account may show a different or empty vault.";
+                    "â€¢ Your current vault will be locked." + Environment.NewLine +
+                    "â€¢ Each Google account has its own separate QuickForge vault." + Environment.NewLine +
+                    "â€¢ A different Google account may show a different or empty vault.";
                 infoTextLabel.Left = 14;
                 infoTextLabel.Top = 36;
-                infoTextLabel.Width = 540;
+                infoTextLabel.Width = 590;
                 infoTextLabel.Height = 65;
                 infoTextLabel.ForeColor = softTextColor;
                 infoTextLabel.BackColor = Color.Transparent;
@@ -4453,8 +4453,8 @@ namespace exam_test
                 Panel syncPanel = new Panel();
                 syncPanel.Left = 24;
                 syncPanel.Top = 335;
-                syncPanel.Width = 590;
-                syncPanel.Height = 54;
+                syncPanel.Width = 630;
+                syncPanel.Height = 60;
                 syncPanel.BackColor = syncPending
                     ? Color.FromArgb(36, 30, 30)
                     : Color.FromArgb(20, 30, 25);
@@ -4466,8 +4466,8 @@ namespace exam_test
                     : "Sync looks safe. No pending background sync was detected.";
                 syncTextLabel.Left = 14;
                 syncTextLabel.Top = 10;
-                syncTextLabel.Width = 550;
-                syncTextLabel.Height = 32;
+                syncTextLabel.Width = 590;
+                syncTextLabel.Height = 38;
                 syncTextLabel.ForeColor = syncPending
                     ? Color.FromArgb(255, 190, 90)
                     : successColor;
@@ -4479,8 +4479,8 @@ namespace exam_test
                 CheckBox confirmCheckBox = new CheckBox();
                 confirmCheckBox.Text = "I understand. Lock this vault and continue.";
                 confirmCheckBox.Left = 24;
-                confirmCheckBox.Top = 402;
-                confirmCheckBox.Width = 390;
+                confirmCheckBox.Top = 445;
+                confirmCheckBox.Width = 380;
                 confirmCheckBox.Height = 28;
                 confirmCheckBox.ForeColor = softTextColor;
                 confirmCheckBox.BackColor = Color.Transparent;
@@ -4488,8 +4488,8 @@ namespace exam_test
 
                 Button cancelButton = new Button();
                 cancelButton.Text = "Cancel";
-                cancelButton.Left = 410;
-                cancelButton.Top = 402;
+                cancelButton.Left = 455;
+                cancelButton.Top = 445;
                 cancelButton.Width = 95;
                 cancelButton.Height = 34;
                 cancelButton.DialogResult = DialogResult.Cancel;
@@ -4497,8 +4497,8 @@ namespace exam_test
 
                 Button continueButton = new Button();
                 continueButton.Text = "Continue";
-                continueButton.Left = 520;
-                continueButton.Top = 402;
+                continueButton.Left = 565;
+                continueButton.Top = 445;
                 continueButton.Width = 95;
                 continueButton.Height = 34;
                 continueButton.Enabled = false;
