@@ -2333,7 +2333,12 @@ namespace exam_test
                 }
             }
 
+            bool deviceTrustRegistrationChanged = RegisterCurrentDeviceForVault(true);
+            SyncDeviceTrustRegistrationAfterUnlockIfNeeded(deviceTrustRegistrationChanged);
+
             ApplyRecoverySettingsToUi();
+            ApplyDeviceTrustRestrictionsToUi();
+            ShowRestrictedModeWarningIfNeeded();
 
             return true;
         }
@@ -4692,7 +4697,7 @@ namespace exam_test
                     "Developer reset complete." + Environment.NewLine + Environment.NewLine +
                     "The QuickForge cloud vault was deleted for this Google account." + Environment.NewLine +
                     "You can now create a fresh vault or restore an encrypted backup.",
-                    "Developer reset complete"
+                    "Developer reset complete",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information
                 );
