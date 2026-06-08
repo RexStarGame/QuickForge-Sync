@@ -83,6 +83,7 @@ namespace exam_test
         private readonly Label appTitleLabel = new Label();
         private readonly Label appSubtitleLabel = new Label();
         private readonly Label accountStatusLabel = new Label();
+        private readonly Label privacyModeWarningLabel = new Label();
         private readonly Button aboutButton = new Button();
         private readonly Button settingsButton = new Button();
         private readonly Button logoutButton = new Button();
@@ -366,6 +367,7 @@ namespace exam_test
 
             accountStatusLabel.Text = "Not connected";
             accountStatusLabel.ForeColor = softTextColor;
+            privacyModeWarningLabel.Visible = false;
             accountStatusLabel.BackColor = Color.Transparent;
             accountStatusLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             accountStatusLabel.AutoSize = false;
@@ -374,15 +376,8 @@ namespace exam_test
             accountStatusLabel.Top = 52;
             accountStatusLabel.Width = 305;
             accountStatusLabel.Height = 22;
-            accountStatusLabel.Cursor = Cursors.Hand;
-            accountStatusLabel.Click += (s, e) =>
-            {
-                if (isVaultUnlocked && !IsStreamerModeEnabled())
-                {
-                    ShowSettingsDialog(2);
-                }
-            };
-            vaultToolTip.SetToolTip(accountStatusLabel, "Streamer mode hides account details while screen sharing. Click when privacy is visible.");
+            accountStatusLabel.Cursor = Cursors.Default;
+            vaultToolTip.SetToolTip(accountStatusLabel, "Current Google account status.");
 
             settingsButton.Text = "Settings";
             settingsButton.Width = 88;
@@ -428,7 +423,25 @@ namespace exam_test
             topBarPanel.Controls.Add(logoutButton);
 
             Controls.Add(topBarPanel);
+
+            privacyModeWarningLabel.Text = "Privacy visible - Streamer mode is off. Click to hide details.";
+            privacyModeWarningLabel.Left = 70;
+            privacyModeWarningLabel.Top = 108;
+            privacyModeWarningLabel.Width = 660;
+            privacyModeWarningLabel.Height = 28;
+            privacyModeWarningLabel.TextAlign = ContentAlignment.MiddleCenter;
+            privacyModeWarningLabel.ForeColor = Color.FromArgb(255, 190, 90);
+            privacyModeWarningLabel.BackColor = Color.FromArgb(36, 30, 30);
+            privacyModeWarningLabel.BorderStyle = BorderStyle.FixedSingle;
+            privacyModeWarningLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            privacyModeWarningLabel.Cursor = Cursors.Hand;
+            privacyModeWarningLabel.Visible = false;
+            privacyModeWarningLabel.Click += (s, e) => ShowSettingsDialog(2);
+            vaultToolTip.SetToolTip(privacyModeWarningLabel, "Streamer mode is off. Click to open Settings > Privacy before screenshots, recording, or streaming.");
+            Controls.Add(privacyModeWarningLabel);
+
             topBarPanel.BringToFront();
+            privacyModeWarningLabel.BringToFront();
         }
 
         private void HideMainPanelSettingsForV021()
@@ -6959,6 +6972,7 @@ namespace exam_test
 
             accountStatusLabel.Text = "Not connected";
             accountStatusLabel.ForeColor = softTextColor;
+            privacyModeWarningLabel.Visible = false;
         }
 
         private void ShowVaultAccessUi()
@@ -6972,6 +6986,7 @@ namespace exam_test
 
             vaultAccessPanel.BringToFront();
             topBarPanel.BringToFront();
+            privacyModeWarningLabel.BringToFront();
         }
 
         private void ShowVaultUi()
@@ -6990,6 +7005,7 @@ namespace exam_test
 
             vaultPanel.BringToFront();
             topBarPanel.BringToFront();
+            privacyModeWarningLabel.BringToFront();
         
             ShowEmptyVaultOnboardingIfNeeded();
         }
@@ -7914,6 +7930,8 @@ namespace exam_test
 
         private void RestoreConnectedAccountStatus()
         {
+            privacyModeWarningLabel.Visible = false;
+
             if (string.IsNullOrWhiteSpace(connectedGoogleEmail))
             {
                 accountStatusLabel.Text = "Not connected";
@@ -7922,19 +7940,17 @@ namespace exam_test
                 return;
             }
 
-            if (isVaultUnlocked && !IsStreamerModeEnabled())
-            {
-                accountStatusLabel.Text = "Privacy visible - click to hide";
-                accountStatusLabel.ForeColor = Color.FromArgb(255, 190, 90);
-                vaultToolTip.SetToolTip(accountStatusLabel, "Streamer mode is off. Click to open Settings > Privacy before screenshots, recording, or streaming.");
-                return;
-            }
-
             accountStatusLabel.Text = "Connected: " + MaskEmailForStreamer(connectedGoogleEmail);
             accountStatusLabel.ForeColor = successColor;
             vaultToolTip.SetToolTip(accountStatusLabel, IsStreamerModeEnabled()
                 ? "Streamer mode is on. Account details are hidden while sharing."
                 : "Connected with Google.");
+
+            if (isVaultUnlocked && !IsStreamerModeEnabled())
+            {
+                privacyModeWarningLabel.Visible = true;
+                privacyModeWarningLabel.BringToFront();
+            }
         }
 
         private async Task<bool> RotateRecoveryKeyAsync()
