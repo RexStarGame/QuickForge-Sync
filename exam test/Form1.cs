@@ -867,6 +867,10 @@ namespace exam_test
                 tabs.TabPages.Add(syncTab);
                 tabs.TabPages.Add(privacyTab);
                 tabs.TabPages.Add(appTab);
+                if (selectedTabIndex >= 0 && selectedTabIndex < tabs.TabPages.Count)
+                {
+                    tabs.SelectedIndex = selectedTabIndex;
+                }
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
@@ -955,17 +959,46 @@ namespace exam_test
                 infoPanel.Controls.Add(infoTitle);
                 infoPanel.Controls.Add(infoText);
 
-                CheckBox privacyCheckBox = new CheckBox();
-                privacyCheckBox.Text = "Enable Streamer mode";
-                privacyCheckBox.Left = 24;
-                privacyCheckBox.Top = 242;
-                privacyCheckBox.Width = 230;
-                privacyCheckBox.Height = 28;
-                privacyCheckBox.Checked = currentVaultSettings.PrivacyModeEnabled;
-                privacyCheckBox.ForeColor = softTextColor;
-                privacyCheckBox.BackColor = Color.Transparent;
-                privacyCheckBox.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+                bool selectedPrivacyMode = currentVaultSettings.PrivacyModeEnabled;
 
+                Label switchLabel = new Label();
+                switchLabel.Text = "Streamer mode";
+                switchLabel.Left = 24;
+                switchLabel.Top = 236;
+                switchLabel.Width = 150;
+                switchLabel.Height = 22;
+                switchLabel.ForeColor = softTextColor;
+                switchLabel.BackColor = Color.Transparent;
+                switchLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Button privacyToggleButton = new Button();
+                privacyToggleButton.Left = 180;
+                privacyToggleButton.Top = 232;
+                privacyToggleButton.Width = 150;
+                privacyToggleButton.Height = 34;
+                privacyToggleButton.FlatStyle = FlatStyle.Flat;
+                privacyToggleButton.FlatAppearance.BorderSize = 1;
+                privacyToggleButton.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                void UpdatePrivacyToggleButton()
+                {
+                    privacyToggleButton.Text = selectedPrivacyMode ? "ON  - Hidden" : "OFF - Visible";
+                    privacyToggleButton.BackColor = selectedPrivacyMode
+                        ? Color.FromArgb(42, 130, 85)
+                        : Color.FromArgb(55, 60, 78);
+                    privacyToggleButton.ForeColor = Color.White;
+                    privacyToggleButton.FlatAppearance.BorderColor = selectedPrivacyMode
+                        ? successColor
+                        : Color.FromArgb(90, 96, 120);
+                }
+
+                privacyToggleButton.Click += (s, e) =>
+                {
+                    selectedPrivacyMode = !selectedPrivacyMode;
+                    UpdatePrivacyToggleButton();
+                };
+
+                UpdatePrivacyToggleButton();
                 Button saveButton = new Button();
                 saveButton.Text = "Save";
                 saveButton.Left = 318;
