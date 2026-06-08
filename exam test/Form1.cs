@@ -328,7 +328,7 @@ namespace exam_test
             WindowState = FormWindowState.Normal;
             Activate();
 
-            MarkVaultActivity();
+            MarkVaultChangedByCurrentDevice("Streamer mode changed");
             UpdateAnimationState();
         }
 
@@ -479,7 +479,7 @@ namespace exam_test
                 return entry.GetDisplayName();
             }
 
-            return (entry.IsFavorite ? "★ " : "") + "Saved entry hidden by Streamer mode";
+            return (entry.IsFavorite ? "â˜… " : "") + "Saved entry hidden by Streamer mode";
         }
 
         private void ApplyStreamerModeToUi()
@@ -808,22 +808,15 @@ namespace exam_test
 
                 privacyTab.Controls.Add(CreateSettingsCard(
                     "Streamer mode",
-                    "Planned",
-                    "Future privacy mode can hide emails, usernames, device IDs, and preview details while screen sharing.",
+                    currentVaultSettings.PrivacyModeEnabled ? "On" : "Off",
+                    "Hide emails, usernames, account names, and preview details while screen sharing or taking screenshots.",
                     360,
                     188,
                     320,
                     150,
-                    "Coming later",
-                    () =>
-                    {
-                        MessageBox.Show(
-                            "Streamer/privacy mode is planned for a later update after v0.2.1 basics are stable.",
-                            "Planned privacy feature",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information
-                        );
-                    }
+                    "Change privacy",
+                    () => ShowStreamerModeSettingsDialog(),
+                    true
                 ));
 
                 appTab.Controls.Add(CreateSettingsCard(
@@ -1001,7 +994,7 @@ namespace exam_test
                     try
                     {
                         ApplyStreamerModeToUi();
-                        MarkVaultActivity();
+                        MarkVaultChangedByCurrentDevice("Streamer mode changed");
 
                         await SaveCurrentVaultToCloudAsync();
 
@@ -1147,7 +1140,7 @@ namespace exam_test
                     {
                         ApplyPerformanceSettingsToUi();
                         HideMainPanelSettingsForV021();
-                        MarkVaultActivity();
+                        MarkVaultChangedByCurrentDevice("Streamer mode changed");
 
                         await SaveCurrentVaultToCloudAsync();
 
@@ -1295,7 +1288,7 @@ namespace exam_test
                         ApplyPerformanceSettingsToUi();
                         HideMainPanelSettingsForV021();
                         ConfigureAutoRefreshTimer();
-                        MarkVaultActivity();
+                        MarkVaultChangedByCurrentDevice("Streamer mode changed");
 
                         await SaveCurrentVaultToCloudAsync();
 
@@ -1432,7 +1425,7 @@ namespace exam_test
                     {
                         ApplyRecoverySettingsToUi();
                         HideMainPanelSettingsForV021();
-                        MarkVaultActivity();
+                        MarkVaultChangedByCurrentDevice("Streamer mode changed");
 
                         await SaveCurrentVaultToCloudAsync();
 
@@ -1545,7 +1538,7 @@ namespace exam_test
                         ApplyPerformanceSettingsToUi();
                         HideMainPanelSettingsForV021();
                         UpdateAnimationState();
-                        MarkVaultActivity();
+                        MarkVaultChangedByCurrentDevice("Streamer mode changed");
 
                         await SaveCurrentVaultToCloudAsync();
 
@@ -3411,7 +3404,7 @@ namespace exam_test
                     currentVaultSettings.AutoLockMinutes = 0;
                 }
 
-                MarkVaultActivity();
+                MarkVaultChangedByCurrentDevice("Streamer mode changed");
 
                 if (isVaultUnlocked)
                 {
@@ -3457,7 +3450,7 @@ namespace exam_test
 
                 currentVaultSettings.AutoRefreshMinutes = GetAutoRefreshMinutesFromSelection();
                 ConfigureAutoRefreshTimer();
-                MarkVaultActivity();
+                MarkVaultChangedByCurrentDevice("Streamer mode changed");
 
                 if (isVaultUnlocked)
                 {
@@ -6894,7 +6887,7 @@ namespace exam_test
 
             ApplyRecoverySettingsToUi();
             ApplyPerformanceSettingsToUi();
-            MarkVaultActivity();
+            MarkVaultChangedByCurrentDevice("Streamer mode changed");
             CheckRecoveryKeyReminder();
 
             loginCard.Visible = false;
