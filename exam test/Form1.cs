@@ -671,7 +671,7 @@ namespace exam_test
                 syncTab.Controls.Add(CreateSettingsCard(
                     "Manual refresh",
                     "Available",
-                    "Load latest encrypted vault and Device Trust status from Google Drive.",
+                    "Load latest encrypted vault and Device Trust status from Google Drive." + Environment.NewLine + "Last load: " + lastLoadSettingsText,
                     16,
                     188,
                     320,
@@ -687,7 +687,7 @@ namespace exam_test
                 syncTab.Controls.Add(CreateSettingsCard(
                     "Manual sync",
                     hasUnsyncedLocalChanges ? "Pending changes" : "Ready",
-                    "Save local encrypted vault changes to Google Drive now.",
+                    "Save local encrypted vault changes to Google Drive now." + Environment.NewLine + "Last save: " + lastSaveSettingsText,
                     360,
                     188,
                     320,
@@ -1676,6 +1676,119 @@ namespace exam_test
                 dialog.Controls.Add(syncCard);
                 dialog.Controls.Add(authenticatorCard);
                 dialog.Controls.Add(legacyReportButton);
+                dialog.Controls.Add(closeButton);
+
+                dialog.ShowDialog(this);
+            }
+        }
+        private void ShowPasswordHealthDialog(int weakPasswords, int reusedPasswords)
+        {
+            bool hasIssues = weakPasswords > 0 || reusedPasswords > 0;
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 560;
+                dialog.Height = 390;
+                dialog.Text = "Password Health";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = hasIssues ? "Password issues found" : "Password health looks good";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 500;
+                titleLabel.Height = 34;
+                titleLabel.ForeColor = hasIssues ? Color.FromArgb(255, 190, 90) : successColor;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = hasIssues
+                    ? "QuickForge found saved entries that deserve your attention."
+                    : "No weak or reused secrets were found in the current vault check.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 500;
+                subtitleLabel.Height = 38;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Panel summaryPanel = new Panel();
+                summaryPanel.Left = 24;
+                summaryPanel.Top = 110;
+                summaryPanel.Width = 500;
+                summaryPanel.Height = 125;
+                summaryPanel.BackColor = Color.FromArgb(24, 28, 44);
+                summaryPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label summaryTitle = new Label();
+                summaryTitle.Text = "Summary";
+                summaryTitle.Left = 16;
+                summaryTitle.Top = 12;
+                summaryTitle.Width = 460;
+                summaryTitle.Height = 24;
+                summaryTitle.ForeColor = Color.White;
+                summaryTitle.BackColor = Color.Transparent;
+                summaryTitle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+
+                Label summaryText = new Label();
+                summaryText.Text =
+                    "Saved entries: " + vaultEntries.Count + Environment.NewLine +
+                    "Weak or empty secrets: " + weakPasswords + Environment.NewLine +
+                    "Reused password groups: " + reusedPasswords;
+                summaryText.Left = 16;
+                summaryText.Top = 42;
+                summaryText.Width = 460;
+                summaryText.Height = 70;
+                summaryText.ForeColor = softTextColor;
+                summaryText.BackColor = Color.Transparent;
+                summaryText.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+
+                summaryPanel.Controls.Add(summaryTitle);
+                summaryPanel.Controls.Add(summaryText);
+
+                Panel nextActionPanel = new Panel();
+                nextActionPanel.Left = 24;
+                nextActionPanel.Top = 250;
+                nextActionPanel.Width = 500;
+                nextActionPanel.Height = 58;
+                nextActionPanel.BackColor = hasIssues
+                    ? Color.FromArgb(36, 30, 30)
+                    : Color.FromArgb(18, 38, 28);
+                nextActionPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label nextActionLabel = new Label();
+                nextActionLabel.Text = hasIssues
+                    ? "Best next action: fix reused passwords first, then weak passwords."
+                    : "Best next action: keep using unique passwords and create backups regularly.";
+                nextActionLabel.Left = 14;
+                nextActionLabel.Top = 15;
+                nextActionLabel.Width = 465;
+                nextActionLabel.Height = 32;
+                nextActionLabel.ForeColor = hasIssues ? Color.FromArgb(255, 190, 90) : successColor;
+                nextActionLabel.BackColor = Color.Transparent;
+                nextActionLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                nextActionPanel.Controls.Add(nextActionLabel);
+
+                Button closeButton = new Button();
+                closeButton.Text = "Close";
+                closeButton.Left = 424;
+                closeButton.Top = 320;
+                closeButton.Width = 100;
+                closeButton.Height = 34;
+                StyleActionButton(closeButton, true);
+                closeButton.Click += (s, e) => dialog.Close();
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(summaryPanel);
+                dialog.Controls.Add(nextActionPanel);
                 dialog.Controls.Add(closeButton);
 
                 dialog.ShowDialog(this);
@@ -8859,6 +8972,123 @@ if (currentDriveService == null)
             return true;
         }
 
+        private string GetLocalDeviceIdentityFilePath()
+        {
+            string appDataFolder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "QuickForge Sync"
+            );
+
+            return Path.Combine(appDataFolder, "device.id");
+        }
+
+        private async Task ForgetCurrentPcForDeveloperTestingAsync()
+        {
+            if (!string.Equals(connectedGoogleEmail, "patrickolsen4@gmail.com", StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show(
+                    "This developer test action is only enabled for patrickolsen4@gmail.com.",
+                    "Developer-only action",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return;
+            }
+
+            if (!isVaultUnlocked || currentDriveService == null)
+            {
+                MessageBox.Show(
+                    "Unlock the vault first before forgetting this PC for testing.",
+                    "Vault required",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return;
+            }
+
+            EnsureLocalDeviceIdentity();
+            EnsureVaultSafetyCollections();
+
+            string oldDeviceId = localDeviceId;
+            string oldDeviceName = string.IsNullOrWhiteSpace(localDeviceName) ? "This PC" : localDeviceName;
+
+            DialogResult confirm = MessageBox.Show(
+                "Forget this PC for developer testing?" + Environment.NewLine + Environment.NewLine +
+                "This removes the current device from this vault's Device Trust list and deletes the local QuickForge device.id file." + Environment.NewLine +
+                "After restarting QuickForge, this PC should appear as a new device again." + Environment.NewLine + Environment.NewLine +
+                "This is only for testing new-device behavior.",
+                "Developer forget this PC",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning
+            );
+
+            if (confirm != DialogResult.Yes)
+            {
+                return;
+            }
+
+            string? typed = ShowPasswordPrompt(
+                "Confirm developer action",
+                "Type FORGET to forget this PC:"
+            );
+
+            if (typed != "FORGET")
+            {
+                MessageBox.Show("Forget PC cancelled.");
+                return;
+            }
+
+            try
+            {
+                currentVaultSettings.KnownDevices.RemoveAll(device =>
+                    string.Equals(device.DeviceId, oldDeviceId, StringComparison.OrdinalIgnoreCase)
+                );
+
+                AddSafetyTimelineEvent(
+                    "Developer forgot current PC",
+                    oldDeviceName + " was removed from Device Trust for new-device testing."
+                );
+
+                await SaveCurrentVaultToCloudAsync();
+
+                string deviceFilePath = GetLocalDeviceIdentityFilePath();
+
+                if (File.Exists(deviceFilePath))
+                {
+                    File.Delete(deviceFilePath);
+                }
+
+                localDeviceId = "";
+                localDeviceName = "";
+                newDeviceDetectedThisSession = false;
+                newDeviceDetectedName = "";
+                untrustedDeviceDetectedThisSession = false;
+                untrustedDeviceDetectedName = "";
+
+                selectedPreviewLabel.Text =
+                    "Developer test: this PC was forgotten." + Environment.NewLine +
+                    "Restart QuickForge to make this PC register as a new device again.";
+
+                MessageBox.Show(
+                    "This PC was forgotten for testing." + Environment.NewLine + Environment.NewLine +
+                    "Restart QuickForge now. On next unlock, this PC should behave like a new device.",
+                    "Developer forget PC complete",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Could not forget this PC: " + ex.Message,
+                    "Developer forget PC failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+            }
+        }
         private void ShowDeviceTrustDialog()
         {
             EnsureLocalDeviceIdentity();
