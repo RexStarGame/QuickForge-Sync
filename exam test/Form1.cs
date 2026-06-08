@@ -10512,6 +10512,126 @@ if (currentDriveService == null)
             return Path.Combine(appDataFolder, "device.id");
         }
 
+        private async Task ForgetSelectedOtherDeviceFromTrustListAsync(KnownVaultDevice selectedDevice)
+        {
+            if (selectedDevice == null)
+            {
+                return;
+            }
+
+            if (!isVaultUnlocked || currentDriveService == null)
+            {
+                MessageBox.Show(
+                    "Unlock the vault before changing Device Trust.",
+                    "Vault required",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return;
+            }
+
+            if (!RequireTrustedDeviceForSensitiveAction("Forget selected device"))
+            {
+                return;
+            }
+
+            if (!ConfirmVaultCodeForDeviceTrust())
+            {
+                return;
+            }
+
+            EnsureLocalDeviceIdentity();
+            EnsureVaultSafetyCollections();
+
+            if (string.Equals(selectedDevice.DeviceId, localDeviceId, StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show(
+                    "This step only forgets another selected device." + Environment.NewLine + Environment.NewLine +
+                    "Current-PC forget will be added in the next safe patch.",
+                    "Current device selected",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return;
+            }
+
+            string selectedDeviceName = string.IsNullOrWhiteSpace(selectedDevice.DeviceName)
+                ? "Selected device"
+                : selectedDevice.DeviceName.Trim();
+
+            int trustedDevicesAfterForget = currentVaultSettings.KnownDevices.Count(device =>
+                !device.IsHiddenFromTrustList &&
+                device.IsTrusted &&
+                !string.Equals(device.DeviceId, selectedDevice.DeviceId, StringComparison.OrdinalIgnoreCase)
+            );
+
+            if (selectedDevice.IsTrusted && trustedDevicesAfterForget == 0)
+            {
+                MessageBox.Show(
+                    "QuickForge cannot forget the last trusted device." +
+                    Environment.NewLine + Environment.NewLine +
+                    "Trust another device first, then try again.",
+                    "Last trusted device",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return;
+            }
+
+            DialogResult confirm = MessageBox.Show(
+                "Forget this selected device from Device Trust?" + Environment.NewLine + Environment.NewLine +
+                "Device: " + selectedDeviceName + Environment.NewLine + Environment.NewLine +
+                "This hides it from the normal Device Trust list and marks it untrusted." + Environment.NewLine +
+                "If that device opens this normal Device Trust list and marks it untrusted." + Environment.NewLine +
+                "If that device opens this vault again later, it will reappear as untrusted.",
+                "Forget selected device",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2
+            );
+
+            if (confirm != DialogResult.Yes)
+            {
+                return;
+            }
+
+            DateTime removedAtUtc = DateTime.UtcNow;
+
+            selectedDevice.IsTrusted = false;
+            selectedDevice.IsHiddenFromTrustList = true;
+            selectedDevice.RemovedFromTrustListAtUtc = removedAtUtc;
+            selectedDevice.TrustedChangedAtUtc = removedAtUtc;
+            selectedDevice.TrustNote = "Device was forgotten from Device Trust by " + localDeviceName + ".";
+
+            currentVaultSettings.LastChangedByDeviceId = localDeviceId;
+            currentVaultSettings.LastChangedByDeviceName = localDeviceName;
+            currentVaultSettings.LastChangedAtUtc = removedAtUtc;
+
+            AddSafetyTimelineEvent(
+                "Device forgotten",
+                selectedDeviceName + " was forgotten from Device Trust by " + localDeviceName + "."
+            );
+
+            QueueBackgroundVaultSync("Device forgotten from Device Trust.");
+
+            SetPreviewText(
+                "Device forgotten.",
+                selectedDeviceName + " was removed from the normal Device Trust list.",
+                "If that device opens this vault again, it will reappear as untrusted."
+            );
+
+            MessageBox.Show(
+                "Selected device was forgotten.",
+                "Device forgotten",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
+
+            await Task.CompletedTask;
+        }
         private async Task ForgetCurrentPcForDeveloperTestingAsync()
         {
             if (!string.Equals(connectedGoogleEmail, "patrickolsen4@gmail.com", StringComparison.OrdinalIgnoreCase))
@@ -10680,6 +10800,7 @@ if (currentDriveService == null)
                 void RefreshDeviceList()
                 {
                     List<KnownVaultDevice> devices = currentVaultSettings.KnownDevices
+                        .Where(device => !device.IsHiddenFromTrustList || device.DeviceId == localDeviceId)
                         .OrderByDescending(device => device.LastSeenAtUtc)
                         .ToList();
 
@@ -10864,16 +10985,23 @@ if (currentDriveService == null)
                     RefreshDeviceList();
                     UpdateDetail();
                     UpdateDeviceTrustActionButtons();
-                };                forgetCurrentPcButton.Text = "Forget this PC";
+                };                forgetCurrentPcButton.Text = "Forget selected";
                 forgetCurrentPcButton.Left = 270;
                 forgetCurrentPcButton.Top = 515;
                 forgetCurrentPcButton.Width = 135;
                 forgetCurrentPcButton.Height = 34;
-                forgetCurrentPcButton.Visible = string.Equals(connectedGoogleEmail, "patrickolsen4@gmail.com", StringComparison.OrdinalIgnoreCase);
+                forgetCurrentPcButton.Visible = true;
                 StyleActionButton(forgetCurrentPcButton);
                 forgetCurrentPcButton.Click += async (s, e) =>
                 {
-                    await ForgetCurrentPcForDeveloperTestingAsync();
+                    KnownVaultDevice? selected = GetSelectedDevice();
+
+                    if (selected == null)
+                    {
+                        return;
+                    }
+
+                    await ForgetSelectedOtherDeviceFromTrustListAsync(selected);
                     RefreshDeviceList();
                     UpdateDetail();
                     UpdateDeviceTrustActionButtons();
@@ -10885,7 +11013,7 @@ if (currentDriveService == null)
 
                     trustButton.Enabled = canManageDeviceTrust && selected != null && !selected.IsTrusted;
                     untrustButton.Enabled = canManageDeviceTrust && selected != null && selected.IsTrusted && selected.DeviceId != localDeviceId;
-                    forgetCurrentPcButton.Enabled = canManageDeviceTrust && selected != null && selected.DeviceId == localDeviceId && string.Equals(connectedGoogleEmail, "patrickolsen4@gmail.com", StringComparison.OrdinalIgnoreCase);
+                    forgetCurrentPcButton.Enabled = canManageDeviceTrust && selected != null && selected.DeviceId != localDeviceId;
                 }
 
                 deviceList.SelectedIndexChanged += (s, e) => UpdateDeviceTrustActionButtons();
