@@ -438,6 +438,66 @@ namespace exam_test
                 control.Enabled = false;
             }
         }
+        private bool IsStreamerModeEnabled()
+        {
+            return isVaultUnlocked &&
+                   currentVaultSettings != null &&
+                   currentVaultSettings.PrivacyModeEnabled;
+        }
+
+        private string MaskEmailForStreamer(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return "Not connected";
+            }
+
+            if (!IsStreamerModeEnabled())
+            {
+                return email;
+            }
+
+            int atIndex = email.IndexOf('@');
+
+            if (atIndex <= 1)
+            {
+                return "Hidden by Streamer mode";
+            }
+
+            return email.Substring(0, 1) + "***@" + "hidden";
+        }
+
+        private string GetVaultListDisplayName(VaultEntry entry)
+        {
+            if (entry == null)
+            {
+                return "Saved entry";
+            }
+
+            if (!IsStreamerModeEnabled())
+            {
+                return entry.GetDisplayName();
+            }
+
+            return (entry.IsFavorite ? "★ " : "") + "Saved entry hidden by Streamer mode";
+        }
+
+        private void ApplyStreamerModeToUi()
+        {
+            RestoreConnectedAccountStatus();
+            RefreshVaultList();
+
+            if (vaultListBox.SelectedIndex >= 0)
+            {
+                VaultListBox_SelectedIndexChanged(this, EventArgs.Empty);
+            }
+            else if (IsStreamerModeEnabled())
+            {
+                selectedPreviewLabel.Text =
+                    "Streamer mode is on." + Environment.NewLine +
+                    "Account details are hidden in lists and preview areas.";
+            }
+        }
         private void ShowSettingsDialog()
         {
             if (currentDriveService == null)
@@ -654,7 +714,7 @@ namespace exam_test
 
                 syncTab.Controls.Add(CreateSettingsCard(
                     "Google account",
-                    string.IsNullOrWhiteSpace(connectedGoogleEmail) ? "Not connected" : connectedGoogleEmail,
+                    string.IsNullOrWhiteSpace(connectedGoogleEmail) ? "Not connected" : MaskEmailForStreamer(connectedGoogleEmail),
                     "Google login is used for app-managed Google Drive appDataFolder sync.",
                     16,
                     18,
@@ -819,6 +879,157 @@ namespace exam_test
                 dialog.Controls.Add(subtitleLabel);
                 dialog.Controls.Add(tabs);
                 dialog.Controls.Add(closeButton);
+
+                dialog.ShowDialog(this);
+            }
+        }
+        private void ShowStreamerModeSettingsDialog()
+        {
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 560;
+                dialog.Height = 360;
+                dialog.Text = "Streamer mode";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Streamer / Privacy mode";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 480;
+                titleLabel.Height = 32;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "Use this when recording videos, sharing screenshots, livestreaming, or showing QuickForge to someone else.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 500;
+                subtitleLabel.Height = 42;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Panel infoPanel = new Panel();
+                infoPanel.Left = 24;
+                infoPanel.Top = 112;
+                infoPanel.Width = 500;
+                infoPanel.Height = 112;
+                infoPanel.BackColor = Color.FromArgb(24, 28, 44);
+                infoPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label infoTitle = new Label();
+                infoTitle.Text = "What it hides";
+                infoTitle.Left = 14;
+                infoTitle.Top = 10;
+                infoTitle.Width = 460;
+                infoTitle.Height = 22;
+                infoTitle.ForeColor = Color.White;
+                infoTitle.BackColor = Color.Transparent;
+                infoTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label infoText = new Label();
+                infoText.Text =
+                    "- Google account email in the top bar" + Environment.NewLine +
+                    "- usernames, websites, notes, and selected-entry preview details" + Environment.NewLine +
+                    "- saved-entry names in the vault list when possible" + Environment.NewLine +
+                    "- it does not delete or encrypt anything differently";
+                infoText.Left = 14;
+                infoText.Top = 36;
+                infoText.Width = 460;
+                infoText.Height = 68;
+                infoText.ForeColor = softTextColor;
+                infoText.BackColor = Color.Transparent;
+                infoText.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+
+                infoPanel.Controls.Add(infoTitle);
+                infoPanel.Controls.Add(infoText);
+
+                CheckBox privacyCheckBox = new CheckBox();
+                privacyCheckBox.Text = "Enable Streamer mode";
+                privacyCheckBox.Left = 24;
+                privacyCheckBox.Top = 242;
+                privacyCheckBox.Width = 230;
+                privacyCheckBox.Height = 28;
+                privacyCheckBox.Checked = currentVaultSettings.PrivacyModeEnabled;
+                privacyCheckBox.ForeColor = softTextColor;
+                privacyCheckBox.BackColor = Color.Transparent;
+                privacyCheckBox.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Button saveButton = new Button();
+                saveButton.Text = "Save";
+                saveButton.Left = 318;
+                saveButton.Top = 282;
+                saveButton.Width = 95;
+                saveButton.Height = 34;
+                StyleActionButton(saveButton, true);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 428;
+                cancelButton.Top = 282;
+                cancelButton.Width = 95;
+                cancelButton.Height = 34;
+                StyleActionButton(cancelButton);
+                cancelButton.Click += (s, e) => dialog.Close();
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "Stored inside your encrypted vault settings.";
+                statusLabel.Left = 24;
+                statusLabel.Top = 286;
+                statusLabel.Width = 270;
+                statusLabel.Height = 26;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+                statusLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+
+                saveButton.Click += async (s, e) =>
+                {
+                    if (!RequireTrustedDeviceForSensitiveAction("Change Streamer mode"))
+                    {
+                        return;
+                    }
+
+                    currentVaultSettings.PrivacyModeEnabled = privacyCheckBox.Checked;
+
+                    try
+                    {
+                        ApplyStreamerModeToUi();
+                        MarkVaultActivity();
+
+                        await SaveCurrentVaultToCloudAsync();
+
+                        selectedPreviewLabel.Text = currentVaultSettings.PrivacyModeEnabled
+                            ? "Streamer mode enabled." + Environment.NewLine + "Safe preview areas now hide account details."
+                            : "Streamer mode disabled." + Environment.NewLine + "Normal account details are visible again.";
+
+                        dialog.Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        statusLabel.Text = "Could not save Streamer mode.";
+                        MessageBox.Show(
+                            "Could not save Streamer mode: " + ex.Message,
+                            "Streamer mode failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
+                    }
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(infoPanel);
+                dialog.Controls.Add(privacyCheckBox);
+                dialog.Controls.Add(statusLabel);
+                dialog.Controls.Add(saveButton);
+                dialog.Controls.Add(cancelButton);
 
                 dialog.ShowDialog(this);
             }
@@ -6946,7 +7157,7 @@ namespace exam_test
             }
 
             SetPreviewText(
-                "Selected: " + entry.GetDisplayName(),
+                "Selected: " + GetVaultListDisplayName(entry),
                 "User: " + MaskEmpty(entry.Username),
                 "Password/code: " + MaskSecret(entry.Secret),
                 "Favorite: " + (entry.IsFavorite ? "Yes" : "No")
@@ -7618,7 +7829,7 @@ namespace exam_test
         {
             if (!string.IsNullOrWhiteSpace(connectedGoogleEmail))
             {
-                accountStatusLabel.Text = "Connected: " + connectedGoogleEmail;
+                accountStatusLabel.Text = "Connected: " + MaskEmailForStreamer(connectedGoogleEmail);
                 accountStatusLabel.ForeColor = successColor;
             }
         }
@@ -10216,7 +10427,7 @@ if (currentDriveService == null)
             if (entry != null)
             {
                 SetPreviewText(
-                "Selected: " + entry.GetDisplayName(),
+                "Selected: " + GetVaultListDisplayName(entry),
                 "User: " + MaskEmpty(entry.Username),
                 "Password/code: " + MaskSecret(entry.Secret));
             }
@@ -10299,6 +10510,11 @@ if (currentDriveService == null)
             if (string.IsNullOrWhiteSpace(value))
             {
                 return "(empty)";
+            }
+
+            if (IsStreamerModeEnabled())
+            {
+                return "Hidden by Streamer mode";
             }
 
             return value;
