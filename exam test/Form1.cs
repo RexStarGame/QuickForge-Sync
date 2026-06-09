@@ -2005,6 +2005,7 @@ namespace exam_test
                 };
 
                 UpdatePrivacyToggleButton();
+
                 Button saveButton = new Button();
                 saveButton.Text = "Save";
                 saveButton.Left = 318;
@@ -2032,50 +2033,42 @@ namespace exam_test
                 statusLabel.BackColor = Color.Transparent;
                 statusLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
 
-                saveButton.Click += async (s, e) =>
+                saveButton.Click += (s, e) =>
                 {
                     if (!RequireTrustedDeviceForSensitiveAction("Change Streamer mode"))
                     {
                         return;
                     }
 
-                    currentVaultSettings.PrivacyModeEnabled = selectedPrivacyMode;
+                    saveButton.Enabled = false;
+                    cancelButton.Enabled = false;
+                    statusLabel.Text = "Saved. Updating Settings...";
+                    statusLabel.ForeColor = successColor;
 
                     try
                     {
+                        currentVaultSettings.PrivacyModeEnabled = selectedPrivacyMode;
+
                         ApplyStreamerModeToUi();
+                        HideMainPanelSettingsForV021();
                         MarkVaultChangedByCurrentDevice("Streamer mode changed");
 
                         selectedPreviewLabel.Text = currentVaultSettings.PrivacyModeEnabled
-                            ? "Streamer mode enabled." + Environment.NewLine + "Safe preview areas now hide account details."
-                            : "Streamer mode disabled." + Environment.NewLine + "Normal account details are visible again.";
+                            ? "Streamer mode enabled." + Environment.NewLine + "Safe preview areas now hide account details. Cloud sync is running in the background."
+                            : "Streamer mode disabled." + Environment.NewLine + "Normal account details are visible again. Cloud sync is running in the background.";
+
+                        SetSyncStatus("Queued background sync");
+                        QueueBackgroundVaultSync("Streamer mode changed");
 
                         saved = true;
                         dialog.Close();
-
-                        try
-                        {
-                            await SaveCurrentVaultToCloudAsync();
-                        }
-                        catch (Exception ex)
-                        {
-                            SetSyncStatus("Streamer mode sync failed", error: true);
-
-                            MessageBox.Show(
-                                "Streamer mode changed locally, but QuickForge could not sync it to Google Drive yet." +
-                                Environment.NewLine + Environment.NewLine +
-                                "Try Manual sync from Settings later." +
-                                Environment.NewLine + Environment.NewLine +
-                                "Details: " + ex.Message,
-                                "Streamer mode sync warning",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Warning
-                            );
-                        }
                     }
                     catch (Exception ex)
                     {
+                        saveButton.Enabled = true;
+                        cancelButton.Enabled = true;
                         statusLabel.Text = "Could not save Streamer mode.";
+                        statusLabel.ForeColor = dangerColor;
 
                         MessageBox.Show(
                             "Could not save Streamer mode: " + ex.Message,
@@ -2097,7 +2090,7 @@ namespace exam_test
 
                 dialog.ShowDialog(this);
             }
-        
+
             return saved;
         }
         private bool ShowAutoLockSettingsDialog()
