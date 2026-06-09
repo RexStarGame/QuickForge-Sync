@@ -791,7 +791,16 @@ namespace exam_test
                     320,
                     150,
                     "Change auto-lock",
-                    () => ShowAutoLockSettingsDialog(),
+                    () =>
+                    {
+                        bool changed = ShowAutoLockSettingsDialog();
+
+                        if (changed)
+                        {
+                            dialog.Close();
+                            BeginInvoke(new Action(() => ShowSettingsDialog(0)));
+                        }
+                    },
                     true
                 ));
 
@@ -2031,8 +2040,10 @@ namespace exam_test
         
             return saved;
         }
-        private void ShowAutoLockSettingsDialog()
+        private bool ShowAutoLockSettingsDialog()
         {
+            bool saved = false;
+
             using (Form dialog = new Form())
             {
                 dialog.Width = 430;
@@ -2116,12 +2127,17 @@ namespace exam_test
                 statusLabel.ForeColor = softTextColor;
                 statusLabel.BackColor = Color.Transparent;
 
-                saveButton.Click += async (s, e) =>
+                saveButton.Click += (s, e) =>
                 {
                     if (!RequireTrustedDeviceForSensitiveAction("Change auto-lock setting"))
                     {
                         return;
                     }
+
+                    saveButton.Enabled = false;
+                    cancelButton.Enabled = false;
+                    statusLabel.Text = "Saved. Updating Settings...";
+                    statusLabel.ForeColor = successColor;
 
                     if (comboBox.SelectedIndex == 1)
                     {
@@ -2144,17 +2160,35 @@ namespace exam_test
                     {
                         ApplyPerformanceSettingsToUi();
                         HideMainPanelSettingsForV021();
-                        MarkVaultChangedByCurrentDevice("Streamer mode changed");
+                        MarkVaultChangedByCurrentDevice("Auto-lock setting changed");
 
-                        await SaveCurrentVaultToCloudAsync();
+                        string autoLockText = currentVaultSettings.AutoLockMinutes <= 0
+                            ? "Auto-lock turned off."
+                            : "Auto-lock set to " + currentVaultSettings.AutoLockMinutes + " minute(s).";
 
-                        selectedPreviewLabel.Text = "Auto-lock setting saved.";
+                        selectedPreviewLabel.Text =
+                            autoLockText + Environment.NewLine +
+                            "Settings updated immediately. Cloud sync is running in the background.";
+
+                        SetSyncStatus("Queued background sync");
+                        QueueBackgroundVaultSync("Auto-lock setting changed");
+
+                        saved = true;
                         dialog.Close();
                     }
                     catch (Exception ex)
                     {
+                        saveButton.Enabled = true;
+                        cancelButton.Enabled = true;
                         statusLabel.Text = "Could not save auto-lock setting.";
-                        MessageBox.Show("Could not save auto-lock setting: " + ex.Message);
+                        statusLabel.ForeColor = dangerColor;
+
+                        MessageBox.Show(
+                            "Could not save auto-lock setting: " + ex.Message,
+                            "Auto-lock setting failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
                     }
                 };
 
@@ -2167,8 +2201,9 @@ namespace exam_test
 
                 dialog.ShowDialog(this);
             }
-        }
 
+            return saved;
+        }
         private void ShowAutoRefreshSettingsDialog()
         {
             using (Form dialog = new Form())
