@@ -22,7 +22,7 @@ Warning: Older versions may have issues. Please use the latest release.
 
 For normal testers:
 
-1. Download the latest `QuickForge-Sync-v0.2.0-beta-preview-win-x64.zip`.
+1. Download the latest `QuickForge-Sync-v0.2.1-dev-preview-win-x64.zip` when testing this development branch.
 2. Extract the ZIP first.
 3. Open the extracted folder.
 4. Run `QuickForge Sync.exe`.
@@ -68,6 +68,31 @@ Your vault is encrypted before it is saved or synced.
 - Change vault code flow
 - Lockout after repeated wrong unlock attempts
 - Auto-lock for safety
+- Optional Authenticator Lock with 6-digit authenticator-app codes
+- Authenticator Lock can be turned off and enabled again without scanning a new QR code
+
+
+### Authenticator Lock
+
+Authenticator Lock is optional extra protection for vault unlock.
+
+When enabled, QuickForge requires:
+
+1. Vault code
+2. A 6-digit authenticator code
+
+It works with common authenticator apps such as Google Authenticator, Microsoft Authenticator, Aegis, 2FAS, and similar TOTP apps.
+
+Important behavior:
+
+- First setup shows a QR code once.
+- Turning Authenticator Lock off does not delete the existing authenticator setup.
+- Turning it on again reuses the same authenticator app.
+- The 6-digit code field continues automatically after 6 digits.
+- Trust Center and Settings > Security use the same real Authenticator Lock flow.
+- Trust Center and Settings â†’ Security use the same real Authenticator Lock flow.
+
+Authenticator Lock is bonus protection. If it is off, the app should show it as optional/recommended, not as a critical failure.
 
 ### Google Drive Sync
 
@@ -213,7 +238,7 @@ Before using real passwords:
 
 ## Current Beta Status
 
-Current development version: `v0.2.0-beta-preview`
+Current development version: `v0.2.1-dev-preview`
 
 Current local automated test result: `30/30 tests passing`
 
@@ -236,6 +261,9 @@ Passed local readiness areas:
 - Reduced animation load
 - Reduced Google Drive roundtrips
 - Release safety cleanup
+- Authenticator Lock setup, disable, and re-enable without new QR
+- Authenticator 6-digit auto-submit UX
+- Trust Center Authenticator Lock Set up / Manage integration
 
 ---
 
@@ -245,7 +273,8 @@ QuickForge Sync is an active beta-preview project.
 
 Current focus:
 
-- Final v0.2.0 beta packaging
+- Final v0.2.1 Authenticator Lock testing
+- v0.2.1 beta/dev packaging decision
 - Manual release testing
 - Controlled tester feedback
 - Cleaner release notes
