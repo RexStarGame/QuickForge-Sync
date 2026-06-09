@@ -11678,6 +11678,20 @@ if (currentDriveService == null)
                         return;
                     }
 
+                    if (string.Equals(selected.DeviceId, localDeviceId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        MessageBox.Show(
+                            "You cannot forget this device while you are using it." + Environment.NewLine + Environment.NewLine +
+                            "This prevents accidentally removing your current trusted device. Use another trusted device if you need to review or remove this computer.",
+                            "Cannot forget this device",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning
+                        );
+
+                        UpdateDeviceTrustActionButtons();
+                        return;
+                    }
+
                     await ForgetSelectedOtherDeviceFromTrustListAsync(selected);
                     RefreshDeviceList();
                     UpdateDetail();
@@ -11688,9 +11702,20 @@ if (currentDriveService == null)
                     KnownVaultDevice? selected = GetSelectedDevice();
                     bool canManageDeviceTrust = !IsRestrictedModeActive();
 
+                    bool selectedIsCurrentDevice =
+                        selected != null &&
+                        string.Equals(selected.DeviceId, localDeviceId, StringComparison.OrdinalIgnoreCase);
+
                     trustButton.Enabled = canManageDeviceTrust && selected != null && !selected.IsTrusted;
-                    untrustButton.Enabled = canManageDeviceTrust && selected != null && selected.IsTrusted && selected.DeviceId != localDeviceId;
-                    forgetCurrentPcButton.Enabled = canManageDeviceTrust && selected != null;
+                    untrustButton.Enabled = canManageDeviceTrust && selected != null && selected.IsTrusted && !selectedIsCurrentDevice;
+                    forgetCurrentPcButton.Enabled = canManageDeviceTrust && selected != null && !selectedIsCurrentDevice;
+
+                    vaultToolTip.SetToolTip(
+                        forgetCurrentPcButton,
+                        selectedIsCurrentDevice
+                            ? "You cannot forget the device you are currently using."
+                            : "Forget the selected non-current device."
+                    );
                 }
 
                 deviceList.SelectedIndexChanged += (s, e) => UpdateDeviceTrustActionButtons();
