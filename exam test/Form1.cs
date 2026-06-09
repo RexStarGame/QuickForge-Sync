@@ -1484,12 +1484,20 @@ namespace exam_test
             if (string.IsNullOrWhiteSpace(code) ||
                 !VerifyAuthenticatorCode(currentVaultSettings.AuthenticatorSecretBase32, code, out _))
             {
-                MessageBox.Show(
-                    "Wrong or expired authenticator code. Authenticator Lock was not enabled.",
+                DialogResult setupNewChoice = MessageBox.Show(
+                    "Wrong or expired authenticator code. Authenticator Lock was not enabled." + Environment.NewLine + Environment.NewLine +
+                    "If this authenticator entry is old, deleted, or from the wrong QR code, you can set up a new QR code now." + Environment.NewLine + Environment.NewLine +
+                    "Set up a new QR code?",
                     "Authenticator check failed",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning,
+                    MessageBoxDefaultButton.Button2
                 );
+
+                if (setupNewChoice == DialogResult.Yes)
+                {
+                    return ShowAuthenticatorSetupDialog();
+                }
 
                 return false;
             }
@@ -1706,7 +1714,7 @@ namespace exam_test
                 {
                     if (!VerifyAuthenticatorCode(secretBase32, codeBox.Text, out long timeWindowUsed))
                     {
-                        statusLabel.Text = "Wrong or expired code. Open your authenticator app and try the newest 6-digit code.";
+                        statusLabel.Text = "Wrong or expired code. This QR is still active for this setup window. Wait for the next 6-digit code and try again.";
                         statusLabel.ForeColor = dangerColor;
                         codeBox.SelectAll();
                         codeBox.Focus();
@@ -1723,6 +1731,7 @@ namespace exam_test
                         currentVaultSettings.AuthenticatorLockEnabled = true;
                         currentVaultSettings.AuthenticatorSecretBase32 = secretBase32;
                         currentVaultSettings.AuthenticatorEnabledAtUtc = DateTime.UtcNow;
+                        currentVaultSettings.LastAuthenticatorTimeWindowUsed = timeWindowUsed;
 
                         MarkVaultChangedByCurrentDevice("Authenticator Lock enabled");
                         await SaveCurrentVaultToCloudAsync();
