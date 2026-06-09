@@ -1,5 +1,47 @@
 # Changelog
 
+## v0.2.1-dev-preview
+
+### Focus
+
+- Optional Authenticator Lock
+- Faster ON/OFF security toggles
+- Trust Center integration
+- Safer close behavior while sync/refresh is running
+- Documentation and release consistency cleanup
+
+### Added
+
+- Added optional Authenticator Lock using 6-digit authenticator-app codes.
+- Added first-time QR setup flow for Authenticator Lock.
+- Added support for turning Authenticator Lock off without deleting the existing authenticator setup.
+- Added support for enabling Authenticator Lock again using the same authenticator app.
+- Added 6-digit code auto-submit after the user types a complete authenticator code.
+- Connected the Trust Center Authenticator Lock card to the same real settings flow used by Settings → Security.
+- Added close protection that blocks app close only while sync, refresh, or pending local changes are active.
+
+### Improved
+
+- Authenticator ON/OFF now updates faster by using background sync instead of making the user wait for cloud upload.
+- Authenticator code prompts are clearer and easier to understand.
+- Trust Center now shows Authenticator Lock as Optional / Set up or Active / Manage.
+- Authenticator Lock is treated as bonus protection, not as a scary failure when off.
+- X close behavior is less annoying: it closes normally when safe and only blocks during sync/refresh risk.
+
+### Testing
+
+- Debug build passed locally.
+- Release build passed locally.
+- Automated tests passed locally: 30/30.
+- Manual testing still required before publishing a v0.2.1 ZIP.
+
+### Status
+
+- Active development branch.
+- Not released as a ZIP yet.
+- Use test data until manual v0.2.1 release testing is complete.
+
+
 ## v0.2.0-beta-preview (development branch)
 
 ### Focus

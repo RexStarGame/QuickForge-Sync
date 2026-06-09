@@ -10,6 +10,8 @@ using System.Runtime.InteropServices;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using OtpNet;
+using QRCoder;
 
 namespace exam_test
 {
@@ -17,7 +19,7 @@ namespace exam_test
     {
         private const string AppName = "QuickForge Sync";
         private const string AppStatus = "Beta Preview";
-        private const string AppVersion = "v0.2.0-beta-preview";
+        private const string AppVersion = "v0.2.1-dev-preview";
         private const string AppDisplayName = AppName + " " + AppStatus;
 
 
@@ -83,7 +85,9 @@ namespace exam_test
         private readonly Label appTitleLabel = new Label();
         private readonly Label appSubtitleLabel = new Label();
         private readonly Label accountStatusLabel = new Label();
+        private readonly Label privacyModeWarningLabel = new Label();
         private readonly Button aboutButton = new Button();
+        private readonly Button settingsButton = new Button();
         private readonly Button logoutButton = new Button();
 
         // Google login card
@@ -205,6 +209,7 @@ namespace exam_test
         private readonly ToolTip vaultToolTip = new ToolTip();
 
         private DateTime lastVaultActivityUtc = DateTime.UtcNow;
+        private int openSettingsDialogCount = 0;
         // Colors
         private readonly Color backgroundColor = Color.FromArgb(8, 10, 18);
         private readonly Color panelColor = Color.FromArgb(18, 22, 36);
@@ -269,17 +274,97 @@ namespace exam_test
             deviceTrustRefreshTimer.Start();
         }
 
+        private void RestartAutoRefreshTimerFromSettings()
+        {
+            autoRefreshTimer.Stop();
+
+            if (!isVaultUnlocked ||
+                currentVaultSettings.AutoRefreshMinutes <= 0)
+            {
+                return;
+            }
+
+            int intervalMinutes = Math.Max(1, currentVaultSettings.AutoRefreshMinutes);
+            autoRefreshTimer.Interval = intervalMinutes * 60 * 1000;
+            autoRefreshTimer.Start();
+
+            SetSyncStatus("Auto-refresh every " + intervalMinutes + " minute(s)");
+        }
+
+        private bool IsSettingsDialogOpen()
+        {
+            return openSettingsDialogCount > 0;
+        }
+
+        private void BeginSettingsDialogActivity()
+        {
+            openSettingsDialogCount++;
+            lastVaultActivityUtc = DateTime.UtcNow;
+        }
+
+        private void EndSettingsDialogActivity()
+        {
+            if (openSettingsDialogCount > 0)
+            {
+                openSettingsDialogCount--;
+            }
+
+            lastVaultActivityUtc = DateTime.UtcNow;
+        }
+
+
+        private bool safeCloseApproved = false;
+
+        private bool IsCloseBlockedBySyncOrRefresh()
+        {
+            return HasPendingBackgroundVaultSync() ||
+                   backgroundVaultSyncRunning ||
+                   backgroundVaultSyncRequested ||
+                   hasUnsyncedLocalChanges ||
+                   autoRefreshRunning ||
+                   deviceTrustBackgroundRefreshRunning ||
+                   (isVaultUnlocked && (!refreshCloudButton.Enabled || !manualSyncButton.Enabled));
+        }
+
+        private void ShowCloseBlockedBySyncOrRefreshMessage()
+        {
+            SetSyncStatus("Close blocked - sync or refresh running", error: true);
+
+            MessageBox.Show(
+                "QuickForge is still syncing or refreshing your encrypted vault." + Environment.NewLine + Environment.NewLine +
+                "Please wait until sync/refresh is finished before closing the app." + Environment.NewLine + Environment.NewLine +
+                "This protects you from closing while this device may still have vault changes that Google Drive has not finished saving or loading.",
+                "Sync or refresh still running",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
+        }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            if (!ConfirmPendingBackgroundSyncBeforeExit("close QuickForge"))
+            if (safeCloseApproved)
             {
+                base.OnFormClosing(e);
+                return;
+            }
+
+            if (IsCloseBlockedBySyncOrRefresh())
+            {
+                ShowCloseBlockedBySyncOrRefreshMessage();
                 e.Cancel = true;
                 return;
             }
 
+            safeCloseApproved = true;
+
+            if (isVaultUnlocked)
+            {
+                LockVaultForSafety("Vault locked before closing QuickForge.");
+            }
+
             base.OnFormClosing(e);
         }
+
         private void Form1_Load(object? sender, EventArgs e)
         {
             // Empty method, safe for Windows Forms Designer.
@@ -327,7 +412,13 @@ namespace exam_test
             WindowState = FormWindowState.Normal;
             Activate();
 
-            MarkVaultActivity();
+            RestoreConnectedAccountStatus();
+
+            if (isVaultUnlocked)
+            {
+                ApplyStreamerModeToUi();
+            }
+
             UpdateAnimationState();
         }
 
@@ -359,6 +450,7 @@ namespace exam_test
 
             accountStatusLabel.Text = "Not connected";
             accountStatusLabel.ForeColor = softTextColor;
+            privacyModeWarningLabel.Visible = false;
             accountStatusLabel.BackColor = Color.Transparent;
             accountStatusLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             accountStatusLabel.AutoSize = false;
@@ -367,7 +459,21 @@ namespace exam_test
             accountStatusLabel.Top = 52;
             accountStatusLabel.Width = 305;
             accountStatusLabel.Height = 22;
+            accountStatusLabel.Cursor = Cursors.Default;
+            vaultToolTip.SetToolTip(accountStatusLabel, "Current Google account status.");
 
+            settingsButton.Text = "Settings";
+            settingsButton.Width = 88;
+            settingsButton.Height = 32;
+            settingsButton.Left = 460;
+            settingsButton.Top = 22;
+            settingsButton.Enabled = false;
+            settingsButton.FlatStyle = FlatStyle.Flat;
+            settingsButton.ForeColor = Color.White;
+            settingsButton.BackColor = Color.FromArgb(35, 40, 60);
+            settingsButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
+            settingsButton.Click += (s, e) => ShowSettingsDialog();
+            vaultToolTip.SetToolTip(settingsButton, "Open QuickForge settings for security, sync, privacy, and app options.");
             aboutButton.Text = "About";
             aboutButton.Width = 80;
             aboutButton.Height = 32;
@@ -385,6 +491,7 @@ namespace exam_test
             logoutButton.Left = 655;
             logoutButton.Top = 22;
             logoutButton.Enabled = false;
+            settingsButton.Enabled = false;
             logoutButton.FlatStyle = FlatStyle.Flat;
             logoutButton.ForeColor = Color.White;
             logoutButton.BackColor = Color.FromArgb(35, 40, 60);
@@ -394,11 +501,3276 @@ namespace exam_test
             topBarPanel.Controls.Add(appTitleLabel);
             topBarPanel.Controls.Add(appSubtitleLabel);
             topBarPanel.Controls.Add(accountStatusLabel);
+            topBarPanel.Controls.Add(settingsButton);
             topBarPanel.Controls.Add(aboutButton);
             topBarPanel.Controls.Add(logoutButton);
 
             Controls.Add(topBarPanel);
+
+            privacyModeWarningLabel.Text = "Privacy visible - Streamer mode is off. Click to hide details.";
+            privacyModeWarningLabel.Left = 70;
+            privacyModeWarningLabel.Top = 108;
+            privacyModeWarningLabel.Width = 660;
+            privacyModeWarningLabel.Height = 28;
+            privacyModeWarningLabel.TextAlign = ContentAlignment.MiddleCenter;
+            privacyModeWarningLabel.ForeColor = Color.FromArgb(255, 190, 90);
+            privacyModeWarningLabel.BackColor = Color.FromArgb(36, 30, 30);
+            privacyModeWarningLabel.BorderStyle = BorderStyle.FixedSingle;
+            privacyModeWarningLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            privacyModeWarningLabel.Cursor = Cursors.Hand;
+            privacyModeWarningLabel.Visible = false;
+            privacyModeWarningLabel.Click += (s, e) => ShowSettingsDialog(2);
+            vaultToolTip.SetToolTip(privacyModeWarningLabel, "Streamer mode is off. Click to open Settings > Privacy before screenshots, recording, or streaming.");
+            Controls.Add(privacyModeWarningLabel);
+
             topBarPanel.BringToFront();
+            privacyModeWarningLabel.BringToFront();
+        }
+
+        private void HideMainPanelSettingsForV021()
+        {
+            Control[] oldMainSettingsControls = new Control[]
+            {
+                securitySettingsLabel,
+                recoveryReminderLabel,
+                recoveryReminderComboBox,
+                rotateRecoveryKeyButton,
+                performanceSettingsLabel,
+                animationEnabledCheckBox,
+                autoLockLabel,
+                autoLockComboBox,
+                autoRefreshLabel,
+                autoRefreshComboBox
+            };
+
+            foreach (Control control in oldMainSettingsControls)
+            {
+                control.Visible = false;
+                control.Enabled = false;
+            }
+        }
+        private bool IsStreamerModeEnabled()
+        {
+            return isVaultUnlocked &&
+                   currentVaultSettings != null &&
+                   currentVaultSettings.PrivacyModeEnabled;
+        }
+
+        private string MaskEmailForStreamer(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return "Not connected";
+            }
+
+            if (!IsStreamerModeEnabled())
+            {
+                return email;
+            }
+
+            int atIndex = email.IndexOf('@');
+
+            if (atIndex <= 1)
+            {
+                return "Hidden by Streamer mode";
+            }
+
+            return email.Substring(0, 1) + "***@" + "hidden";
+        }
+
+        private string GetVaultListDisplayName(VaultEntry entry)
+        {
+            if (entry == null)
+            {
+                return "Saved entry";
+            }
+
+            if (!IsStreamerModeEnabled())
+            {
+                return entry.GetDisplayName();
+            }
+
+            return (entry.IsFavorite ? "[Favorite] " : "") + "Saved entry hidden by Streamer mode";
+        }
+
+        private void ApplyStreamerModeToUi()
+        {
+            RestoreConnectedAccountStatus();
+            RefreshVaultList();
+
+            if (vaultListBox.SelectedIndex >= 0)
+            {
+                VaultListBox_SelectedIndexChanged(this, EventArgs.Empty);
+            }
+            else if (IsStreamerModeEnabled())
+            {
+                selectedPreviewLabel.Text =
+                    "Streamer mode is on." + Environment.NewLine +
+                    "Usernames, websites, notes, and secrets are hidden in lists, preview areas, and QuickFill.";
+            }
+
+            if (quickFillListBox != null && !quickFillListBox.IsDisposed)
+            {
+                RefreshQuickFillList(quickFillSearchBox?.Text ?? "");
+            }
+
+            if (quickFillForm != null && !quickFillForm.IsDisposed)
+            {
+                quickFillForm.Text = IsStreamerModeEnabled()
+                    ? "QuickFill - Streamer mode"
+                    : "QuickFill";
+            }
+        }
+        private void ShowSettingsDialog(int selectedTabIndex = 0)
+        {
+            if (currentDriveService == null)
+            {
+                MessageBox.Show(
+                    "Connect with Google first before opening Settings.",
+                    "Settings unavailable",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return;
+            }
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 760;
+                dialog.Height = 640;
+                dialog.Text = "QuickForge Settings";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Settings";
+                titleLabel.Left = 22;
+                titleLabel.Top = 18;
+                titleLabel.Width = 500;
+                titleLabel.Height = 32;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "Manage QuickForge security, sync, privacy, and app options.";
+                subtitleLabel.Left = 22;
+                subtitleLabel.Top = 52;
+                subtitleLabel.Width = 690;
+                subtitleLabel.Height = 24;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                TabControl tabs = new TabControl();
+                tabs.Left = 20;
+                tabs.Top = 90;
+                tabs.Width = 705;
+                tabs.Height = 440;
+
+                TabPage securityTab = new TabPage("Security");
+                TabPage syncTab = new TabPage("Sync");
+                TabPage privacyTab = new TabPage("Privacy");
+                TabPage appTab = new TabPage("App");
+
+                securityTab.BackColor = Color.FromArgb(16, 20, 34);
+                syncTab.BackColor = Color.FromArgb(16, 20, 34);
+                privacyTab.BackColor = Color.FromArgb(16, 20, 34);
+                appTab.BackColor = Color.FromArgb(16, 20, 34);
+
+                Panel CreateSettingsCard(
+                    string title,
+                    string status,
+                    string detail,
+                    int left,
+                    int top,
+                    int width,
+                    int height,
+                    string? actionText = null,
+                    Action? action = null,
+                    bool primary = false)
+                {
+                    Panel card = new Panel();
+                    card.Left = left;
+                    card.Top = top;
+                    card.Width = width;
+                    card.Height = height;
+                    card.BackColor = Color.FromArgb(24, 28, 44);
+                    card.BorderStyle = BorderStyle.FixedSingle;
+
+                    Label cardTitle = new Label();
+                    cardTitle.Text = title;
+                    cardTitle.Left = 14;
+                    cardTitle.Top = 12;
+                    cardTitle.Width = width - 28;
+                    cardTitle.Height = 22;
+                    cardTitle.ForeColor = Color.White;
+                    cardTitle.BackColor = Color.Transparent;
+                    cardTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                    Label cardStatus = new Label();
+                    cardStatus.Text = status;
+                    cardStatus.Left = 14;
+                    cardStatus.Top = 38;
+                    cardStatus.Width = width - 28;
+                    cardStatus.Height = 24;
+                    cardStatus.ForeColor = primary ? successColor : Color.FromArgb(255, 190, 90);
+                    cardStatus.BackColor = Color.Transparent;
+                    cardStatus.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                    Label cardDetail = new Label();
+                    cardDetail.Text = detail;
+                    cardDetail.Left = 14;
+                    cardDetail.Top = 66;
+                    cardDetail.Width = width - 28;
+                    cardDetail.Height = actionText == null ? height - 76 : height - 116;
+                    cardDetail.ForeColor = softTextColor;
+                    cardDetail.BackColor = Color.Transparent;
+                    cardDetail.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+
+                    card.Controls.Add(cardTitle);
+                    card.Controls.Add(cardStatus);
+                    card.Controls.Add(cardDetail);
+
+                    if (!string.IsNullOrWhiteSpace(actionText) && action != null)
+                    {
+                        Button actionButton = new Button();
+                        actionButton.Text = actionText;
+                        actionButton.Left = 14;
+                        actionButton.Top = height - 42;
+                        actionButton.Width = 150;
+                        actionButton.Height = 30;
+                        StyleActionButton(actionButton, primary);
+                        actionButton.Click += (s, e) => action();
+
+                        card.Controls.Add(actionButton);
+                    }
+
+                    return card;
+                }
+
+                string autoLockStatus = currentVaultSettings.AutoLockMinutes <= 0
+                    ? "Off"
+                    : currentVaultSettings.AutoLockMinutes + " minutes";
+
+                string autoRefreshStatus = currentVaultSettings.AutoRefreshMinutes <= 0
+                    ? "Off"
+                    : "Every " + currentVaultSettings.AutoRefreshMinutes + " minute(s)";
+
+                string recoveryReminderStatus = currentVaultSettings.RecoveryKeyReminderDays <= 0
+                    ? "Off"
+                    : currentVaultSettings.RecoveryKeyReminderDays + " days";
+
+                bool authenticatorIsConfigured = IsAuthenticatorLockConfigured();
+                bool authenticatorIsEnabled = IsAuthenticatorLockEnabled();
+
+                string authenticatorLockStatus = authenticatorIsEnabled
+                    ? "On"
+                    : (authenticatorIsConfigured ? "Off" : "Not set up");
+                string lastSaveSettingsText = lastCloudSaveUtc.HasValue
+                    ? lastCloudSaveUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                    : "Not yet";
+
+                string lastLoadSettingsText = lastCloudLoadUtc.HasValue
+                    ? lastCloudLoadUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                    : "Not yet";
+
+                securityTab.Controls.Add(CreateSettingsCard(
+                    "Two-step vault unlock",
+                    authenticatorLockStatus,
+                    authenticatorIsEnabled
+                        ? "After your vault code, QuickForge asks for a 6-digit authenticator code."
+                        : (authenticatorIsConfigured
+                            ? "Authenticator is already set up. Enable it again without scanning a new QR code."
+                            : "Add an optional authenticator-app code after your vault code."),
+                    16,
+                    18,
+                    320,
+                    150,
+                    authenticatorIsEnabled ? "Manage" : (authenticatorIsConfigured ? "Enable" : "Set up"),
+                    async () =>
+                    {
+                        bool changed = await ShowAuthenticatorLockSettingsDialogAsync();
+
+                        if (changed)
+                        {
+                            dialog.Close();
+                            BeginInvoke(new Action(() => ShowSettingsDialog(0)));
+                        }
+                    },
+                    authenticatorLockStatus == "On"
+                ));
+                securityTab.Controls.Add(CreateSettingsCard(
+                    "Auto-lock",
+                    autoLockStatus,
+                    "QuickForge can lock the vault automatically after inactivity.",
+                    360,
+                    18,
+                    320,
+                    150,
+                    "Change auto-lock",
+                    () =>
+                    {
+                        bool changed = ShowAutoLockSettingsDialog();
+
+                        if (changed)
+                        {
+                            dialog.Close();
+                            BeginInvoke(new Action(() => ShowSettingsDialog(0)));
+                        }
+                    },
+                    true
+                ));
+
+                securityTab.Controls.Add(CreateSettingsCard(
+                    "Vault code",
+                    "Available",
+                    "Change your vault code when you suspect reuse, sharing, or device compromise.",
+                    16,
+                    188,
+                    320,
+                    150,
+                    "Change vault code",
+                    () =>
+                    {
+                                                ChangeVaultCodeButton_Click(this, EventArgs.Empty);
+                    },
+                    true
+                ));
+
+                securityTab.Controls.Add(CreateSettingsCard(
+                    "Recovery key",
+                    "Reminder: " + recoveryReminderStatus,
+                    "Recovery key rotation and reminders help protect long-term access to your vault.",
+                    360,
+                    188,
+                    320,
+                    150,
+                    "Recovery options",
+                    () =>
+                    {
+                        bool changed = ShowRecoveryReminderSettingsDialog();
+
+                        if (changed)
+                        {
+                            dialog.Close();
+                            BeginInvoke(new Action(() => ShowSettingsDialog(0)));
+                        }
+                    },
+                    true
+                ));
+
+                syncTab.Controls.Add(CreateSettingsCard(
+                    "Google account",
+                    string.IsNullOrWhiteSpace(connectedGoogleEmail) ? "Not connected" : MaskEmailForStreamer(connectedGoogleEmail),
+                    "Google login is used for app-managed Google Drive appDataFolder sync.",
+                    16,
+                    18,
+                    320,
+                    150
+                ));
+
+                syncTab.Controls.Add(CreateSettingsCard(
+                    "Auto-refresh",
+                    autoRefreshStatus,
+                    "Auto-refresh can load cloud/device-trust changes from Google Drive while the vault is open.",
+                    360,
+                    18,
+                    320,
+                    150,
+                    "Change refresh",
+                    () =>
+                    {
+                        bool changed = ShowAutoRefreshSettingsDialog();
+
+                        if (changed)
+                        {
+                            dialog.Close();
+                            BeginInvoke(new Action(() => ShowSettingsDialog(1)));
+                        }
+                    },
+                    true
+                ));
+
+                syncTab.Controls.Add(CreateSettingsCard(
+                    "Manual refresh",
+                    "Available",
+                    "Load latest encrypted vault and Device Trust status from Google Drive." + Environment.NewLine + "Last load: " + lastLoadSettingsText,
+                    16,
+                    188,
+                    320,
+                    150,
+                    "Refresh vault",
+                    () =>
+                    {
+                                                RefreshCloudButton_Click(this, EventArgs.Empty);
+                    },
+                    true
+                ));
+
+                syncTab.Controls.Add(CreateSettingsCard(
+                    "Manual sync",
+                    hasUnsyncedLocalChanges ? "Pending changes" : "Ready",
+                    "Save local encrypted vault changes to Google Drive now." + Environment.NewLine + "Last save: " + lastSaveSettingsText,
+                    360,
+                    188,
+                    320,
+                    150,
+                    "Sync now",
+                    () =>
+                    {
+                                                ManualSyncButton_Click(this, EventArgs.Empty);
+                    },
+                    true
+                ));
+
+                privacyTab.Controls.Add(CreateSettingsCard(
+                    "Clipboard cleanup",
+                    "Active",
+                    "Copied secrets are cleared automatically after a short time. This helps reduce accidental leaks.",
+                    16,
+                    18,
+                    320,
+                    150
+                ));
+
+                privacyTab.Controls.Add(CreateSettingsCard(
+                    "Sensitive previews",
+                    "Hidden by default",
+                    "QuickForge hides saved secrets until you intentionally reveal or copy them.",
+                    360,
+                    18,
+                    320,
+                    150,
+                    "Security check",
+                    () =>
+                    {
+                                                ShowTrustCenterDialog();
+                    },
+                    true
+                ));
+
+                privacyTab.Controls.Add(CreateSettingsCard(
+                    "Background animation",
+                    currentVaultSettings.BackgroundAnimationEnabled ? "On" : "Off",
+                    "Disable animation if you want lower visual load while keeping the vault open.",
+                    16,
+                    188,
+                    320,
+                    150,
+                    "Change animation",
+                    () =>
+                    {
+                        bool changed = ShowBackgroundAnimationSettingsDialog();
+
+                        if (changed)
+                        {
+                            dialog.Close();
+                            BeginInvoke(new Action(() => ShowSettingsDialog(2)));
+                        }
+                    },
+                    true
+                ));
+
+                privacyTab.Controls.Add(CreateSettingsCard(
+                    "Streamer mode",
+                    currentVaultSettings.PrivacyModeEnabled ? "On" : "Off",
+                    "Hide emails, usernames, account names, and preview details while screen sharing or taking screenshots.",
+                    360,
+                    188,
+                    320,
+                    150,
+                    "Change privacy",
+                    () =>
+                    {
+                        bool saved = ShowStreamerModeSettingsDialog();
+
+                        if (saved)
+                        {
+                            dialog.Close();
+                            BeginInvoke(new Action(() => ShowSettingsDialog(2)));
+                        }
+                    },
+                    true
+                ));
+
+                appTab.Controls.Add(CreateSettingsCard(
+                    "Version",
+                    AppVersion,
+                    "This branch is a development preview. Do not publish it as a public release yet.",
+                    16,
+                    18,
+                    320,
+                    150
+                ));
+
+                appTab.Controls.Add(CreateSettingsCard(
+                    "About QuickForge",
+                    AppDisplayName,
+                    "Encrypted Windows vault with Google Drive appDataFolder sync.",
+                    360,
+                    18,
+                    320,
+                    150,
+                    "About",
+                    () => AboutButton_Click(this, EventArgs.Empty),
+                    true
+                ));
+
+                appTab.Controls.Add(CreateSettingsCard(
+                    "Developer reset",
+                    string.Equals(connectedGoogleEmail, "patrickolsen4@gmail.com", StringComparison.OrdinalIgnoreCase)
+                        ? "Available for this account"
+                        : "Hidden",
+                    "Developer reset remains restricted to the developer account and is not a normal public setting.",
+                    16,
+                    188,
+                    320,
+                    150
+                ));
+
+                tabs.TabPages.Add(securityTab);
+                tabs.TabPages.Add(syncTab);
+                tabs.TabPages.Add(privacyTab);
+                tabs.TabPages.Add(appTab);
+                if (selectedTabIndex >= 0 && selectedTabIndex < tabs.TabPages.Count)
+                {
+                    tabs.SelectedIndex = selectedTabIndex;
+                }
+
+                Button closeButton = new Button();
+                closeButton.Text = "Close";
+                closeButton.Left = 625;
+                closeButton.Top = 548;
+                closeButton.Width = 100;
+                closeButton.Height = 34;
+                StyleActionButton(closeButton, true);
+                closeButton.Click += (s, e) => dialog.Close();
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(tabs);
+                dialog.Controls.Add(closeButton);
+
+                BeginSettingsDialogActivity();
+                dialog.FormClosed += (s, e) => EndSettingsDialogActivity();
+                dialog.ShowDialog(this);
+            }
+        }
+        private bool IsAuthenticatorLockConfigured()
+        {
+            return currentVaultSettings != null &&
+                   !string.IsNullOrWhiteSpace(currentVaultSettings.AuthenticatorSecretBase32);
+        }
+
+        private bool IsAuthenticatorLockEnabled()
+        {
+            return IsAuthenticatorLockConfigured() &&
+                   currentVaultSettings.AuthenticatorLockEnabled;
+        }
+
+        private string GenerateAuthenticatorSecretBase32()
+        {
+            byte[] secretBytes = KeyGeneration.GenerateRandomKey(20);
+            return Base32Encoding.ToString(secretBytes);
+        }
+
+        private string BuildAuthenticatorSetupUri(string secretBase32)
+        {
+            string accountLabel = string.IsNullOrWhiteSpace(connectedGoogleEmail)
+                ? "vault"
+                : connectedGoogleEmail.Trim();
+
+            string label = Uri.EscapeDataString("QuickForge:" + accountLabel);
+            string issuer = Uri.EscapeDataString("QuickForge Sync");
+
+            return "otpauth://totp/" + label +
+                   "?secret=" + secretBase32 +
+                   "&issuer=" + issuer +
+                   "&digits=6&period=30";
+        }
+
+        private Bitmap CreateAuthenticatorQrBitmap(string setupUri)
+        {
+            QRCodeGenerator qrGenerator = new QRCodeGenerator();
+            QRCodeData qrCodeData = qrGenerator.CreateQrCode(setupUri, QRCodeGenerator.ECCLevel.Q);
+            PngByteQRCode qrCode = new PngByteQRCode(qrCodeData);
+            byte[] qrBytes = qrCode.GetGraphic(10);
+
+            using (MemoryStream stream = new MemoryStream(qrBytes))
+            using (Bitmap temporary = new Bitmap(stream))
+            {
+                qrCodeData.Dispose();
+                return new Bitmap(temporary);
+            }
+        }
+
+        private bool VerifyAuthenticatorCode(string secretBase32, string code, out long timeWindowUsed)
+        {
+            timeWindowUsed = 0;
+
+            string cleanCode = new string((code ?? "").Where(char.IsDigit).ToArray());
+
+            if (cleanCode.Length != 6 || string.IsNullOrWhiteSpace(secretBase32))
+            {
+                return false;
+            }
+
+            try
+            {
+                byte[] secretBytes = Base32Encoding.ToBytes(secretBase32);
+                Totp totp = new Totp(secretBytes);
+
+                return totp.VerifyTotp(
+                    cleanCode,
+                    out timeWindowUsed,
+                    new VerificationWindow(previous: 1, future: 1)
+                );
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private string NormalizeAuthenticatorCodeInput(string value)
+        {
+            string digits = new string((value ?? "").Where(char.IsDigit).ToArray());
+
+            if (digits.Length > 6)
+            {
+                return digits.Substring(0, 6);
+            }
+
+            return digits;
+        }
+
+        private void StyleAuthenticatorCodeInput(TextBox codeBox)
+        {
+            codeBox.MaxLength = 6;
+            codeBox.Width = 190;
+            codeBox.Height = 38;
+            codeBox.PlaceholderText = "000000";
+            codeBox.Font = new Font("Consolas", 18, FontStyle.Bold);
+            codeBox.TextAlign = HorizontalAlignment.Center;
+        }
+
+        private void AttachAuthenticatorAutoSubmit(
+            TextBox codeBox,
+            Label statusLabel,
+            Button submitButton,
+            string waitingText,
+            string readyText)
+        {
+            bool changingCodeText = false;
+            bool submittedAutomatically = false;
+
+            codeBox.TextChanged += (s, e) =>
+            {
+                if (changingCodeText)
+                {
+                    return;
+                }
+
+                string digits = NormalizeAuthenticatorCodeInput(codeBox.Text);
+
+                if (codeBox.Text != digits)
+                {
+                    changingCodeText = true;
+                    codeBox.Text = digits;
+                    codeBox.SelectionStart = codeBox.Text.Length;
+                    changingCodeText = false;
+                }
+
+                if (digits.Length < 6)
+                {
+                    submittedAutomatically = false;
+                    statusLabel.Text = waitingText + " " + digits.Length + "/6 digits entered.";
+                    statusLabel.ForeColor = softTextColor;
+                    return;
+                }
+
+                statusLabel.Text = readyText;
+                statusLabel.ForeColor = successColor;
+
+                if (submittedAutomatically)
+                {
+                    return;
+                }
+
+                submittedAutomatically = true;
+
+                BeginInvoke(new Action(() =>
+                {
+                    if (!submitButton.IsDisposed && submitButton.Enabled)
+                    {
+                        submitButton.PerformClick();
+                    }
+                }));
+            };
+        }
+        private string? ShowAuthenticatorCodePrompt(string title, string message)
+        {
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 420;
+                dialog.Height = 275;
+                dialog.Text = title;
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label messageLabel = new Label();
+                messageLabel.Text =
+                    message + Environment.NewLine + Environment.NewLine +
+                    "Open your authenticator app, find QuickForge, and type the 6 digits shown there. QuickForge continues automatically after 6 digits.";
+                messageLabel.Left = 20;
+                messageLabel.Top = 18;
+                messageLabel.Width = 360;
+                messageLabel.Height = 82;
+                messageLabel.ForeColor = softTextColor;
+                messageLabel.BackColor = Color.Transparent;
+                messageLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                TextBox codeBox = new TextBox();
+                codeBox.Left = 20;
+                codeBox.Top = 112;
+                codeBox.Width = 150;
+                codeBox.Height = 28;
+                codeBox.MaxLength = 6;
+                codeBox.PlaceholderText = "6-digit code";
+                codeBox.Font = new Font("Consolas", 12, FontStyle.Bold);
+                StyleAuthenticatorCodeInput(codeBox);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 180;
+                cancelButton.Top = 175;
+                cancelButton.Width = 90;
+                cancelButton.Height = 32;
+                cancelButton.DialogResult = DialogResult.Cancel;
+                StyleActionButton(cancelButton);
+
+                Button confirmButton = new Button();
+                confirmButton.Text = "Continue";
+                confirmButton.Left = 285;
+                confirmButton.Top = 175;
+                confirmButton.Width = 95;
+                confirmButton.Height = 32;
+                confirmButton.DialogResult = DialogResult.OK;
+                StyleActionButton(confirmButton, true);
+
+                AttachAuthenticatorAutoSubmit(
+                    codeBox,
+                    messageLabel,
+                    confirmButton,
+                    "Type the code from your authenticator app.",
+                    "6 digits entered. Continuing..."
+                );
+
+                dialog.Controls.Add(messageLabel);
+                dialog.Controls.Add(codeBox);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(confirmButton);
+
+                dialog.AcceptButton = confirmButton;
+                dialog.CancelButton = cancelButton;
+
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                {
+                    return codeBox.Text;
+                }
+
+                return null;
+            }
+        }
+
+        private bool ShowAuthenticatorUnlockDialog(string authenticatorSecretBase32)
+        {
+            if (string.IsNullOrWhiteSpace(authenticatorSecretBase32))
+            {
+                return true;
+            }
+
+            bool verified = false;
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 460;
+                dialog.Height = 250;
+                dialog.Text = "Two-step vault unlock";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Authenticator code required";
+                titleLabel.Left = 22;
+                titleLabel.Top = 18;
+                titleLabel.Width = 390;
+                titleLabel.Height = 28;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
+
+                Label detailLabel = new Label();
+                detailLabel.Text = "Open your authenticator app, find QuickForge, and type the 6-digit code. QuickForge continues automatically after 6 digits.";
+                detailLabel.Left = 22;
+                detailLabel.Top = 55;
+                detailLabel.Width = 390;
+                detailLabel.Height = 48;
+                detailLabel.ForeColor = softTextColor;
+                detailLabel.BackColor = Color.Transparent;
+                detailLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                TextBox codeBox = new TextBox();
+                codeBox.Left = 22;
+                codeBox.Top = 108;
+                codeBox.Width = 160;
+                codeBox.Height = 30;
+                codeBox.MaxLength = 6;
+                codeBox.PlaceholderText = "6-digit code";
+                codeBox.Font = new Font("Consolas", 12, FontStyle.Bold);
+                StyleAuthenticatorCodeInput(codeBox);
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "";
+                statusLabel.Left = 22;
+                statusLabel.Top = 152;
+                statusLabel.Width = 390;
+                statusLabel.Height = 28;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+                statusLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 220;
+                cancelButton.Top = 184;
+                cancelButton.Width = 90;
+                cancelButton.Height = 34;
+                StyleActionButton(cancelButton);
+                cancelButton.Click += (s, e) => dialog.Close();
+
+                Button unlockButton = new Button();
+                unlockButton.Text = "Unlock";
+                unlockButton.Left = 325;
+                unlockButton.Top = 184;
+                unlockButton.Width = 90;
+                unlockButton.Height = 34;
+                StyleActionButton(unlockButton, true);
+
+                unlockButton.Click += (s, e) =>
+                {
+                    if (VerifyAuthenticatorCode(
+                        authenticatorSecretBase32,
+                        codeBox.Text,
+                        out long timeWindowUsed))
+                    {
+                        verified = true;
+                        dialog.Close();
+                        return;
+                    }
+
+                    statusLabel.Text = "Wrong or expired code. Open your authenticator app and try the newest 6-digit code.";
+                    statusLabel.ForeColor = dangerColor;
+                    codeBox.SelectAll();
+                    codeBox.Focus();
+                };
+
+                AttachAuthenticatorAutoSubmit(
+                    codeBox,
+                    statusLabel,
+                    unlockButton,
+                    "Type the code from your authenticator app.",
+                    "6 digits entered. Checking code..."
+                );
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(detailLabel);
+                dialog.Controls.Add(codeBox);
+                dialog.Controls.Add(statusLabel);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(unlockButton);
+
+                dialog.AcceptButton = unlockButton;
+                dialog.CancelButton = cancelButton;
+
+                dialog.ShowDialog(this);
+            }
+
+            return verified;
+        }
+
+        private async Task<bool> ShowAuthenticatorLockSettingsDialogAsync()
+        {
+            if (!isVaultUnlocked || currentEncryptedVaultFile == null)
+            {
+                MessageBox.Show(
+                    "Unlock your vault before changing Authenticator Lock.",
+                    "Vault locked",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return false;
+            }
+
+            if (!RequireTrustedDeviceForSensitiveAction("Manage Authenticator Lock"))
+            {
+                return false;
+            }
+
+            if (IsAuthenticatorLockEnabled())
+            {
+                return await ShowDisableAuthenticatorLockDialogAsync();
+            }
+
+            if (IsAuthenticatorLockConfigured())
+            {
+                return await ShowEnableExistingAuthenticatorLockDialogAsync();
+            }
+
+            return ShowAuthenticatorSetupDialog();
+        }
+
+        private async Task<bool> ShowEnableExistingAuthenticatorLockDialogAsync()
+        {
+            DialogResult choice = MessageBox.Show(
+                "Authenticator Lock is currently OFF, but an authenticator is already set up." + Environment.NewLine + Environment.NewLine +
+                "Enable it again using the same authenticator app?",
+                "Enable Authenticator Lock",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+
+            if (choice != DialogResult.Yes)
+            {
+                return false;
+            }
+
+            string? unlockCheck = ShowPasswordPrompt(
+                "Enable Authenticator Lock",
+                "Enter your vault code or recovery key:"
+            );
+
+            if (string.IsNullOrWhiteSpace(unlockCheck) ||
+                currentEncryptedVaultFile == null ||
+                !VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, unlockCheck))
+            {
+                MessageBox.Show(
+                    "Wrong vault code or recovery key. Authenticator Lock was not enabled.",
+                    "Confirmation failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return false;
+            }
+
+            string? code = ShowAuthenticatorCodePrompt(
+                "Enable Authenticator Lock",
+                "Enter the current 6-digit code from your existing authenticator app:"
+            );
+
+            if (string.IsNullOrWhiteSpace(code) ||
+                !VerifyAuthenticatorCode(currentVaultSettings.AuthenticatorSecretBase32, code, out _))
+            {
+                DialogResult setupNewChoice = MessageBox.Show(
+                    "Wrong or expired authenticator code. Authenticator Lock was not enabled." + Environment.NewLine + Environment.NewLine +
+                    "If this authenticator entry is old, deleted, or from the wrong QR code, you can set up a new QR code now." + Environment.NewLine + Environment.NewLine +
+                    "Set up a new QR code?",
+                    "Authenticator check failed",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning,
+                    MessageBoxDefaultButton.Button2
+                );
+
+                if (setupNewChoice == DialogResult.Yes)
+                {
+                    return ShowAuthenticatorSetupDialog();
+                }
+
+                return false;
+            }
+
+            bool previousEnabled = currentVaultSettings.AuthenticatorLockEnabled;
+            DateTime? previousEnabledAt = currentVaultSettings.AuthenticatorEnabledAtUtc;
+            long? previousWindow = currentVaultSettings.LastAuthenticatorTimeWindowUsed;
+
+            try
+            {
+                currentVaultSettings.AuthenticatorLockEnabled = true;
+                currentVaultSettings.AuthenticatorEnabledAtUtc = DateTime.UtcNow;
+                currentVaultSettings.LastAuthenticatorTimeWindowUsed = null;
+
+                MarkVaultChangedByCurrentDevice("Authenticator Lock re-enabled");
+
+                SetSyncStatus("Syncing Authenticator Lock...");
+
+                SetPreviewText(
+                    "Authenticator Lock enabled.",
+                    "QuickForge reused the existing authenticator setup.",
+                    "Syncing this setting to Google Drive in the background."
+                );
+
+                QueueBackgroundVaultSync("Authenticator Lock re-enabled");
+
+                await Task.CompletedTask;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                currentVaultSettings.AuthenticatorLockEnabled = previousEnabled;
+                currentVaultSettings.AuthenticatorEnabledAtUtc = previousEnabledAt;
+                currentVaultSettings.LastAuthenticatorTimeWindowUsed = previousWindow;
+
+                MessageBox.Show(
+                    "Could not enable Authenticator Lock: " + ex.Message,
+                    "Save failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+
+                return false;
+            }
+        }
+
+        private bool ShowAuthenticatorSetupDialog()
+        {
+            string? unlockCheck = ShowPasswordPrompt(
+                "Confirm Vault Code",
+                "Enter your vault code or recovery key before enabling Authenticator Lock:"
+            );
+
+            if (string.IsNullOrWhiteSpace(unlockCheck) ||
+                currentEncryptedVaultFile == null ||
+                !VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, unlockCheck))
+            {
+                MessageBox.Show(
+                    "Wrong vault code or recovery key. Authenticator Lock was not enabled.",
+                    "Confirmation failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return false;
+            }
+
+            string secretBase32 = GenerateAuthenticatorSecretBase32();
+            string setupUri = BuildAuthenticatorSetupUri(secretBase32);
+            Bitmap qrBitmap = CreateAuthenticatorQrBitmap(setupUri);
+            bool saved = false;
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 720;
+                dialog.Height = 620;
+                dialog.Text = "Set up Authenticator Lock";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Set up two-step vault unlock";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 640;
+                titleLabel.Height = 32;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "Step 1: scan the QR code. Step 2: type the 6-digit code from your authenticator app. QuickForge continues automatically after 6 digits.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 640;
+                subtitleLabel.Height = 42;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                PictureBox qrPicture = new PictureBox();
+                qrPicture.Left = 24;
+                qrPicture.Top = 100;
+                qrPicture.Width = 260;
+                qrPicture.Height = 260;
+                qrPicture.SizeMode = PictureBoxSizeMode.Zoom;
+                qrPicture.BackColor = Color.White;
+                qrPicture.Image = qrBitmap;
+
+                Panel infoPanel = new Panel();
+                infoPanel.Left = 310;
+                infoPanel.Top = 100;
+                infoPanel.Width = 370;
+                infoPanel.Height = 260;
+                infoPanel.BackColor = Color.FromArgb(24, 28, 44);
+                infoPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label infoTitle = new Label();
+                infoTitle.Text = "Before enabling";
+                infoTitle.Left = 14;
+                infoTitle.Top = 12;
+                infoTitle.Width = 330;
+                infoTitle.Height = 24;
+                infoTitle.ForeColor = Color.FromArgb(255, 190, 90);
+                infoTitle.BackColor = Color.Transparent;
+                infoTitle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+
+                Label infoText = new Label();
+                infoText.Text =
+                    "Works with Google Authenticator, Microsoft Authenticator, Aegis, 2FAS, and similar apps." +
+                    Environment.NewLine + Environment.NewLine +
+                    "You will need your vault code and a 6-digit authenticator code to unlock." +
+                    Environment.NewLine + Environment.NewLine +
+                    "If you lose your authenticator app, your recovery key is the emergency path.";
+                infoText.Left = 14;
+                infoText.Top = 44;
+                infoText.Width = 335;
+                infoText.Height = 190;
+                infoText.ForeColor = softTextColor;
+                infoText.BackColor = Color.Transparent;
+                infoText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                infoPanel.Controls.Add(infoTitle);
+                infoPanel.Controls.Add(infoText);
+
+                Label manualLabel = new Label();
+                manualLabel.Text = "Manual setup key";
+                manualLabel.Left = 24;
+                manualLabel.Top = 380;
+                manualLabel.Width = 200;
+                manualLabel.Height = 22;
+                manualLabel.ForeColor = Color.White;
+                manualLabel.BackColor = Color.Transparent;
+                manualLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                TextBox manualKeyBox = new TextBox();
+                manualKeyBox.Left = 24;
+                manualKeyBox.Top = 405;
+                manualKeyBox.Width = 420;
+                manualKeyBox.Height = 28;
+                manualKeyBox.ReadOnly = true;
+                manualKeyBox.Text = secretBase32;
+                manualKeyBox.Font = new Font("Consolas", 9, FontStyle.Regular);
+
+                Label codeLabel = new Label();
+                codeLabel.Text = "Type the 6-digit code from your authenticator app";
+                codeLabel.Left = 24;
+                codeLabel.Top = 445;
+                codeLabel.Width = 420;
+                codeLabel.Height = 22;
+                codeLabel.ForeColor = Color.White;
+                codeLabel.BackColor = Color.Transparent;
+                codeLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                TextBox codeBox = new TextBox();
+                codeBox.Left = 24;
+                codeBox.Top = 470;
+                codeBox.Width = 150;
+                codeBox.Height = 30;
+                codeBox.MaxLength = 6;
+                codeBox.PlaceholderText = "123456";
+                codeBox.Font = new Font("Consolas", 12, FontStyle.Bold);
+                StyleAuthenticatorCodeInput(codeBox);
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "After scanning the QR code, open your authenticator app and type the 6 digits here.";
+                statusLabel.Left = 195;
+                statusLabel.Top = 470;
+                statusLabel.Width = 485;
+                statusLabel.Height = 35;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+                statusLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 460;
+                cancelButton.Top = 530;
+                cancelButton.Width = 90;
+                cancelButton.Height = 34;
+                StyleActionButton(cancelButton);
+                cancelButton.Click += (s, e) => dialog.Close();
+
+                Button enableButton = new Button();
+                enableButton.Text = "Enable";
+                enableButton.Left = 570;
+                enableButton.Top = 530;
+                enableButton.Width = 95;
+                enableButton.Height = 34;
+                StyleActionButton(enableButton, true);
+
+                enableButton.Click += async (s, e) =>
+                {
+                    if (!VerifyAuthenticatorCode(secretBase32, codeBox.Text, out long timeWindowUsed))
+                    {
+                        statusLabel.Text = "Wrong or expired code. This QR is still active for this setup window. Wait for the next 6-digit code and try again.";
+                        statusLabel.ForeColor = dangerColor;
+                        codeBox.SelectAll();
+                        codeBox.Focus();
+                        return;
+                    }
+
+                    bool previousEnabled = currentVaultSettings.AuthenticatorLockEnabled;
+                    string previousSecret = currentVaultSettings.AuthenticatorSecretBase32;
+                    DateTime? previousEnabledAt = currentVaultSettings.AuthenticatorEnabledAtUtc;
+                    long? previousWindow = currentVaultSettings.LastAuthenticatorTimeWindowUsed;
+
+                    try
+                    {
+                        currentVaultSettings.AuthenticatorLockEnabled = true;
+                        currentVaultSettings.AuthenticatorSecretBase32 = secretBase32;
+                        currentVaultSettings.AuthenticatorEnabledAtUtc = DateTime.UtcNow;
+                        currentVaultSettings.LastAuthenticatorTimeWindowUsed = timeWindowUsed;
+
+                        MarkVaultChangedByCurrentDevice("Authenticator Lock enabled");
+                        SetSyncStatus("Syncing Authenticator Lock...");
+
+                        SetPreviewText(
+                            "Authenticator Lock enabled.",
+                            "QuickForge will ask for a 6-digit authenticator code after your vault code.",
+                            "Syncing this setting to Google Drive in the background."
+                        );
+
+                        QueueBackgroundVaultSync("Authenticator Lock enabled");
+
+                        saved = true;
+                        dialog.Close();
+
+                        await Task.CompletedTask;
+                    }
+                    catch (Exception ex)
+                    {
+                        currentVaultSettings.AuthenticatorLockEnabled = previousEnabled;
+                        currentVaultSettings.AuthenticatorSecretBase32 = previousSecret;
+                        currentVaultSettings.AuthenticatorEnabledAtUtc = previousEnabledAt;
+                        currentVaultSettings.LastAuthenticatorTimeWindowUsed = previousWindow;
+
+                        statusLabel.Text = "Could not save Authenticator Lock.";
+                        statusLabel.ForeColor = dangerColor;
+
+                        MessageBox.Show(
+                            "Could not save Authenticator Lock: " + ex.Message,
+                            "Save failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
+                    }
+                };
+
+                AttachAuthenticatorAutoSubmit(
+                    codeBox,
+                    statusLabel,
+                    enableButton,
+                    "Type the code from your authenticator app.",
+                    "6 digits entered. Enabling Authenticator Lock..."
+                );
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(qrPicture);
+                dialog.Controls.Add(infoPanel);
+                dialog.Controls.Add(manualLabel);
+                dialog.Controls.Add(manualKeyBox);
+                dialog.Controls.Add(codeLabel);
+                dialog.Controls.Add(codeBox);
+                dialog.Controls.Add(statusLabel);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(enableButton);
+
+                dialog.AcceptButton = enableButton;
+                dialog.CancelButton = cancelButton;
+
+                dialog.ShowDialog(this);
+            }
+
+            qrBitmap.Dispose();
+            return saved;
+        }
+
+        private async Task<bool> ShowDisableAuthenticatorLockDialogAsync()
+        {
+            DialogResult choice = MessageBox.Show(
+                "Authenticator Lock is currently ON." + Environment.NewLine + Environment.NewLine +
+                "Disable it for this vault?",
+                "Manage Authenticator Lock",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+
+            if (choice != DialogResult.Yes)
+            {
+                return false;
+            }
+
+            string? unlockCheck = ShowPasswordPrompt(
+                "Disable Authenticator Lock",
+                "Enter your vault code or recovery key:"
+            );
+
+            if (string.IsNullOrWhiteSpace(unlockCheck) ||
+                currentEncryptedVaultFile == null ||
+                !VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, unlockCheck))
+            {
+                MessageBox.Show(
+                    "Wrong vault code or recovery key. Authenticator Lock was not disabled.",
+                    "Confirmation failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return false;
+            }
+
+            string? code = ShowAuthenticatorCodePrompt(
+                "Disable Authenticator Lock",
+                "Enter the current 6-digit authenticator code:"
+            );
+
+            if (string.IsNullOrWhiteSpace(code) ||
+                !VerifyAuthenticatorCode(currentVaultSettings.AuthenticatorSecretBase32, code, out _))
+            {
+                MessageBox.Show(
+                    "Wrong or expired authenticator code. Authenticator Lock was not disabled.",
+                    "Authenticator check failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return false;
+            }
+
+            bool previousEnabled = currentVaultSettings.AuthenticatorLockEnabled;
+            string previousSecret = currentVaultSettings.AuthenticatorSecretBase32;
+            DateTime? previousEnabledAt = currentVaultSettings.AuthenticatorEnabledAtUtc;
+            long? previousWindow = currentVaultSettings.LastAuthenticatorTimeWindowUsed;
+
+            try
+            {
+                currentVaultSettings.AuthenticatorLockEnabled = false;
+                currentVaultSettings.AuthenticatorEnabledAtUtc = null;
+                currentVaultSettings.LastAuthenticatorTimeWindowUsed = null;
+
+                MarkVaultChangedByCurrentDevice("Authenticator Lock disabled");
+
+                SetSyncStatus("Syncing Authenticator Lock...");
+
+                SetPreviewText(
+                    "Authenticator Lock disabled.",
+                    "QuickForge will unlock with Google login and vault code only.",
+                    "Syncing this setting to Google Drive in the background. You can enable it again without scanning a new QR code."
+                );
+
+                QueueBackgroundVaultSync("Authenticator Lock disabled");
+
+                await Task.CompletedTask;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                currentVaultSettings.AuthenticatorLockEnabled = previousEnabled;
+                currentVaultSettings.AuthenticatorSecretBase32 = previousSecret;
+                currentVaultSettings.AuthenticatorEnabledAtUtc = previousEnabledAt;
+                currentVaultSettings.LastAuthenticatorTimeWindowUsed = previousWindow;
+
+                MessageBox.Show(
+                    "Could not disable Authenticator Lock: " + ex.Message,
+                    "Save failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+
+                return false;
+            }
+        }
+        private bool ShowStreamerModeSettingsDialog()
+        {
+            bool saved = false;
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 560;
+                dialog.Height = 360;
+                dialog.Text = "Streamer mode";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Streamer / Privacy mode";
+                titleLabel.Left = 24;
+                titleLabel.Top = 20;
+                titleLabel.Width = 480;
+                titleLabel.Height = 32;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "Use this when recording videos, sharing screenshots, livestreaming, or showing QuickForge to someone else.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 500;
+                subtitleLabel.Height = 42;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Panel infoPanel = new Panel();
+                infoPanel.Left = 24;
+                infoPanel.Top = 112;
+                infoPanel.Width = 500;
+                infoPanel.Height = 112;
+                infoPanel.BackColor = Color.FromArgb(24, 28, 44);
+                infoPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label infoTitle = new Label();
+                infoTitle.Text = "What it hides";
+                infoTitle.Left = 14;
+                infoTitle.Top = 10;
+                infoTitle.Width = 460;
+                infoTitle.Height = 22;
+                infoTitle.ForeColor = Color.White;
+                infoTitle.BackColor = Color.Transparent;
+                infoTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label infoText = new Label();
+                infoText.Text =
+                    "- Google account email in the top bar" + Environment.NewLine +
+                    "- usernames, websites, notes, and selected-entry preview details" + Environment.NewLine +
+                    "- saved-entry names in the vault list when possible" + Environment.NewLine +
+                    "- it does not delete or encrypt anything differently";
+                infoText.Left = 14;
+                infoText.Top = 36;
+                infoText.Width = 460;
+                infoText.Height = 68;
+                infoText.ForeColor = softTextColor;
+                infoText.BackColor = Color.Transparent;
+                infoText.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+
+                infoPanel.Controls.Add(infoTitle);
+                infoPanel.Controls.Add(infoText);
+
+                bool selectedPrivacyMode = currentVaultSettings.PrivacyModeEnabled;
+
+                Label switchLabel = new Label();
+                switchLabel.Text = "Streamer mode";
+                switchLabel.Left = 24;
+                switchLabel.Top = 236;
+                switchLabel.Width = 150;
+                switchLabel.Height = 22;
+                switchLabel.ForeColor = softTextColor;
+                switchLabel.BackColor = Color.Transparent;
+                switchLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Button privacyToggleButton = new Button();
+                privacyToggleButton.Left = 180;
+                privacyToggleButton.Top = 232;
+                privacyToggleButton.Width = 150;
+                privacyToggleButton.Height = 34;
+                privacyToggleButton.FlatStyle = FlatStyle.Flat;
+                privacyToggleButton.FlatAppearance.BorderSize = 1;
+                privacyToggleButton.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                void UpdatePrivacyToggleButton()
+                {
+                    privacyToggleButton.Text = selectedPrivacyMode ? "ON  - Hidden" : "OFF - Visible";
+                    privacyToggleButton.BackColor = selectedPrivacyMode
+                        ? Color.FromArgb(42, 130, 85)
+                        : Color.FromArgb(55, 60, 78);
+                    privacyToggleButton.ForeColor = Color.White;
+                    privacyToggleButton.FlatAppearance.BorderColor = selectedPrivacyMode
+                        ? successColor
+                        : Color.FromArgb(90, 96, 120);
+                }
+
+                privacyToggleButton.Click += (s, e) =>
+                {
+                    selectedPrivacyMode = !selectedPrivacyMode;
+                    UpdatePrivacyToggleButton();
+                };
+
+                UpdatePrivacyToggleButton();
+
+                Button saveButton = new Button();
+                saveButton.Text = "Save";
+                saveButton.Left = 318;
+                saveButton.Top = 282;
+                saveButton.Width = 95;
+                saveButton.Height = 34;
+                StyleActionButton(saveButton, true);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 428;
+                cancelButton.Top = 282;
+                cancelButton.Width = 95;
+                cancelButton.Height = 34;
+                StyleActionButton(cancelButton);
+                cancelButton.Click += (s, e) => dialog.Close();
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "Stored inside your encrypted vault settings.";
+                statusLabel.Left = 24;
+                statusLabel.Top = 286;
+                statusLabel.Width = 270;
+                statusLabel.Height = 26;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+                statusLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+
+                saveButton.Click += (s, e) =>
+                {
+                    if (!RequireTrustedDeviceForSensitiveAction("Change Streamer mode"))
+                    {
+                        return;
+                    }
+
+                    saveButton.Enabled = false;
+                    cancelButton.Enabled = false;
+                    statusLabel.Text = "Saved. Updating Settings...";
+                    statusLabel.ForeColor = successColor;
+
+                    try
+                    {
+                        currentVaultSettings.PrivacyModeEnabled = selectedPrivacyMode;
+
+                        ApplyStreamerModeToUi();
+                        HideMainPanelSettingsForV021();
+                        MarkVaultChangedByCurrentDevice("Streamer mode changed");
+
+                        selectedPreviewLabel.Text = currentVaultSettings.PrivacyModeEnabled
+                            ? "Streamer mode enabled." + Environment.NewLine + "Safe preview areas now hide account details. Cloud sync is running in the background."
+                            : "Streamer mode disabled." + Environment.NewLine + "Normal account details are visible again. Cloud sync is running in the background.";
+
+                        SetSyncStatus("Queued background sync");
+                        QueueBackgroundVaultSync("Streamer mode changed");
+
+                        saved = true;
+                        dialog.Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        saveButton.Enabled = true;
+                        cancelButton.Enabled = true;
+                        statusLabel.Text = "Could not save Streamer mode.";
+                        statusLabel.ForeColor = dangerColor;
+
+                        MessageBox.Show(
+                            "Could not save Streamer mode: " + ex.Message,
+                            "Streamer mode failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
+                    }
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(infoPanel);
+                dialog.Controls.Add(switchLabel);
+                dialog.Controls.Add(privacyToggleButton);
+                dialog.Controls.Add(statusLabel);
+                dialog.Controls.Add(saveButton);
+                dialog.Controls.Add(cancelButton);
+
+                dialog.ShowDialog(this);
+            }
+
+            return saved;
+        }
+        private bool ShowAutoLockSettingsDialog()
+        {
+            bool saved = false;
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 430;
+                dialog.Height = 250;
+                dialog.Text = "Auto-lock settings";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Auto-lock";
+                titleLabel.Left = 20;
+                titleLabel.Top = 18;
+                titleLabel.Width = 360;
+                titleLabel.Height = 28;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
+
+                Label infoLabel = new Label();
+                infoLabel.Text = "Choose when QuickForge should lock the vault after inactivity.";
+                infoLabel.Left = 20;
+                infoLabel.Top = 52;
+                infoLabel.Width = 360;
+                infoLabel.Height = 38;
+                infoLabel.ForeColor = softTextColor;
+                infoLabel.BackColor = Color.Transparent;
+
+                ComboBox comboBox = new ComboBox();
+                comboBox.Left = 20;
+                comboBox.Top = 100;
+                comboBox.Width = 180;
+                comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+                comboBox.Items.Add("Never");
+                comboBox.Items.Add("5 minutes");
+                comboBox.Items.Add("10 minutes");
+                comboBox.Items.Add("30 minutes");
+
+                if (currentVaultSettings.AutoLockMinutes == 5)
+                {
+                    comboBox.SelectedIndex = 1;
+                }
+                else if (currentVaultSettings.AutoLockMinutes == 10)
+                {
+                    comboBox.SelectedIndex = 2;
+                }
+                else if (currentVaultSettings.AutoLockMinutes == 30)
+                {
+                    comboBox.SelectedIndex = 3;
+                }
+                else
+                {
+                    comboBox.SelectedIndex = 0;
+                }
+
+                Button saveButton = new Button();
+                saveButton.Text = "Save";
+                saveButton.Left = 210;
+                saveButton.Top = 98;
+                saveButton.Width = 85;
+                saveButton.Height = 32;
+                StyleActionButton(saveButton, true);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 305;
+                cancelButton.Top = 98;
+                cancelButton.Width = 85;
+                cancelButton.Height = 32;
+                StyleActionButton(cancelButton);
+                cancelButton.Click += (s, e) => dialog.Close();
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "Stored inside your encrypted vault.";
+                statusLabel.Left = 20;
+                statusLabel.Top = 150;
+                statusLabel.Width = 360;
+                statusLabel.Height = 32;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+
+                saveButton.Click += (s, e) =>
+                {
+                    if (!RequireTrustedDeviceForSensitiveAction("Change auto-lock setting"))
+                    {
+                        return;
+                    }
+
+                    saveButton.Enabled = false;
+                    cancelButton.Enabled = false;
+                    statusLabel.Text = "Saved. Updating Settings...";
+                    statusLabel.ForeColor = successColor;
+
+                    if (comboBox.SelectedIndex == 1)
+                    {
+                        currentVaultSettings.AutoLockMinutes = 5;
+                    }
+                    else if (comboBox.SelectedIndex == 2)
+                    {
+                        currentVaultSettings.AutoLockMinutes = 10;
+                    }
+                    else if (comboBox.SelectedIndex == 3)
+                    {
+                        currentVaultSettings.AutoLockMinutes = 30;
+                    }
+                    else
+                    {
+                        currentVaultSettings.AutoLockMinutes = 0;
+                    }
+
+                    try
+                    {
+                        ApplyPerformanceSettingsToUi();
+                        HideMainPanelSettingsForV021();
+                        MarkVaultChangedByCurrentDevice("Auto-lock setting changed");
+
+                        string autoLockText = currentVaultSettings.AutoLockMinutes <= 0
+                            ? "Auto-lock turned off."
+                            : "Auto-lock set to " + currentVaultSettings.AutoLockMinutes + " minute(s).";
+
+                        selectedPreviewLabel.Text =
+                            autoLockText + Environment.NewLine +
+                            "Settings updated immediately. Cloud sync is running in the background.";
+
+                        SetSyncStatus("Queued background sync");
+                        QueueBackgroundVaultSync("Auto-lock setting changed");
+
+                        saved = true;
+                        dialog.Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        saveButton.Enabled = true;
+                        cancelButton.Enabled = true;
+                        statusLabel.Text = "Could not save auto-lock setting.";
+                        statusLabel.ForeColor = dangerColor;
+
+                        MessageBox.Show(
+                            "Could not save auto-lock setting: " + ex.Message,
+                            "Auto-lock setting failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
+                    }
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(infoLabel);
+                dialog.Controls.Add(comboBox);
+                dialog.Controls.Add(saveButton);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(statusLabel);
+
+                dialog.ShowDialog(this);
+            }
+
+            return saved;
+        }
+        private bool ShowAutoRefreshSettingsDialog()
+        {
+            bool saved = false;
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 450;
+                dialog.Height = 250;
+                dialog.Text = "Auto-refresh settings";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Auto-refresh";
+                titleLabel.Left = 20;
+                titleLabel.Top = 18;
+                titleLabel.Width = 360;
+                titleLabel.Height = 28;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
+
+                Label infoLabel = new Label();
+                infoLabel.Text = "Choose how often QuickForge checks Google Drive for cloud and Device Trust changes.";
+                infoLabel.Left = 20;
+                infoLabel.Top = 52;
+                infoLabel.Width = 390;
+                infoLabel.Height = 42;
+                infoLabel.ForeColor = softTextColor;
+                infoLabel.BackColor = Color.Transparent;
+
+                ComboBox comboBox = new ComboBox();
+                comboBox.Left = 20;
+                comboBox.Top = 105;
+                comboBox.Width = 190;
+                comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+                comboBox.Items.Add("Never");
+                comboBox.Items.Add("Every 1 minute");
+                comboBox.Items.Add("Every 5 minutes");
+                comboBox.Items.Add("Every 10 minutes");
+                comboBox.Items.Add("Every 30 minutes");
+
+                if (currentVaultSettings.AutoRefreshMinutes == 1)
+                {
+                    comboBox.SelectedIndex = 1;
+                }
+                else if (currentVaultSettings.AutoRefreshMinutes == 5)
+                {
+                    comboBox.SelectedIndex = 2;
+                }
+                else if (currentVaultSettings.AutoRefreshMinutes == 10 || currentVaultSettings.AutoRefreshMinutes == 15)
+                {
+                    comboBox.SelectedIndex = 3;
+                }
+                else if (currentVaultSettings.AutoRefreshMinutes == 30)
+                {
+                    comboBox.SelectedIndex = 4;
+                }
+                else
+                {
+                    comboBox.SelectedIndex = 0;
+                }
+
+                Button saveButton = new Button();
+                saveButton.Text = "Save";
+                saveButton.Left = 220;
+                saveButton.Top = 103;
+                saveButton.Width = 85;
+                saveButton.Height = 32;
+                StyleActionButton(saveButton, true);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 315;
+                cancelButton.Top = 103;
+                cancelButton.Width = 85;
+                cancelButton.Height = 32;
+                StyleActionButton(cancelButton);
+                cancelButton.Click += (s, e) => dialog.Close();
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "Stored inside your encrypted vault.";
+                statusLabel.Left = 20;
+                statusLabel.Top = 155;
+                statusLabel.Width = 390;
+                statusLabel.Height = 32;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+
+                saveButton.Click += (s, e) =>
+                {
+                    if (!RequireTrustedDeviceForSensitiveAction("Change auto-refresh setting"))
+                    {
+                        return;
+                    }
+
+                    saveButton.Enabled = false;
+                    cancelButton.Enabled = false;
+                    statusLabel.Text = "Saved. Updating Settings...";
+                    statusLabel.ForeColor = successColor;
+
+                    if (comboBox.SelectedIndex == 1)
+                    {
+                        currentVaultSettings.AutoRefreshMinutes = 1;
+                    }
+                    else if (comboBox.SelectedIndex == 2)
+                    {
+                        currentVaultSettings.AutoRefreshMinutes = 5;
+                    }
+                    else if (comboBox.SelectedIndex == 3)
+                    {
+                        currentVaultSettings.AutoRefreshMinutes = 10;
+                    }
+                    else if (comboBox.SelectedIndex == 4)
+                    {
+                        currentVaultSettings.AutoRefreshMinutes = 30;
+                    }
+                    else
+                    {
+                        currentVaultSettings.AutoRefreshMinutes = 0;
+                    }
+
+                    try
+                    {
+                        ApplyPerformanceSettingsToUi();
+                        HideMainPanelSettingsForV021();
+                        RestartAutoRefreshTimerFromSettings();
+                        MarkVaultChangedByCurrentDevice("Auto-refresh setting changed");
+
+                        string autoRefreshText = currentVaultSettings.AutoRefreshMinutes <= 0
+                            ? "Auto-refresh turned off."
+                            : "Auto-refresh set to every " + currentVaultSettings.AutoRefreshMinutes + " minute(s).";
+
+                        selectedPreviewLabel.Text =
+                            autoRefreshText + Environment.NewLine +
+                            "Settings updated immediately. Cloud sync is running in the background.";
+
+                        SetSyncStatus("Queued background sync");
+                        QueueBackgroundVaultSync("Auto-refresh setting changed");
+
+                        saved = true;
+                        dialog.Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        saveButton.Enabled = true;
+                        cancelButton.Enabled = true;
+                        statusLabel.Text = "Could not save auto-refresh setting.";
+                        statusLabel.ForeColor = dangerColor;
+
+                        MessageBox.Show(
+                            "Could not save auto-refresh setting: " + ex.Message,
+                            "Auto-refresh setting failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
+                    }
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(infoLabel);
+                dialog.Controls.Add(comboBox);
+                dialog.Controls.Add(saveButton);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(statusLabel);
+
+                dialog.ShowDialog(this);
+            }
+
+            return saved;
+        }
+        private bool ShowRecoveryReminderSettingsDialog()
+        {
+            bool saved = false;
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 470;
+                dialog.Height = 270;
+                dialog.Text = "Recovery key settings";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Recovery key";
+                titleLabel.Left = 20;
+                titleLabel.Top = 18;
+                titleLabel.Width = 360;
+                titleLabel.Height = 28;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
+
+                Label infoLabel = new Label();
+                infoLabel.Text = "Set recovery reminder timing or rotate your recovery key.";
+                infoLabel.Left = 20;
+                infoLabel.Top = 52;
+                infoLabel.Width = 390;
+                infoLabel.Height = 36;
+                infoLabel.ForeColor = softTextColor;
+                infoLabel.BackColor = Color.Transparent;
+
+                ComboBox comboBox = new ComboBox();
+                comboBox.Left = 20;
+                comboBox.Top = 100;
+                comboBox.Width = 150;
+                comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+                comboBox.Items.Add("Never");
+                comboBox.Items.Add("30 days");
+                comboBox.Items.Add("90 days");
+
+                if (currentVaultSettings.RecoveryKeyReminderDays == 30)
+                {
+                    comboBox.SelectedIndex = 1;
+                }
+                else if (currentVaultSettings.RecoveryKeyReminderDays == 90)
+                {
+                    comboBox.SelectedIndex = 2;
+                }
+                else
+                {
+                    comboBox.SelectedIndex = 0;
+                }
+
+                Button saveButton = new Button();
+                saveButton.Text = "Save reminder";
+                saveButton.Left = 180;
+                saveButton.Top = 98;
+                saveButton.Width = 115;
+                saveButton.Height = 32;
+                StyleActionButton(saveButton, true);
+
+                Button rotateButton = new Button();
+                rotateButton.Text = "New key";
+                rotateButton.Left = 305;
+                rotateButton.Top = 98;
+                rotateButton.Width = 85;
+                rotateButton.Height = 32;
+                StyleActionButton(rotateButton);
+
+                Button closeButton = new Button();
+                closeButton.Text = "Close";
+                closeButton.Left = 305;
+                closeButton.Top = 168;
+                closeButton.Width = 85;
+                closeButton.Height = 32;
+                StyleActionButton(closeButton);
+                closeButton.Click += (s, e) => dialog.Close();
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "Keep your recovery key separate from your encrypted backup.";
+                statusLabel.Left = 20;
+                statusLabel.Top = 145;
+                statusLabel.Width = 270;
+                statusLabel.Height = 58;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+
+                saveButton.Click += (s, e) =>
+                {
+                    if (!RequireTrustedDeviceForSensitiveAction("Change recovery reminder setting"))
+                    {
+                        return;
+                    }
+
+                    saveButton.Enabled = false;
+                    rotateButton.Enabled = false;
+                    closeButton.Enabled = false;
+                    statusLabel.Text = "Saved. Updating Settings...";
+                    statusLabel.ForeColor = successColor;
+
+                    if (comboBox.SelectedIndex == 1)
+                    {
+                        currentVaultSettings.RecoveryKeyReminderDays = 30;
+                    }
+                    else if (comboBox.SelectedIndex == 2)
+                    {
+                        currentVaultSettings.RecoveryKeyReminderDays = 90;
+                    }
+                    else
+                    {
+                        currentVaultSettings.RecoveryKeyReminderDays = 0;
+                    }
+
+                    try
+                    {
+                        ApplyRecoverySettingsToUi();
+                        HideMainPanelSettingsForV021();
+                        MarkVaultChangedByCurrentDevice("Recovery reminder setting changed");
+
+                        string recoveryText = currentVaultSettings.RecoveryKeyReminderDays <= 0
+                            ? "Recovery reminder turned off."
+                            : "Recovery reminder set to " + currentVaultSettings.RecoveryKeyReminderDays + " days.";
+
+                        selectedPreviewLabel.Text =
+                            recoveryText + Environment.NewLine +
+                            "Settings updated immediately. Cloud sync is running in the background.";
+
+                        SetSyncStatus("Queued background sync");
+                        QueueBackgroundVaultSync("Recovery reminder setting changed");
+
+                        saved = true;
+                        dialog.Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        saveButton.Enabled = true;
+                        rotateButton.Enabled = true;
+                        closeButton.Enabled = true;
+                        statusLabel.Text = "Could not save recovery reminder.";
+                        statusLabel.ForeColor = dangerColor;
+
+                        MessageBox.Show(
+                            "Could not save recovery reminder: " + ex.Message,
+                            "Recovery reminder failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
+                    }
+                };
+
+                rotateButton.Click += (s, e) =>
+                {
+                    RotateRecoveryKeyButton_Click(this, EventArgs.Empty);
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(infoLabel);
+                dialog.Controls.Add(comboBox);
+                dialog.Controls.Add(saveButton);
+                dialog.Controls.Add(rotateButton);
+                dialog.Controls.Add(statusLabel);
+                dialog.Controls.Add(closeButton);
+
+                dialog.ShowDialog(this);
+            }
+
+            return saved;
+        }
+        private bool ShowBackgroundAnimationSettingsDialog()
+        {
+            bool saved = false;
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 430;
+                dialog.Height = 240;
+                dialog.Text = "Background animation";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Background animation";
+                titleLabel.Left = 20;
+                titleLabel.Top = 18;
+                titleLabel.Width = 360;
+                titleLabel.Height = 28;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
+
+                Label infoLabel = new Label();
+                infoLabel.Text = "Turn off animation if you want lower visual load.";
+                infoLabel.Left = 20;
+                infoLabel.Top = 52;
+                infoLabel.Width = 360;
+                infoLabel.Height = 36;
+                infoLabel.ForeColor = softTextColor;
+                infoLabel.BackColor = Color.Transparent;
+
+                CheckBox animationCheckBox = new CheckBox();
+                animationCheckBox.Text = "Enable background animation";
+                animationCheckBox.Left = 20;
+                animationCheckBox.Top = 95;
+                animationCheckBox.Width = 230;
+                animationCheckBox.Height = 28;
+                animationCheckBox.Checked = currentVaultSettings.BackgroundAnimationEnabled;
+                animationCheckBox.ForeColor = softTextColor;
+                animationCheckBox.BackColor = Color.Transparent;
+
+                Button saveButton = new Button();
+                saveButton.Text = "Save";
+                saveButton.Left = 260;
+                saveButton.Top = 93;
+                saveButton.Width = 75;
+                saveButton.Height = 32;
+                StyleActionButton(saveButton, true);
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 20;
+                cancelButton.Top = 145;
+                cancelButton.Width = 90;
+                cancelButton.Height = 32;
+                StyleActionButton(cancelButton);
+                cancelButton.Click += (s, e) => dialog.Close();
+
+                Label statusLabel = new Label();
+                statusLabel.Text = "Stored inside your encrypted vault.";
+                statusLabel.Left = 120;
+                statusLabel.Top = 150;
+                statusLabel.Width = 260;
+                statusLabel.Height = 28;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+
+                saveButton.Click += (s, e) =>
+                {
+                    if (!RequireTrustedDeviceForSensitiveAction("Change animation setting"))
+                    {
+                        return;
+                    }
+
+                    saveButton.Enabled = false;
+                    cancelButton.Enabled = false;
+                    statusLabel.Text = "Saved. Updating Settings...";
+                    statusLabel.ForeColor = successColor;
+
+                    currentVaultSettings.BackgroundAnimationEnabled = animationCheckBox.Checked;
+
+                    try
+                    {
+                        ApplyPerformanceSettingsToUi();
+                        HideMainPanelSettingsForV021();
+                        UpdateAnimationState();
+                        MarkVaultChangedByCurrentDevice("Background animation setting changed");
+
+                        string animationText = currentVaultSettings.BackgroundAnimationEnabled
+                            ? "Background animation turned on."
+                            : "Background animation turned off.";
+
+                        selectedPreviewLabel.Text =
+                            animationText + Environment.NewLine +
+                            "Settings updated immediately. Cloud sync is running in the background.";
+
+                        SetSyncStatus("Queued background sync");
+                        QueueBackgroundVaultSync("Background animation setting changed");
+
+                        saved = true;
+                        dialog.Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        saveButton.Enabled = true;
+                        cancelButton.Enabled = true;
+                        statusLabel.Text = "Could not save animation setting.";
+                        statusLabel.ForeColor = dangerColor;
+
+                        MessageBox.Show(
+                            "Could not save animation setting: " + ex.Message,
+                            "Background animation failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
+                    }
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(infoLabel);
+                dialog.Controls.Add(animationCheckBox);
+                dialog.Controls.Add(saveButton);
+                dialog.Controls.Add(cancelButton);
+                dialog.Controls.Add(statusLabel);
+
+                dialog.ShowDialog(this);
+            }
+
+            return saved;
+        }
+        private int GetPasswordHealthScore(string secret)
+        {
+            if (string.IsNullOrWhiteSpace(secret))
+            {
+                return 0;
+            }
+
+            string clean = secret.Trim();
+            int score = 0;
+
+            score += Math.Min(45, clean.Length * 3);
+
+            if (clean.Length >= 12)
+            {
+                score += 8;
+            }
+
+            if (clean.Length >= 16)
+            {
+                score += 8;
+            }
+
+            if (clean.Length >= 20)
+            {
+                score += 7;
+            }
+
+            bool hasLower = clean.Any(char.IsLower);
+            bool hasUpper = clean.Any(char.IsUpper);
+            bool hasDigit = clean.Any(char.IsDigit);
+            bool hasSpecial = clean.Any(ch => !char.IsLetterOrDigit(ch));
+
+            if (hasLower)
+            {
+                score += 7;
+            }
+
+            if (hasUpper)
+            {
+                score += 7;
+            }
+
+            if (hasDigit)
+            {
+                score += 7;
+            }
+
+            if (hasSpecial)
+            {
+                score += 10;
+            }
+
+            int categoryCount = 0;
+
+            if (hasLower) categoryCount++;
+            if (hasUpper) categoryCount++;
+            if (hasDigit) categoryCount++;
+            if (hasSpecial) categoryCount++;
+
+            if (categoryCount >= 3)
+            {
+                score += 8;
+            }
+
+            int uniqueCharacters = clean.Distinct().Count();
+
+            if (uniqueCharacters >= Math.Min(10, clean.Length))
+            {
+                score += 6;
+            }
+
+            string lower = clean.ToLowerInvariant();
+
+            string[] riskyWords =
+            {
+                "password",
+                "qwerty",
+                "admin",
+                "letmein",
+                "welcome",
+                "quickforge",
+                "youtube",
+                "google",
+                "facebook",
+                "steam",
+                "123456",
+                "111111",
+                "000000"
+            };
+
+            if (riskyWords.Any(word => lower.Contains(word)))
+            {
+                score -= 30;
+            }
+
+            if (clean.All(ch => ch == clean[0]))
+            {
+                score -= 40;
+            }
+
+            if (clean.All(char.IsDigit) || clean.All(char.IsLetter))
+            {
+                score -= 20;
+            }
+
+            if (clean.Length < 8)
+            {
+                score -= 25;
+            }
+
+            return Math.Max(0, Math.Min(100, score));
+        }
+
+        private string GetPasswordHealthLevel(string secret)
+        {
+            if (string.IsNullOrWhiteSpace(secret))
+            {
+                return "Missing";
+            }
+
+            int score = GetPasswordHealthScore(secret);
+
+            if (score < 20)
+            {
+                return "Super weak";
+            }
+
+            if (score < 40)
+            {
+                return "Weak";
+            }
+
+            if (score < 65)
+            {
+                return "OK but improve";
+            }
+
+            if (score < 80)
+            {
+                return "Good";
+            }
+
+            if (score < 92)
+            {
+                return "Strong";
+            }
+
+            return "Very strong";
+        }
+
+        private bool ShouldReviewPassword(string secret)
+        {
+            return GetPasswordHealthScore(secret) < 65;
+        }
+
+        private string GetPasswordHealthReason(string secret, bool reused)
+        {
+            if (string.IsNullOrWhiteSpace(secret))
+            {
+                return "No password/secret is saved for this entry.";
+            }
+
+            int score = GetPasswordHealthScore(secret);
+
+            if (reused)
+            {
+                return "This exact password/secret is reused somewhere else in the vault.";
+            }
+
+            if (score < 20)
+            {
+                return "Very easy to guess, empty, too short, or contains a risky/common pattern.";
+            }
+
+            if (score < 40)
+            {
+                return "Too weak. Use more length and mix letters, numbers, and symbols.";
+            }
+
+            if (score < 65)
+            {
+                return "Acceptable for low-risk use, but still below QuickForge's recommended strength.";
+            }
+
+            if (score < 80)
+            {
+                return "Good. Better than weak passwords, but it could still be stronger.";
+            }
+
+            if (score < 92)
+            {
+                return "Strong. Usually acceptable for normal use.";
+            }
+
+            return "Very strong. No immediate password-strength action needed.";
+        }
+
+        private Color GetPasswordHealthColor(string secret, bool reused)
+        {
+            if (reused)
+            {
+                return Color.FromArgb(255, 190, 90);
+            }
+
+            int score = GetPasswordHealthScore(secret);
+
+            if (score < 20)
+            {
+                return dangerColor;
+            }
+
+            if (score < 65)
+            {
+                return Color.FromArgb(255, 190, 90);
+            }
+
+            return successColor;
+        }
+        private void BeginPasswordHealthEntryFix(VaultEntry entry, bool openWebsiteToo)
+        {
+            if (entry == null)
+            {
+                return;
+            }
+
+            List<Form> childForms = Application.OpenForms
+                .Cast<Form>()
+                .Where(openForm => !ReferenceEquals(openForm, this))
+                .ToList();
+
+            foreach (Form childForm in childForms)
+            {
+                childForm.Close();
+            }
+
+            BeginInvoke(new Action(() =>
+            {
+                ShowVaultUi();
+
+                vaultSearchTextBox.Clear();
+                RefreshVaultList();
+
+                int visibleIndex = visibleVaultEntries.IndexOf(entry);
+
+                if (visibleIndex >= 0 && visibleIndex < vaultListBox.Items.Count)
+                {
+                    vaultListBox.SelectedIndex = visibleIndex;
+                }
+
+                if (openWebsiteToo && !string.IsNullOrWhiteSpace(entry.Website))
+                {
+                    OpenWebsite(entry.Website);
+                }
+
+                EditEntryButton_Click(this, EventArgs.Empty);
+
+                selectedPreviewLabel.Text =
+                    "Password Health opened this entry for editing." + Environment.NewLine +
+                    "Update the password/secret, then click Save changes." +
+                    (openWebsiteToo && !string.IsNullOrWhiteSpace(entry.Website)
+                        ? Environment.NewLine + "The website was opened too so you can change the real account password."
+                        : "");
+            }));
+        }
+        private void ShowTrustCenterDialog()
+        {
+            if (!isVaultUnlocked)
+            {
+                MessageBox.Show(
+                    "Unlock your vault before opening Trust Center.",
+                    "Trust Center unavailable",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return;
+            }
+
+            if (!RequireTrustedDeviceForSensitiveAction("Open Trust Center"))
+            {
+                return;
+            }
+
+            currentVaultSettings.KnownDevices ??= new List<KnownVaultDevice>();
+            currentVaultSettings.SafetyTimeline ??= new List<VaultSafetyEvent>();
+
+            int visibleDevices = currentVaultSettings.KnownDevices.Count(device => !device.IsHiddenFromTrustList);
+            int untrustedDevices = currentVaultSettings.KnownDevices.Count(device =>
+                !device.IsHiddenFromTrustList &&
+                !device.IsTrusted
+            );
+
+            int weakPasswords = vaultEntries.Count(entry => ShouldReviewPassword(entry.Secret));
+
+            int reusedPasswords = vaultEntries
+                .Where(entry => !string.IsNullOrWhiteSpace(entry.Secret))
+                .GroupBy(entry => entry.Secret, StringComparer.Ordinal)
+                .Count(group => group.Count() > 1);
+
+            bool hasRecentBackup =
+                currentVaultSettings.LastBackupAtUtc.HasValue &&
+                (DateTime.UtcNow - currentVaultSettings.LastBackupAtUtc.Value.ToUniversalTime()).TotalDays <= 30;
+
+            bool hasRecentCloudLoad =
+                lastCloudLoadUtc.HasValue &&
+                (DateTime.UtcNow - lastCloudLoadUtc.Value).TotalMinutes <= 60;
+
+            string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
+                ? "Last backup: " + currentVaultSettings.LastBackupAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                : "No backup recorded";
+
+            string syncStatus = lastCloudLoadUtc.HasValue
+                ? "Last cloud load: " + lastCloudLoadUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                : "No cloud load recorded";
+
+            string deviceStatus = untrustedDevices > 0
+                ? untrustedDevices + " device(s) need review"
+                : visibleDevices + " known device(s)";
+
+            string recoveryStatus = currentVaultSettings.RecoveryKeyRotationRequired
+                ? "Rotation required"
+                : "Available";
+
+            string passwordHealthStatus =
+                weakPasswords == 0 && reusedPasswords == 0
+                    ? "Looks good"
+                    : weakPasswords + " to review / " + reusedPasswords + " reused";
+
+            bool authenticatorLockActive = IsAuthenticatorLockEnabled();
+
+            string authenticatorStatus = authenticatorLockActive
+                ? "Active"
+                : "Optional";
+
+            string authenticatorDetail = authenticatorLockActive
+                ? "Vault unlock requires vault code + authenticator code."
+                : "Adds a 6-digit authenticator code after your vault code.";
+
+            string authenticatorActionText = authenticatorLockActive
+                ? "Manage"
+                : "Set up";
+
+            Color authenticatorStatusColor = authenticatorLockActive
+                ? successColor
+                : Color.FromArgb(255, 190, 90);
+
+            string overallStatus;
+
+            if (untrustedDevices > 0 ||
+                currentVaultSettings.RecoveryKeyRotationRequired ||
+                !hasRecentBackup ||
+                weakPasswords > 0 ||
+                reusedPasswords > 0)
+            {
+                overallStatus = "Review recommended";
+            }
+            else
+            {
+                overallStatus = "Looks safe today";
+            }
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 860;
+                dialog.Height = 790;
+                dialog.Text = "QuickForge Trust Center";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Trust Center";
+                titleLabel.Left = 24;
+                titleLabel.Top = 18;
+                titleLabel.Width = 500;
+                titleLabel.Height = 34;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 16, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = "Review your vault safety. Use each card action to fix or inspect that area.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 56;
+                subtitleLabel.Width = 700;
+                subtitleLabel.Height = 24;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Label overallStatusLabel = new Label();
+                overallStatusLabel.Text = overallStatus;
+                overallStatusLabel.Left = 24;
+                overallStatusLabel.Top = 88;
+                overallStatusLabel.Width = 700;
+                overallStatusLabel.Height = 28;
+                overallStatusLabel.ForeColor = overallStatus == "Looks safe today"
+                    ? successColor
+                    : Color.FromArgb(255, 190, 90);
+                overallStatusLabel.BackColor = Color.Transparent;
+                overallStatusLabel.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+
+                Panel CreateTrustCard(
+                    string title,
+                    string status,
+                    string detail,
+                    int left,
+                    int top,
+                    Color statusColor,
+                    string actionText,
+                    Action action,
+                    bool primaryAction = false)
+                {
+                    Panel card = new Panel();
+                    card.Left = left;
+                    card.Top = top;
+                    card.Width = 365;
+                    card.Height = 155;
+                    card.BackColor = Color.FromArgb(24, 28, 44);
+                    card.BorderStyle = BorderStyle.FixedSingle;
+
+                    Label cardTitle = new Label();
+                    cardTitle.Text = title;
+                    cardTitle.Left = 14;
+                    cardTitle.Top = 10;
+                    cardTitle.Width = 335;
+                    cardTitle.Height = 22;
+                    cardTitle.ForeColor = Color.White;
+                    cardTitle.BackColor = Color.Transparent;
+                    cardTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                    Label cardStatus = new Label();
+                    cardStatus.Text = status;
+                    cardStatus.Left = 14;
+                    cardStatus.Top = 36;
+                    cardStatus.Width = 335;
+                    cardStatus.Height = 22;
+                    cardStatus.ForeColor = statusColor;
+                    cardStatus.BackColor = Color.Transparent;
+                    cardStatus.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                    Label cardDetail = new Label();
+                    cardDetail.Text = detail;
+                    cardDetail.Left = 14;
+                    cardDetail.Top = 62;
+                    cardDetail.Width = 335;
+                    cardDetail.Height = 50;
+                    cardDetail.ForeColor = softTextColor;
+                    cardDetail.BackColor = Color.Transparent;
+                    cardDetail.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+
+                    Button actionButton = new Button();
+                    actionButton.Text = actionText;
+                    actionButton.Left = 14;
+                    actionButton.Top = 116;
+                    actionButton.Width = 150;
+                    actionButton.Height = 28;
+                    StyleActionButton(actionButton, primaryAction);
+                    actionButton.Click += (s, e) => action();
+
+                    card.Controls.Add(cardTitle);
+                    card.Controls.Add(cardStatus);
+                    card.Controls.Add(cardDetail);
+                    card.Controls.Add(actionButton);
+
+                    return card;
+                }
+
+                Panel CreateAuthenticatorTrustCard(
+                    string status,
+                    string detail,
+                    Color statusColor,
+                    string actionText,
+                    bool primaryAction)
+                {
+                    Panel card = CreateTrustCard(
+                        "Authenticator Lock",
+                        status,
+                        detail,
+                        420,
+                        480,
+                        statusColor,
+                        actionText,
+                        () => { },
+                        primaryAction
+                    );
+
+                    Button? actionButton = card.Controls.OfType<Button>().FirstOrDefault();
+
+                    if (actionButton != null)
+                    {
+                        actionButton.Click += async (s, e) =>
+                        {
+                            actionButton.Enabled = false;
+                            actionButton.Text = "Opening...";
+
+                            try
+                            {
+                                bool changed = await ShowAuthenticatorLockSettingsDialogAsync();
+
+                                if (changed)
+                                {
+                                    dialog.Close();
+                                    BeginInvoke(new Action(() => ShowTrustCenterDialog()));
+                                    return;
+                                }
+
+                                actionButton.Text = actionText;
+                                actionButton.Enabled = true;
+                            }
+                            catch (Exception ex)
+                            {
+                                actionButton.Text = actionText;
+                                actionButton.Enabled = true;
+
+                                MessageBox.Show(
+                                    "Could not open Authenticator Lock settings: " + ex.Message,
+                                    "Authenticator Lock",
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Error
+                                );
+                            }
+                        };
+                    }
+
+                    return card;
+                }
+
+                Panel deviceCard = CreateTrustCard(
+                    "Device Trust",
+                    deviceStatus,
+                    "Approve, trust, or untrust devices that have opened this vault.",
+                    24,
+                    130,
+                    untrustedDevices > 0 ? Color.FromArgb(255, 190, 90) : successColor,
+                    "Manage devices",
+                    () =>
+                    {
+                        ShowDeviceTrustDialog();
+                    },
+                    untrustedDevices > 0
+                );
+
+                Panel recoveryCard = CreateTrustCard(
+                    "Recovery",
+                    recoveryStatus,
+                    "Your recovery key protects you if the vault code is forgotten. Keep it separate from backups.",
+                    420,
+                    130,
+                    currentVaultSettings.RecoveryKeyRotationRequired ? Color.FromArgb(255, 190, 90) : successColor,
+                    "Recovery options",
+                    () =>
+                    {
+                                                ShowRecoveryReminderSettingsDialog();
+                    },
+                    currentVaultSettings.RecoveryKeyRotationRequired
+                );
+
+                Panel backupCard = CreateTrustCard(
+                    "Backups",
+                    hasRecentBackup ? "Recent backup found" : "Backup recommended",
+                    backupStatus + ". Encrypted backups still require your vault code or recovery key.",
+                    24,
+                    305,
+                    hasRecentBackup ? successColor : Color.FromArgb(255, 190, 90),
+                    "Create backup",
+                    () =>
+                    {
+                                                ShowBackupDialog();
+                    },
+                    !hasRecentBackup
+                );
+
+                Panel passwordCard = CreateTrustCard(
+                    "Password Health",
+                    passwordHealthStatus,
+                    "Shows which saved entries need stronger or unique passwords.",
+                    420,
+                    305,
+                    weakPasswords == 0 && reusedPasswords == 0 ? successColor : Color.FromArgb(255, 190, 90),
+                    "View issues",
+                    () =>
+                    {
+                        ShowPasswordHealthDialog(weakPasswords, reusedPasswords);
+                    },
+                    weakPasswords > 0 || reusedPasswords > 0
+                );
+
+                Panel syncCard = CreateTrustCard(
+                    "Sync Safety",
+                    hasRecentCloudLoad ? "Recently checked" : "Refresh recommended",
+                    syncStatus + ". Refresh if another device may have changed the vault.",
+                    24,
+                    480,
+                    hasRecentCloudLoad ? successColor : Color.FromArgb(255, 190, 90),
+                    "Refresh vault",
+                    () =>
+                    {
+                                                RefreshCloudButton_Click(this, EventArgs.Empty);
+                    },
+                    !hasRecentCloudLoad
+                );
+
+                Panel authenticatorCard = CreateAuthenticatorTrustCard(
+                    authenticatorStatus,
+                    authenticatorDetail,
+                    authenticatorStatusColor,
+                    authenticatorActionText,
+                    authenticatorLockActive
+                );
+
+                Button legacyReportButton = new Button();
+                legacyReportButton.Text = "Full report";
+                legacyReportButton.Left = 24;
+                legacyReportButton.Top = 720;
+                legacyReportButton.Width = 120;
+                legacyReportButton.Height = 30;
+                StyleActionButton(legacyReportButton);
+                legacyReportButton.Click += (s, e) =>
+                {
+                    MessageBox.Show(
+                        BuildVaultSafetyReport(vaultEntries.Count, weakPasswords, reusedPasswords, untrustedDevices),
+                        "Full vault safety report",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
+                };
+
+                Button closeButton = new Button();
+                closeButton.Text = "Close";
+                closeButton.Left = 735;
+                closeButton.Top = 720;
+                closeButton.Width = 100;
+                closeButton.Height = 30;
+                StyleActionButton(closeButton, true);
+                closeButton.Click += (s, e) => dialog.Close();
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(overallStatusLabel);
+                dialog.Controls.Add(deviceCard);
+                dialog.Controls.Add(recoveryCard);
+                dialog.Controls.Add(backupCard);
+                dialog.Controls.Add(passwordCard);
+                dialog.Controls.Add(syncCard);
+                dialog.Controls.Add(authenticatorCard);
+                dialog.Controls.Add(legacyReportButton);
+                dialog.Controls.Add(closeButton);
+
+                dialog.ShowDialog(this);
+            }
+        }
+        private void ShowPasswordHealthDialog(int weakPasswords, int reusedPasswords)
+        {
+            HashSet<string> reusedSecrets = vaultEntries
+                .Where(entry => !string.IsNullOrWhiteSpace(entry.Secret))
+                .GroupBy(entry => entry.Secret, StringComparer.Ordinal)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key)
+                .ToHashSet(StringComparer.Ordinal);
+
+            var findings = vaultEntries
+                .Select(entry => new
+                {
+                    Entry = entry,
+                    Level = GetPasswordHealthLevel(entry.Secret),
+                    Score = GetPasswordHealthScore(entry.Secret),
+                    Reused = !string.IsNullOrWhiteSpace(entry.Secret) && reusedSecrets.Contains(entry.Secret),
+                    NeedsReview = ShouldReviewPassword(entry.Secret) ||
+                                  (!string.IsNullOrWhiteSpace(entry.Secret) && reusedSecrets.Contains(entry.Secret))
+                })
+                .OrderBy(item => item.NeedsReview ? 0 : 1)
+                .ThenBy(item => item.Score)
+                .ThenBy(item => item.Entry.Platform)
+                .ToList();
+
+            int missingCount = findings.Count(item => item.Level == "Missing");
+            int superWeakCount = findings.Count(item => item.Level == "Super weak");
+            int weakCount = findings.Count(item => item.Level == "Weak");
+            int okButImproveCount = findings.Count(item => item.Level == "OK but improve");
+            int goodCount = findings.Count(item => item.Level == "Good");
+            int strongCount = findings.Count(item => item.Level == "Strong");
+            int veryStrongCount = findings.Count(item => item.Level == "Very strong");
+            int reusedEntryCount = findings.Count(item => item.Reused);
+            int reviewCount = findings.Count(item => item.NeedsReview);
+
+            bool hasIssues = reviewCount > 0;
+
+            Color BlendPasswordHealthColor(Color from, Color to, double amount)
+            {
+                amount = Math.Max(0, Math.Min(1, amount));
+
+                int red = (int)(from.R + (to.R - from.R) * amount);
+                int green = (int)(from.G + (to.G - from.G) * amount);
+                int blue = (int)(from.B + (to.B - from.B) * amount);
+
+                return Color.FromArgb(red, green, blue);
+            }
+
+            Color GetBarColor(int score)
+            {
+                Color red = Color.FromArgb(255, 95, 95);
+                Color amber = Color.FromArgb(255, 190, 90);
+                Color green = successColor;
+
+                if (score <= 50)
+                {
+                    return BlendPasswordHealthColor(red, amber, score / 50.0);
+                }
+
+                return BlendPasswordHealthColor(amber, green, (score - 50) / 50.0);
+            }
+
+            string GetSeverityText(int score, bool reused)
+            {
+                if (reused)
+                {
+                    return "Warning: reused secret. Change this so every account has its own password.";
+                }
+
+                if (score < 20)
+                {
+                    return "Urgent: this is very easy to guess or crack. Change it as soon as possible.";
+                }
+
+                if (score < 40)
+                {
+                    return "High risk: this password is weak. Use a longer generated password.";
+                }
+
+                if (score < 65)
+                {
+                    return "Improve: acceptable only for low-risk use, but not recommended.";
+                }
+
+                if (score < 80)
+                {
+                    return "Suggestion: good enough for normal use, but it can still be stronger.";
+                }
+
+                if (score < 92)
+                {
+                    return "Looks strong. No urgent action needed.";
+                }
+
+                return "Very strong. No password-strength action needed.";
+            }
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 840;
+                dialog.Height = 720;
+                dialog.Text = "Password Health";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = hasIssues ? "Password review needed" : "Password health looks good";
+                titleLabel.Left = 24;
+                titleLabel.Top = 18;
+                titleLabel.Width = 760;
+                titleLabel.Height = 34;
+                titleLabel.ForeColor = hasIssues ? Color.FromArgb(255, 190, 90) : successColor;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text = hasIssues
+                    ? "Click an entry to open it directly in QuickForge edit mode. Passwords are never shown here."
+                    : "No weak, OK-but-risky, or reused secrets were found in the current vault check.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 56;
+                subtitleLabel.Width = 770;
+                subtitleLabel.Height = 38;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Panel summaryPanel = new Panel();
+                summaryPanel.Left = 24;
+                summaryPanel.Top = 104;
+                summaryPanel.Width = 780;
+                summaryPanel.Height = 118;
+                summaryPanel.BackColor = Color.FromArgb(24, 28, 44);
+                summaryPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label summaryTitle = new Label();
+                summaryTitle.Text = "Summary";
+                summaryTitle.Left = 16;
+                summaryTitle.Top = 10;
+                summaryTitle.Width = 740;
+                summaryTitle.Height = 22;
+                summaryTitle.ForeColor = Color.White;
+                summaryTitle.BackColor = Color.Transparent;
+                summaryTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                Label summaryText = new Label();
+                summaryText.Text =
+                    "Saved entries: " + vaultEntries.Count + Environment.NewLine +
+                    "Need review: " + reviewCount + " | Reused entries: " + reusedEntryCount + Environment.NewLine +
+                    "Missing: " + missingCount + " | Super weak: " + superWeakCount + " | Weak: " + weakCount + " | OK but improve: " + okButImproveCount + Environment.NewLine +
+                    "Good: " + goodCount + " | Strong: " + strongCount + " | Very strong: " + veryStrongCount;
+                summaryText.Left = 16;
+                summaryText.Top = 36;
+                summaryText.Width = 740;
+                summaryText.Height = 72;
+                summaryText.ForeColor = softTextColor;
+                summaryText.BackColor = Color.Transparent;
+                summaryText.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                summaryPanel.Controls.Add(summaryTitle);
+                summaryPanel.Controls.Add(summaryText);
+
+                Label legendLabel = new Label();
+                legendLabel.Text = "Strength bars: color gradually moves from red to amber to green as the password gets stronger.";
+                legendLabel.Left = 24;
+                legendLabel.Top = 234;
+                legendLabel.Width = 780;
+                legendLabel.Height = 22;
+                legendLabel.ForeColor = softTextColor;
+                legendLabel.BackColor = Color.Transparent;
+                legendLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                FlowLayoutPanel findingsPanel = new FlowLayoutPanel();
+                findingsPanel.Left = 24;
+                findingsPanel.Top = 264;
+                findingsPanel.Width = 780;
+                findingsPanel.Height = 330;
+                findingsPanel.AutoScroll = true;
+                findingsPanel.FlowDirection = FlowDirection.TopDown;
+                findingsPanel.WrapContents = false;
+                findingsPanel.BackColor = Color.FromArgb(16, 20, 34);
+                findingsPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                void AddFindingRow(dynamic finding)
+                {
+                    string platform = string.IsNullOrWhiteSpace(finding.Entry.Platform)
+                        ? "Unnamed entry"
+                        : finding.Entry.Platform.Trim();
+
+                    string username = string.IsNullOrWhiteSpace(finding.Entry.Username)
+                        ? "No username saved"
+                        : finding.Entry.Username.Trim();
+
+                    int score = finding.Score;
+                    bool reused = finding.Reused;
+                    bool needsReview = finding.NeedsReview;
+                    Color barColor = GetBarColor(score);
+
+                    Panel row = new Panel();
+                    row.Width = 740;
+                    row.Height = 150;
+                    row.Margin = new Padding(8, 8, 8, 2);
+                    row.BackColor = needsReview
+                        ? Color.FromArgb(26, 24, 34)
+                        : Color.FromArgb(20, 32, 28);
+                    row.BorderStyle = BorderStyle.FixedSingle;
+                    row.Cursor = Cursors.Hand;
+
+                    Label accountLabel = new Label();
+                    accountLabel.Text = platform + "  |  user: " + username;
+                    accountLabel.Left = 12;
+                    accountLabel.Top = 8;
+                    accountLabel.Width = 500;
+                    accountLabel.Height = 22;
+                    accountLabel.ForeColor = Color.White;
+                    accountLabel.BackColor = Color.Transparent;
+                    accountLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                    accountLabel.Cursor = Cursors.Hand;
+
+                    Label levelLabel = new Label();
+                    levelLabel.Text = finding.Level + (reused ? " + reused" : "") + "  (" + score + "/100)";
+                    levelLabel.Left = 520;
+                    levelLabel.Top = 8;
+                    levelLabel.Width = 200;
+                    levelLabel.Height = 22;
+                    levelLabel.ForeColor = barColor;
+                    levelLabel.BackColor = Color.Transparent;
+                    levelLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                    levelLabel.Cursor = Cursors.Hand;
+
+                    Panel barTrack = new Panel();
+                    barTrack.Left = 12;
+                    barTrack.Top = 38;
+                    barTrack.Width = 700;
+                    barTrack.Height = 14;
+                    barTrack.BackColor = Color.FromArgb(45, 50, 68);
+                    barTrack.BorderStyle = BorderStyle.FixedSingle;
+                    barTrack.Cursor = Cursors.Hand;
+
+                    Panel barFill = new Panel();
+                    barFill.Left = 0;
+                    barFill.Top = 0;
+                    barFill.Width = Math.Max(4, Math.Min(698, score * 698 / 100));
+                    barFill.Height = 12;
+                    barFill.BackColor = barColor;
+                    barFill.Cursor = Cursors.Hand;
+
+                    barTrack.Controls.Add(barFill);
+
+                    Label reasonLabel = new Label();
+                    reasonLabel.Text = GetSeverityText(score, reused) + " " + GetPasswordHealthReason(finding.Entry.Secret, reused);
+                    reasonLabel.Left = 12;
+                    reasonLabel.Top = 62;
+                    reasonLabel.Width = 700;
+                    reasonLabel.Height = 36;
+                    reasonLabel.ForeColor = needsReview ? Color.FromArgb(255, 210, 150) : softTextColor;
+                    reasonLabel.BackColor = Color.Transparent;
+                    reasonLabel.Font = new Font("Segoe UI", 8, FontStyle.Regular);
+                    reasonLabel.Cursor = Cursors.Hand;
+
+                    Button fixButton = new Button();
+                    fixButton.Text = "Fix in QuickForge";
+                    fixButton.Left = 12;
+                    fixButton.Top = 108;
+                    fixButton.Width = 140;
+                    fixButton.Height = 30;
+                    StyleActionButton(fixButton, true);
+
+                    Button openSiteButton = new Button();
+                    openSiteButton.Text = string.IsNullOrWhiteSpace(finding.Entry.Website)
+                        ? "No website saved"
+                        : "Open site + edit";
+                    openSiteButton.Left = 165;
+                    openSiteButton.Top = 108;
+                    openSiteButton.Width = 140;
+                    openSiteButton.Height = 30;
+                    openSiteButton.Enabled = !string.IsNullOrWhiteSpace(finding.Entry.Website);
+                    StyleActionButton(openSiteButton);
+
+                    EventHandler fixHandler = (s, e) =>
+                    {
+                        BeginPasswordHealthEntryFix(finding.Entry, false);
+                    };
+
+                    row.Click += fixHandler;
+                    accountLabel.Click += fixHandler;
+                    levelLabel.Click += fixHandler;
+                    barTrack.Click += fixHandler;
+                    barFill.Click += fixHandler;
+                    reasonLabel.Click += fixHandler;
+                    fixButton.Click += fixHandler;
+
+                    openSiteButton.Click += (s, e) =>
+                    {
+                        BeginPasswordHealthEntryFix(finding.Entry, true);
+                    };
+
+                    row.Controls.Add(accountLabel);
+                    row.Controls.Add(levelLabel);
+                    row.Controls.Add(barTrack);
+                    row.Controls.Add(reasonLabel);
+                    row.Controls.Add(fixButton);
+                    row.Controls.Add(openSiteButton);
+
+                    findingsPanel.Controls.Add(row);
+                }
+
+                List<dynamic> rowsToShow = findings
+                    .Where(item => item.NeedsReview)
+                    .Cast<dynamic>()
+                    .ToList();
+
+                if (rowsToShow.Count == 0)
+                {
+                    rowsToShow = findings.Cast<dynamic>().ToList();
+                }
+
+                if (rowsToShow.Count == 0)
+                {
+                    Label emptyLabel = new Label();
+                    emptyLabel.Text = "No saved entries yet.";
+                    emptyLabel.Left = 12;
+                    emptyLabel.Top = 12;
+                    emptyLabel.Width = 700;
+                    emptyLabel.Height = 30;
+                    emptyLabel.ForeColor = softTextColor;
+                    emptyLabel.BackColor = Color.Transparent;
+                    findingsPanel.Controls.Add(emptyLabel);
+                }
+                else
+                {
+                    foreach (dynamic finding in rowsToShow)
+                    {
+                        AddFindingRow(finding);
+                    }
+                }
+
+                Panel nextActionPanel = new Panel();
+                nextActionPanel.Left = 24;
+                nextActionPanel.Top = 610;
+                nextActionPanel.Width = 640;
+                nextActionPanel.Height = 58;
+                nextActionPanel.BackColor = hasIssues
+                    ? Color.FromArgb(36, 30, 30)
+                    : Color.FromArgb(18, 38, 28);
+                nextActionPanel.BorderStyle = BorderStyle.FixedSingle;
+
+                Label nextActionLabel = new Label();
+                nextActionLabel.Text = hasIssues
+                    ? "Best next action: click a card to edit it in QuickForge. Use Open site + edit only when you need to change the real account password."
+                    : "Best next action: keep using unique passwords and create encrypted backups regularly.";
+                nextActionLabel.Left = 14;
+                nextActionLabel.Top = 10;
+                nextActionLabel.Width = 610;
+                nextActionLabel.Height = 42;
+                nextActionLabel.ForeColor = hasIssues ? Color.FromArgb(255, 190, 90) : successColor;
+                nextActionLabel.BackColor = Color.Transparent;
+                nextActionLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                nextActionPanel.Controls.Add(nextActionLabel);
+
+                Button closeButton = new Button();
+                closeButton.Text = "Close";
+                closeButton.Left = 704;
+                closeButton.Top = 622;
+                closeButton.Width = 100;
+                closeButton.Height = 34;
+                StyleActionButton(closeButton, true);
+                closeButton.Click += (s, e) => dialog.Close();
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(summaryPanel);
+                dialog.Controls.Add(legendLabel);
+                dialog.Controls.Add(findingsPanel);
+                dialog.Controls.Add(nextActionPanel);
+                dialog.Controls.Add(closeButton);
+
+                dialog.ShowDialog(this);
+            }
         }
 
         private void AboutButton_Click(object? sender, EventArgs e)
@@ -1132,7 +4504,7 @@ namespace exam_test
             rotateRecoveryKeyButton.FlatAppearance.BorderColor = Color.FromArgb(90, 110, 150);
             rotateRecoveryKeyButton.Click += RotateRecoveryKeyButton_Click;
 
-            securityCenterButton.Text = "Security check";
+            securityCenterButton.Text = "Trust Center";
             securityCenterButton.Left = 315;
             securityCenterButton.Top = 570;
             securityCenterButton.Width = 105;
@@ -1141,7 +4513,11 @@ namespace exam_test
             securityCenterButton.ForeColor = Color.White;
             securityCenterButton.BackColor = Color.FromArgb(45, 90, 160);
             securityCenterButton.FlatAppearance.BorderColor = borderColor;
-            securityCenterButton.Click += (s, e) => ShowSecurityCenterDialog();
+            securityCenterButton.Click += (s, e) =>
+            {
+                _ = RefreshDeviceTrustFromCloudInBackgroundAsync();
+                ShowTrustCenterDialog();
+            };
 
             backupButton.Text = "Backup";
             backupButton.Left = 430;
@@ -1276,7 +4652,7 @@ namespace exam_test
                     currentVaultSettings.AutoLockMinutes = 0;
                 }
 
-                MarkVaultActivity();
+                MarkVaultChangedByCurrentDevice("Streamer mode changed");
 
                 if (isVaultUnlocked)
                 {
@@ -1321,8 +4697,8 @@ namespace exam_test
                 }
 
                 currentVaultSettings.AutoRefreshMinutes = GetAutoRefreshMinutesFromSelection();
-                ConfigureAutoRefreshTimer();
-                MarkVaultActivity();
+                RestartAutoRefreshTimerFromSettings();
+                MarkVaultChangedByCurrentDevice("Streamer mode changed");
 
                 if (isVaultUnlocked)
                 {
@@ -1343,6 +4719,7 @@ namespace exam_test
             vaultPanel.Controls.Add(autoLockComboBox);
             vaultPanel.Controls.Add(autoRefreshLabel);
             vaultPanel.Controls.Add(autoRefreshComboBox);
+            HideMainPanelSettingsForV021();
 
             openSiteButton.Text = "Open site";
             openSiteButton.Left = 315;
@@ -1419,6 +4796,7 @@ namespace exam_test
                 accountStatusLabel.Text = "Connected: " + email;
                 accountStatusLabel.ForeColor = successColor;
                 logoutButton.Enabled = true;
+                settingsButton.Enabled = true;
 
                 cloudVaultExists = await GoogleDriveVaultService.VaultExistsAsync(currentDriveService);
 
@@ -1836,6 +5214,7 @@ namespace exam_test
 
                     currentDataKey = dataKey;
                     currentEncryptedVaultFile = encryptedVaultFile;
+            RestartAutoRefreshTimerFromSettings();
 
                     await GoogleDriveVaultService.UploadEncryptedVaultAsync(
                         currentDriveService,
@@ -1852,6 +5231,7 @@ namespace exam_test
                     GrantSecretAccessWindow();
 
                     ShowVaultUi();
+                    RestartAutoRefreshTimerFromSettings();
                     ShowEmergencyBackupGuidance();
                 }
                 catch (Exception ex)
@@ -2296,8 +5676,38 @@ namespace exam_test
                 throw new InvalidOperationException("Vault unlock did not complete.");
             }
 
+            VaultSettings unlockedVaultSettings = vaultData.Settings ?? new VaultSettings();
+
+            bool authenticatorRequired =
+                !usedRecoveryKey &&
+                unlockedVaultSettings.AuthenticatorLockEnabled &&
+                !string.IsNullOrWhiteSpace(unlockedVaultSettings.AuthenticatorSecretBase32);
+
+            if (authenticatorRequired)
+            {
+                SetSyncStatus("Vault code accepted - authenticator required");
+                SetPreviewText(
+                    "Vault code accepted.",
+                    "Enter the 6-digit authenticator code to finish unlocking.",
+                    "QuickForge will not open the vault until both checks pass."
+                );
+
+                if (!ShowAuthenticatorUnlockDialog(unlockedVaultSettings.AuthenticatorSecretBase32))
+                {
+                    vaultCode = "";
+                    currentDataKey = null;
+                    currentEncryptedVaultFile = null;
+                    currentVaultSettings = new VaultSettings();
+                    vaultEntries.Clear();
+                    RefreshVaultList();
+                    SetSyncStatus("Authenticator cancelled", error: true);
+                    ClearVaultCodeInputForRetry();
+                    return false;
+                }
+            }
+
             vaultCode = unlockCode;
-            currentVaultSettings = vaultData.Settings ?? new VaultSettings();
+            currentVaultSettings = unlockedVaultSettings;
             currentDataKey = dataKey;
             currentEncryptedVaultFile = decryptedEncryptedVaultFile;
 
@@ -2349,6 +5759,21 @@ namespace exam_test
             return true;
         }
 
+        private bool HasRecentSaveAndLoadWithinMinutes(int minutes)
+        {
+            DateTime now = DateTime.UtcNow;
+
+            bool recentSave =
+                lastCloudSaveUtc.HasValue &&
+                (now - lastCloudSaveUtc.Value).TotalMinutes <= minutes;
+
+            bool recentLoad =
+                lastCloudLoadUtc.HasValue &&
+                (now - lastCloudLoadUtc.Value).TotalMinutes <= minutes;
+
+            return recentSave && recentLoad;
+        }
+
         private void SetSyncStatus(string status, bool success = false, bool error = false)
         {
             string lastSaveText = lastCloudSaveUtc.HasValue
@@ -2359,14 +5784,37 @@ namespace exam_test
                 ? lastCloudLoadUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
                 : "Not yet";
 
+            bool recentSaveAndLoadOk = HasRecentSaveAndLoadWithinMinutes(10);
+
+            bool showRecentHealthyInsteadOfStreamerWarning =
+                error &&
+                recentSaveAndLoadOk &&
+                status.Equals("Streamer mode sync failed", StringComparison.OrdinalIgnoreCase);
+
+            string displayStatus = showRecentHealthyInsteadOfStreamerWarning
+                ? "Active (recent save/load)"
+                : status;
+
             syncStatusLabel.Text =
-                "Sync: " + status + Environment.NewLine +
+                "Sync: " + displayStatus + Environment.NewLine +
                 "Last save: " + lastSaveText + Environment.NewLine +
                 "Last load: " + lastLoadText;
 
-            if (error)
+            if (showRecentHealthyInsteadOfStreamerWarning)
             {
-                syncStatusLabel.ForeColor = dangerColor;
+                syncStatusLabel.ForeColor = successColor;
+            }
+            else if (error)
+            {
+                bool reviewState =
+                    status.Contains("Conflict", StringComparison.OrdinalIgnoreCase) ||
+                    status.Contains("retry", StringComparison.OrdinalIgnoreCase) ||
+                    status.Contains("pending", StringComparison.OrdinalIgnoreCase) ||
+                    status.Contains("skipped", StringComparison.OrdinalIgnoreCase);
+
+                syncStatusLabel.ForeColor = reviewState
+                    ? Color.FromArgb(255, 190, 90)
+                    : dangerColor;
             }
             else if (success)
             {
@@ -3050,6 +6498,7 @@ namespace exam_test
                 "- Open + Fill" + Environment.NewLine +
                 "- Add/edit/delete entries" + Environment.NewLine +
                 "- Backup/import" + Environment.NewLine +
+                "- Trust Center and security reports" + Environment.NewLine +
                 "- Change vault code or recovery key" + Environment.NewLine +
                 "- Manage Device Trust" + Environment.NewLine + Environment.NewLine +
                 "To regain full access, open QuickForge on a trusted device, go to Security Center > Device Trust, select this device, and click Trust." + Environment.NewLine + Environment.NewLine +
@@ -3116,7 +6565,7 @@ namespace exam_test
                 SetPreviewText(
                     "UNTRUSTED DEVICE MODE",
                     "This device is not trusted for this vault.",
-                    "Sensitive actions are disabled. Refresh, Sync, Lock, and Security Center remain available."
+                    "Sensitive actions are disabled. Refresh, Sync, and Lock remain available. Backup and Trust Center are blocked until this device is trusted."
                 );
             }
 
@@ -3152,7 +6601,7 @@ namespace exam_test
                 secretVisibilityButton.Enabled = !restricted;
             }
 
-            securityCenterButton.Enabled = true;
+            securityCenterButton.Enabled = !restricted;
             refreshCloudButton.Enabled = true;
             manualSyncButton.Enabled = true;
             lockVaultButton.Enabled = true;
@@ -3258,7 +6707,9 @@ namespace exam_test
 
         private void SyncDeviceTrustRegistrationAfterUnlockIfNeeded(bool deviceTrustChanged)
         {
-            if (!deviceTrustChanged ||
+            bool shouldSyncCurrentUntrustedDevice = IsRestrictedModeActive();
+
+            if ((!deviceTrustChanged && !shouldSyncCurrentUntrustedDevice) ||
                 currentDriveService == null ||
                 currentDataKey == null ||
                 currentEncryptedVaultFile == null)
@@ -3266,15 +6717,60 @@ namespace exam_test
                 return;
             }
 
-            SetSyncStatus("Device Trust sync pending");
+            string reason = shouldSyncCurrentUntrustedDevice
+                ? "Untrusted Device Trust registration updated: " + localDeviceName
+                : "Device Trust registration updated: " + localDeviceName;
+
+            SetSyncStatus("Device Trust syncing...");
 
             SetPreviewText(
                 "Device Trust updated.",
-                "This device was added to the vault device list.",
-                "QuickForge is syncing this so trusted PCs can review it."
+                "This device was added or refreshed in the vault device list.",
+                "QuickForge is syncing it now so trusted PCs can review it."
             );
 
-            QueueBackgroundVaultSync("Device Trust registration updated: " + localDeviceName);
+            hasUnsyncedLocalChanges = true;
+            backgroundVaultSyncReason = reason;
+
+            if (backgroundVaultSyncRunning || backgroundVaultSyncRequested)
+            {
+                QueueBackgroundVaultSync(reason);
+                return;
+            }
+
+            _ = SyncDeviceTrustRegistrationNowAsync(reason);
+        }
+
+        private async Task SyncDeviceTrustRegistrationNowAsync(string reason)
+        {
+            try
+            {
+                SetSyncStatus("Syncing Device Trust...");
+
+                bool merged = await SaveCurrentVaultToCloudWithAutoMergeAsync();
+
+                hasUnsyncedLocalChanges = false;
+                backgroundVaultSyncRetryCount = 0;
+
+                SetSyncStatus("Device Trust synced", success: true);
+
+                selectedPreviewLabel.Text = merged
+                    ? reason + Environment.NewLine + "Cloud Device Trust changes were merged and synced."
+                    : reason + Environment.NewLine + "Synced. Trusted devices can now review this device.";
+            }
+            catch (Exception ex)
+            {
+                SetSyncStatus("Device Trust sync pending", error: true);
+
+                SetPreviewText(
+                    "Device Trust sync pending.",
+                    "This device was added locally, but immediate sync failed.",
+                    "QuickForge will retry background sync.",
+                    "Error: " + ex.Message
+                );
+
+                QueueBackgroundVaultSync(reason);
+            }
         }
         private void AddSafetyTimelineEvent(string action, string detail)
         {
@@ -3295,7 +6791,6 @@ namespace exam_test
                 .Take(MaxSafetyTimelineEvents)
                 .ToList();
         }
-
         private void MarkVaultChangedByCurrentDevice(string action)
         {
             EnsureLocalDeviceIdentity();
@@ -3565,6 +7060,36 @@ namespace exam_test
                 return true;
             }
         }
+        private async Task SaveCurrentVaultToCloudWithoutDeviceRegistrationAsync()
+        {
+            if (currentDriveService == null)
+            {
+                throw new InvalidOperationException("Google Drive is not connected.");
+            }
+
+            if (currentDataKey == null || currentEncryptedVaultFile == null)
+            {
+                throw new InvalidOperationException("Vault is locked.");
+            }
+
+            SetSyncStatus("Checking cloud...");
+            await EnsureCloudVaultIsSafeToOverwriteAsync();
+
+            SetSyncStatus("Saving...");
+
+            string encryptedJson = CreateCurrentEncryptedVaultJson();
+
+            GoogleDriveVaultMetadata? uploadedMetadata =
+                await GoogleDriveVaultService.UploadEncryptedVaultAsync(
+                    currentDriveService,
+                    encryptedJson
+                );
+
+            lastKnownCloudFingerprint = uploadedMetadata?.Fingerprint ?? lastKnownCloudFingerprint;
+            cloudVaultExists = true;
+            lastCloudSaveUtc = DateTime.UtcNow;
+            SetSyncStatus("Active", success: true);
+        }
         private async Task SaveCurrentVaultToCloudAsync()
         {
             if (currentDriveService == null)
@@ -3647,6 +7172,7 @@ namespace exam_test
             ApplyRecoverySettingsToUi();
             currentDataKey = dataKey;
             currentEncryptedVaultFile = encryptedVaultFile;
+            RestartAutoRefreshTimerFromSettings();
 
             vaultEntries.Clear();
 
@@ -4616,7 +8142,9 @@ namespace exam_test
                 accountStatusLabel.Text = "Not connected";
                 accountStatusLabel.ForeColor = softTextColor;
                 logoutButton.Enabled = false;
-                isVaultUnlocked = false;
+            settingsButton.Enabled = false;
+                autoRefreshTimer.Stop();
+            isVaultUnlocked = false;
                 ClearSecretAccessWindow();
                 currentDataKey = null;
                 currentEncryptedVaultFile = null;
@@ -4688,7 +8216,8 @@ namespace exam_test
                 currentEncryptedVaultFile = null;
                 currentVaultSettings = new VaultSettings();
                 hasShownRecoveryReminderThisSession = false;
-                isVaultUnlocked = false;
+                autoRefreshTimer.Stop();
+            isVaultUnlocked = false;
                 cloudVaultExists = false;
 
                 lastKnownCloudFingerprint = null;
@@ -4721,11 +8250,13 @@ namespace exam_test
             vaultAccessPanel.Visible = false;
             vaultPanel.Visible = false;
             logoutButton.Enabled = false;
+            settingsButton.Enabled = false;
             resetTestVaultButton.Visible = false;
             importBackupAccessButton.Visible = false;
 
             accountStatusLabel.Text = "Not connected";
             accountStatusLabel.ForeColor = softTextColor;
+            privacyModeWarningLabel.Visible = false;
         }
 
         private void ShowVaultAccessUi()
@@ -4739,16 +8270,18 @@ namespace exam_test
 
             vaultAccessPanel.BringToFront();
             topBarPanel.BringToFront();
+            privacyModeWarningLabel.BringToFront();
         }
 
         private void ShowVaultUi()
         {
             unlockStatusTimer.Stop();
             isVaultUnlocked = true;
-
+            RestartAutoRefreshTimerFromSettings();
+            ApplyStreamerModeToUi();
             ApplyRecoverySettingsToUi();
             ApplyPerformanceSettingsToUi();
-            MarkVaultActivity();
+            MarkVaultChangedByCurrentDevice("Streamer mode changed");
             CheckRecoveryKeyReminder();
 
             loginCard.Visible = false;
@@ -4757,6 +8290,7 @@ namespace exam_test
 
             vaultPanel.BringToFront();
             topBarPanel.BringToFront();
+            privacyModeWarningLabel.BringToFront();
         
             ShowEmptyVaultOnboardingIfNeeded();
         }
@@ -5011,7 +8545,7 @@ namespace exam_test
             }
 
             SetPreviewText(
-                "Selected: " + entry.GetDisplayName(),
+                "Selected: " + GetVaultListDisplayName(entry),
                 "User: " + MaskEmpty(entry.Username),
                 "Password/code: " + MaskSecret(entry.Secret),
                 "Favorite: " + (entry.IsFavorite ? "Yes" : "No")
@@ -5681,12 +9215,29 @@ namespace exam_test
 
         private void RestoreConnectedAccountStatus()
         {
-            if (!string.IsNullOrWhiteSpace(connectedGoogleEmail))
+            privacyModeWarningLabel.Visible = false;
+
+            if (string.IsNullOrWhiteSpace(connectedGoogleEmail))
             {
-                accountStatusLabel.Text = "Connected: " + connectedGoogleEmail;
-                accountStatusLabel.ForeColor = successColor;
+                accountStatusLabel.Text = "Not connected";
+                accountStatusLabel.ForeColor = softTextColor;
+                vaultToolTip.SetToolTip(accountStatusLabel, "Connect with Google first.");
+                return;
+            }
+
+            accountStatusLabel.Text = "Connected: " + MaskEmailForStreamer(connectedGoogleEmail);
+            accountStatusLabel.ForeColor = successColor;
+            vaultToolTip.SetToolTip(accountStatusLabel, IsStreamerModeEnabled()
+                ? "Streamer mode is on. Account details are hidden while sharing."
+                : "Connected with Google.");
+
+            if (isVaultUnlocked && !IsStreamerModeEnabled())
+            {
+                privacyModeWarningLabel.Visible = true;
+                privacyModeWarningLabel.BringToFront();
             }
         }
+
         private async Task<bool> RotateRecoveryKeyAsync()
         {
             if (currentDataKey == null || currentEncryptedVaultFile == null)
@@ -6207,6 +9758,11 @@ namespace exam_test
         }
         private void ShowBackupDialog()
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Create or restore encrypted backup"))
+            {
+                return;
+            }
+
             string backupStatusText = currentVaultSettings.LastBackupAtUtc.HasValue
                 ? "Last backup: " + currentVaultSettings.LastBackupAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
                 : "No encrypted backup recorded yet";
@@ -6215,7 +9771,7 @@ namespace exam_test
             {
                 dialog.Width = 720;
                 dialog.Height = 570;
-                dialog.Text = "Backup Center";
+                dialog.Text = "Create backup";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialog.MaximizeBox = false;
@@ -6223,7 +9779,7 @@ namespace exam_test
                 dialog.BackColor = Color.FromArgb(16, 20, 34);
 
                 Label titleLabel = new Label();
-                titleLabel.Text = "Backup Center";
+                titleLabel.Text = "Create backup";
                 titleLabel.Left = 24;
                 titleLabel.Top = 20;
                 titleLabel.Width = 600;
@@ -6488,6 +10044,11 @@ namespace exam_test
 
         private void ExportEncryptedBackup()
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Export encrypted backup"))
+            {
+                return;
+            }
+
             if (!isVaultUnlocked)
             {
                 MessageBox.Show("Unlock the vault before exporting a backup.");
@@ -6786,6 +10347,7 @@ if (currentDriveService == null)
                     RefreshVaultList();
                     GrantSecretAccessWindow();
                     ShowVaultUi();
+                    RestartAutoRefreshTimerFromSettings();
 
                     SetPreviewText(
                         "Encrypted backup imported successfully.",
@@ -7030,6 +10592,11 @@ if (currentDriveService == null)
         }
         private async Task OpenSecurityCenterWithRefreshAsync()
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Open Trust Center"))
+            {
+                return;
+            }
+
             if (isVaultUnlocked &&
                 currentDriveService != null &&
                 currentDataKey != null &&
@@ -7073,7 +10640,7 @@ if (currentDriveService == null)
                 }
             }
 
-            ShowSecurityCenterDialog();
+            ShowTrustCenterDialog();
         }
         private void ShowSecurityCenterDialog()
         {
@@ -7576,9 +11143,282 @@ if (currentDriveService == null)
             return true;
         }
 
+        private string GetLocalDeviceIdentityFilePath()
+        {
+            string appDataFolder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "QuickForge Sync"
+            );
+
+            return Path.Combine(appDataFolder, "device.id");
+        }
+
+        private async Task ForgetSelectedOtherDeviceFromTrustListAsync(KnownVaultDevice selectedDevice)
+        {
+            if (selectedDevice == null)
+            {
+                return;
+            }
+
+            if (!isVaultUnlocked || currentDriveService == null)
+            {
+                MessageBox.Show(
+                    "Unlock the vault before changing Device Trust.",
+                    "Vault required",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return;
+            }
+
+            if (!RequireTrustedDeviceForSensitiveAction("Forget selected device"))
+            {
+                return;
+            }
+
+            if (!ConfirmVaultCodeForDeviceTrust())
+            {
+                return;
+            }
+
+            EnsureLocalDeviceIdentity();
+            EnsureVaultSafetyCollections();
+
+            bool isCurrentDevice = string.Equals(
+                selectedDevice.DeviceId,
+                localDeviceId,
+                StringComparison.OrdinalIgnoreCase
+            );
+
+            string selectedDeviceName = string.IsNullOrWhiteSpace(selectedDevice.DeviceName)
+                ? "Selected device"
+                : selectedDevice.DeviceName.Trim();
+
+            int trustedDevicesAfterForget = currentVaultSettings.KnownDevices.Count(device =>
+                !device.IsHiddenFromTrustList &&
+                device.IsTrusted &&
+                !string.Equals(device.DeviceId, selectedDevice.DeviceId, StringComparison.OrdinalIgnoreCase)
+            );
+
+            if (selectedDevice.IsTrusted && trustedDevicesAfterForget == 0)
+            {
+                MessageBox.Show(
+                    "QuickForge cannot forget the last trusted device." +
+                    Environment.NewLine + Environment.NewLine +
+                    "Trust another device first, then try again.",
+                    "Last trusted device",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return;
+            }
+
+            string confirmMessage = isCurrentDevice
+                ? "Forget this current PC from Device Trust?" + Environment.NewLine + Environment.NewLine +
+                  "Device: " + selectedDeviceName + Environment.NewLine + Environment.NewLine +
+                  "This removes this PC from the trusted-device list and deletes the local device.id file." + Environment.NewLine +
+                  "Restart QuickForge after this. On next unlock, this PC should appear as a new untrusted device."
+                : "Forget this selected device from Device Trust?" + Environment.NewLine + Environment.NewLine +
+                  "Device: " + selectedDeviceName + Environment.NewLine + Environment.NewLine +
+                  "This hides it from the normal Device Trust list and marks it untrusted." + Environment.NewLine +
+                  "If that device opens this vault again later, it will reappear as untrusted.";
+
+            DialogResult confirm = MessageBox.Show(
+                confirmMessage,
+                "Forget selected device",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2
+            );
+
+            if (confirm != DialogResult.Yes)
+            {
+                return;
+            }
+
+            if (isCurrentDevice)
+            {
+                string? typed = ShowPasswordPrompt(
+                    "Confirm forget current PC",
+                    "Type FORGET THIS DEVICE to continue:"
+                );
+
+                if (!string.Equals(typed, "FORGET THIS DEVICE", StringComparison.Ordinal))
+                {
+                    MessageBox.Show("Forget current PC cancelled.");
+                    return;
+                }
+            }
+
+            DateTime removedAtUtc = DateTime.UtcNow;
+
+            selectedDevice.IsTrusted = false;
+            selectedDevice.IsHiddenFromTrustList = true;
+            selectedDevice.RemovedFromTrustListAtUtc = removedAtUtc;
+            selectedDevice.TrustedChangedAtUtc = removedAtUtc;
+            selectedDevice.TrustNote = "Device was forgotten from Device Trust by " + localDeviceName + ".";
+
+            currentVaultSettings.LastChangedByDeviceId = localDeviceId;
+            currentVaultSettings.LastChangedByDeviceName = localDeviceName;
+            currentVaultSettings.LastChangedAtUtc = removedAtUtc;
+
+            AddSafetyTimelineEvent(
+                "Device forgotten",
+                selectedDeviceName + " was forgotten from Device Trust by " + localDeviceName + "."
+            );
+
+            await SaveCurrentVaultToCloudWithoutDeviceRegistrationAsync();
+
+            if (isCurrentDevice)
+            {
+                string deviceFilePath = GetLocalDeviceIdentityFilePath();
+
+                if (File.Exists(deviceFilePath))
+                {
+                    File.Delete(deviceFilePath);
+                }
+
+                ApplyDeviceTrustRestrictionsToUi();
+            }
+
+            SetPreviewText(
+                "Device forgotten.",
+                selectedDeviceName + " was removed from the normal Device Trust list.",
+                isCurrentDevice
+                    ? "Restart QuickForge. On next unlock, this PC should appear as a new untrusted device."
+                    : "If that device opens this vault again, it will reappear as untrusted."
+            );
+
+            MessageBox.Show(
+                isCurrentDevice ? "This PC was forgotten. Restart QuickForge to test new-device behavior." : "Selected device was forgotten.",
+                "Device forgotten",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
+
+            await Task.CompletedTask;
+        }
+        private async Task ForgetCurrentPcForDeveloperTestingAsync()
+        {
+            if (!string.Equals(connectedGoogleEmail, "patrickolsen4@gmail.com", StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show(
+                    "This developer test action is only enabled for patrickolsen4@gmail.com.",
+                    "Developer-only action",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return;
+            }
+
+            if (!isVaultUnlocked || currentDriveService == null)
+            {
+                MessageBox.Show(
+                    "Unlock the vault first before forgetting this PC for testing.",
+                    "Vault required",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return;
+            }
+
+            EnsureLocalDeviceIdentity();
+            EnsureVaultSafetyCollections();
+
+            string oldDeviceId = localDeviceId;
+            string oldDeviceName = string.IsNullOrWhiteSpace(localDeviceName) ? "This PC" : localDeviceName;
+
+            DialogResult confirm = MessageBox.Show(
+                "Forget this PC for developer testing?" + Environment.NewLine + Environment.NewLine +
+                "This removes the current device from this vault's Device Trust list and deletes the local QuickForge device.id file." + Environment.NewLine +
+                "After restarting QuickForge, this PC should appear as a new device again." + Environment.NewLine + Environment.NewLine +
+                "This is only for testing new-device behavior.",
+                "Developer forget this PC",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning
+            );
+
+            if (confirm != DialogResult.Yes)
+            {
+                return;
+            }
+
+            string? typed = ShowPasswordPrompt(
+                "Confirm developer action",
+                "Type FORGET to forget this PC:"
+            );
+
+            if (typed != "FORGET")
+            {
+                MessageBox.Show("Forget PC cancelled.");
+                return;
+            }
+
+            try
+            {
+                currentVaultSettings.KnownDevices.RemoveAll(device =>
+                    string.Equals(device.DeviceId, oldDeviceId, StringComparison.OrdinalIgnoreCase)
+                );
+
+                AddSafetyTimelineEvent(
+                    "Developer forgot current PC",
+                    oldDeviceName + " was removed from Device Trust for new-device testing."
+                );
+
+                await SaveCurrentVaultToCloudAsync();
+
+                string deviceFilePath = GetLocalDeviceIdentityFilePath();
+
+                if (File.Exists(deviceFilePath))
+                {
+                    File.Delete(deviceFilePath);
+                }
+
+                localDeviceId = "";
+                localDeviceName = "";
+                newDeviceDetectedThisSession = false;
+                newDeviceDetectedName = "";
+                untrustedDeviceDetectedThisSession = false;
+                untrustedDeviceDetectedName = "";
+
+                selectedPreviewLabel.Text =
+                    "Developer test: this PC was forgotten." + Environment.NewLine +
+                    "Restart QuickForge to make this PC register as a new device again.";
+
+                MessageBox.Show(
+                    "This PC was forgotten for testing." + Environment.NewLine + Environment.NewLine +
+                    "Restart QuickForge now. On next unlock, this PC should behave like a new device.",
+                    "Developer forget PC complete",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Could not forget this PC: " + ex.Message,
+                    "Developer forget PC failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+            }
+        }
         private void ShowDeviceTrustDialog()
         {
             EnsureLocalDeviceIdentity();
+
+            if (isVaultUnlocked &&
+                currentDriveService != null &&
+                currentDataKey != null &&
+                currentEncryptedVaultFile != null &&
+                !deviceTrustBackgroundRefreshRunning)
+            {
+                _ = RefreshDeviceTrustFromCloudInBackgroundAsync();
+            }
             EnsureVaultSafetyCollections();
             RegisterCurrentDeviceForVault(false);
 
@@ -7637,6 +11477,7 @@ if (currentDriveService == null)
                 void RefreshDeviceList()
                 {
                     List<KnownVaultDevice> devices = currentVaultSettings.KnownDevices
+                        .Where(device => !device.IsHiddenFromTrustList || device.DeviceId == localDeviceId)
                         .OrderByDescending(device => device.LastSeenAtUtc)
                         .ToList();
 
@@ -7723,6 +11564,7 @@ if (currentDriveService == null)
 
                 Button trustButton = new Button();
                 Button untrustButton = new Button();
+                Button forgetCurrentPcButton = new Button();
                 trustButton.Text = "Trust";
                 trustButton.Left = 20;
                 trustButton.Top = 515;
@@ -7820,14 +11662,60 @@ if (currentDriveService == null)
                     RefreshDeviceList();
                     UpdateDetail();
                     UpdateDeviceTrustActionButtons();
+                };                forgetCurrentPcButton.Text = "Forget selected";
+                forgetCurrentPcButton.Left = 270;
+                forgetCurrentPcButton.Top = 515;
+                forgetCurrentPcButton.Width = 135;
+                forgetCurrentPcButton.Height = 34;
+                forgetCurrentPcButton.Visible = true;
+                StyleActionButton(forgetCurrentPcButton);
+                forgetCurrentPcButton.Click += async (s, e) =>
+                {
+                    KnownVaultDevice? selected = GetSelectedDevice();
+
+                    if (selected == null)
+                    {
+                        return;
+                    }
+
+                    if (string.Equals(selected.DeviceId, localDeviceId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        MessageBox.Show(
+                            "You cannot forget this device while you are using it." + Environment.NewLine + Environment.NewLine +
+                            "This prevents accidentally removing your current trusted device. Use another trusted device if you need to review or remove this computer.",
+                            "Cannot forget this device",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning
+                        );
+
+                        UpdateDeviceTrustActionButtons();
+                        return;
+                    }
+
+                    await ForgetSelectedOtherDeviceFromTrustListAsync(selected);
+                    RefreshDeviceList();
+                    UpdateDetail();
+                    UpdateDeviceTrustActionButtons();
                 };
                 void UpdateDeviceTrustActionButtons()
                 {
                     KnownVaultDevice? selected = GetSelectedDevice();
                     bool canManageDeviceTrust = !IsRestrictedModeActive();
 
+                    bool selectedIsCurrentDevice =
+                        selected != null &&
+                        string.Equals(selected.DeviceId, localDeviceId, StringComparison.OrdinalIgnoreCase);
+
                     trustButton.Enabled = canManageDeviceTrust && selected != null && !selected.IsTrusted;
-                    untrustButton.Enabled = canManageDeviceTrust && selected != null && selected.IsTrusted && selected.DeviceId != localDeviceId;
+                    untrustButton.Enabled = canManageDeviceTrust && selected != null && selected.IsTrusted && !selectedIsCurrentDevice;
+                    forgetCurrentPcButton.Enabled = canManageDeviceTrust && selected != null && !selectedIsCurrentDevice;
+
+                    vaultToolTip.SetToolTip(
+                        forgetCurrentPcButton,
+                        selectedIsCurrentDevice
+                            ? "You cannot forget the device you are currently using."
+                            : "Forget the selected non-current device."
+                    );
                 }
 
                 deviceList.SelectedIndexChanged += (s, e) => UpdateDeviceTrustActionButtons();
@@ -7859,6 +11747,7 @@ if (currentDriveService == null)
                 dialog.Controls.Add(detailLabel);
                 dialog.Controls.Add(trustButton);
                 dialog.Controls.Add(untrustButton);
+                dialog.Controls.Add(forgetCurrentPcButton);
                 dialog.Controls.Add(closeButton);
                 dialog.Controls.Add(warningLabel);
 
@@ -8148,7 +12037,7 @@ if (currentDriveService == null)
             if (entry != null)
             {
                 SetPreviewText(
-                "Selected: " + entry.GetDisplayName(),
+                "Selected: " + GetVaultListDisplayName(entry),
                 "User: " + MaskEmpty(entry.Username),
                 "Password/code: " + MaskSecret(entry.Secret));
             }
@@ -8201,9 +12090,11 @@ if (currentDriveService == null)
                 {
                     visibleVaultEntries.Add(entry);
 
-                    string listText = entry.IsFavorite
-                        ? "\u2605 " + entry.GetDisplayName()
-                        : "  " + entry.GetDisplayName();
+                    string listText = IsStreamerModeEnabled()
+                        ? GetVaultListDisplayName(entry)
+                        : (entry.IsFavorite
+                            ? "\u2605 " + entry.GetDisplayName()
+                            : "  " + entry.GetDisplayName());
 
                     vaultListBox.Items.Add(listText);
                 }
@@ -8231,6 +12122,11 @@ if (currentDriveService == null)
             if (string.IsNullOrWhiteSpace(value))
             {
                 return "(empty)";
+            }
+
+            if (IsStreamerModeEnabled())
+            {
+                return "Hidden by Streamer mode";
             }
 
             return value;
@@ -8968,7 +12864,7 @@ if (currentDriveService == null)
             {
                 autoRefreshComboBox.SelectedIndex = 1;
             }
-            else if (currentVaultSettings.AutoRefreshMinutes == 15)
+            else if (currentVaultSettings.AutoRefreshMinutes == 10 || currentVaultSettings.AutoRefreshMinutes == 15)
             {
                 autoRefreshComboBox.SelectedIndex = 3;
             }
@@ -8986,7 +12882,7 @@ if (currentDriveService == null)
                 currentVaultSettings.AutoRefreshMinutes = 5;
             }
 
-            ConfigureAutoRefreshTimer();
+            RestartAutoRefreshTimerFromSettings();
             UpdateAnimationState();
         }
 
@@ -9046,7 +12942,7 @@ if (currentDriveService == null)
             }
             finally
             {
-                ConfigureAutoRefreshTimer();
+                RestartAutoRefreshTimerFromSettings();
             }
         }
 
@@ -9144,6 +13040,12 @@ if (currentDriveService == null)
 
         private void AutoLockTimer_Tick(object? sender, EventArgs e)
         {
+            if (IsSettingsDialogOpen())
+            {
+                lastVaultActivityUtc = DateTime.UtcNow;
+                return;
+            }
+
             if (!isVaultUnlocked)
             {
                 return;
@@ -9229,6 +13131,7 @@ if (currentDriveService == null)
         {
             autoRefreshTimer.Stop();
 
+            autoRefreshTimer.Stop();
             isVaultUnlocked = false;
             ClearUnlockedVaultSessionSecrets();
 
@@ -9255,6 +13158,36 @@ if (currentDriveService == null)
             ConfigureVaultAccessForUnlock();
             ShowVaultAccessUi();
         }
+        private string GetQuickFillDisplayText(VaultEntry entry, int hiddenNumber)
+        {
+            string prefix = entry.IsFavorite ? "[F] " : "";
+
+            if (IsStreamerModeEnabled())
+            {
+                string safePlatform = (entry.Platform ?? "").Trim();
+
+                if (!string.IsNullOrWhiteSpace(safePlatform))
+                {
+                    if (safePlatform.Length > 32)
+                    {
+                        safePlatform = safePlatform.Substring(0, 32) + "...";
+                    }
+
+                    return prefix + "Hidden login [" + safePlatform + "]";
+                }
+
+                return prefix + "Hidden saved login #" + hiddenNumber;
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.Platform) &&
+                !string.IsNullOrWhiteSpace(entry.Username))
+            {
+                return prefix + entry.Platform + " - " + entry.Username;
+            }
+
+            return prefix + entry.GetDisplayName();
+        }
+
         private void ShowQuickFill()
         {
             IntPtr activeWindow = GetForegroundWindow();
@@ -9301,6 +13234,8 @@ if (currentDriveService == null)
             }
 
             RefreshQuickFillList("");
+
+            quickFillForm!.Text = IsStreamerModeEnabled() ? "QuickFill - Streamer mode" : "QuickFill";
 
             quickFillForm!.Show();
             quickFillForm.TopMost = true;
@@ -9517,6 +13452,8 @@ if (currentDriveService == null)
                 .OrderByDescending(entry => entry.IsFavorite)
                 .ThenBy(entry => entry.GetDisplayName());
 
+            int hiddenNumber = 1;
+
             foreach (VaultEntry entry in orderedEntries)
             {
                 string searchable =
@@ -9525,14 +13462,21 @@ if (currentDriveService == null)
 
                 if (string.IsNullOrWhiteSpace(cleanFilter) || searchable.Contains(cleanFilter))
                 {
-                    quickFillListBox.Items.Add(new QuickFillItem(entry));
+                    quickFillListBox.Items.Add(new QuickFillItem(
+                        entry,
+                        GetQuickFillDisplayText(entry, hiddenNumber)
+                    ));
+
+                    hiddenNumber++;
                 }
             }
 
             if (quickFillListBox.Items.Count > 0)
             {
                 quickFillListBox.SelectedIndex = 0;
-                SetQuickFillStatus("Choose a login, then copy or fill.");
+                SetQuickFillStatus(IsStreamerModeEnabled()
+                    ? "Streamer mode is on. Usernames and websites are hidden; app names remain visible."
+                    : "Choose a login, then copy or fill.");
             }
             else
             {
@@ -9701,32 +13645,28 @@ if (currentDriveService == null)
         private class QuickFillItem
         {
             public VaultEntry Entry { get; }
+            private readonly string displayText;
 
-            public QuickFillItem(VaultEntry entry)
+            public QuickFillItem(VaultEntry entry, string displayText)
             {
                 Entry = entry;
+                this.displayText = displayText;
             }
 
             public override string ToString()
             {
-                string prefix = Entry.IsFavorite ? "[F] " : "";
-
-                if (!string.IsNullOrWhiteSpace(Entry.Platform) &&
-                    !string.IsNullOrWhiteSpace(Entry.Username))
-                {
-                    return prefix + Entry.Platform + " - " + Entry.Username;
-                }
-
-                return prefix + Entry.GetDisplayName();
+                return displayText;
             }
         }
+
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             try
             {
                 quickFillForm?.Hide();
 
-                isVaultUnlocked = false;
+                autoRefreshTimer.Stop();
+            isVaultUnlocked = false;
                 ClearSecretAccessWindow();
 
                 vaultCode = "";

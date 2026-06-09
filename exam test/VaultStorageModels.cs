@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace exam_test
@@ -16,6 +16,12 @@ namespace exam_test
         public bool RecoveryKeyRotationRequired { get; set; } = false;
 
         public bool BackgroundAnimationEnabled { get; set; } = true;
+        public bool PrivacyModeEnabled { get; set; } = false;
+        
+        public bool AuthenticatorLockEnabled { get; set; } = false;
+        public string AuthenticatorSecretBase32 { get; set; } = "";
+        public DateTime? AuthenticatorEnabledAtUtc { get; set; } = null;
+        public long? LastAuthenticatorTimeWindowUsed { get; set; } = null;
         public int AutoLockMinutes { get; set; } = 10;
         public int AutoRefreshMinutes { get; set; } = 5;
 
