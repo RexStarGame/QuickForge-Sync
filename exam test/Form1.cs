@@ -852,7 +852,16 @@ namespace exam_test
                     320,
                     150,
                     "Change refresh",
-                    () => ShowAutoRefreshSettingsDialog(),
+                    () =>
+                    {
+                        bool changed = ShowAutoRefreshSettingsDialog();
+
+                        if (changed)
+                        {
+                            dialog.Close();
+                            BeginInvoke(new Action(() => ShowSettingsDialog(1)));
+                        }
+                    },
                     true
                 ));
 
@@ -2204,8 +2213,10 @@ namespace exam_test
 
             return saved;
         }
-        private void ShowAutoRefreshSettingsDialog()
+        private bool ShowAutoRefreshSettingsDialog()
         {
+            bool saved = false;
+
             using (Form dialog = new Form())
             {
                 dialog.Width = 450;
@@ -2294,12 +2305,17 @@ namespace exam_test
                 statusLabel.ForeColor = softTextColor;
                 statusLabel.BackColor = Color.Transparent;
 
-                saveButton.Click += async (s, e) =>
+                saveButton.Click += (s, e) =>
                 {
                     if (!RequireTrustedDeviceForSensitiveAction("Change auto-refresh setting"))
                     {
                         return;
                     }
+
+                    saveButton.Enabled = false;
+                    cancelButton.Enabled = false;
+                    statusLabel.Text = "Saved. Updating Settings...";
+                    statusLabel.ForeColor = successColor;
 
                     if (comboBox.SelectedIndex == 1)
                     {
@@ -2327,17 +2343,35 @@ namespace exam_test
                         ApplyPerformanceSettingsToUi();
                         HideMainPanelSettingsForV021();
                         RestartAutoRefreshTimerFromSettings();
-                        MarkVaultChangedByCurrentDevice("Streamer mode changed");
+                        MarkVaultChangedByCurrentDevice("Auto-refresh setting changed");
 
-                        await SaveCurrentVaultToCloudAsync();
+                        string autoRefreshText = currentVaultSettings.AutoRefreshMinutes <= 0
+                            ? "Auto-refresh turned off."
+                            : "Auto-refresh set to every " + currentVaultSettings.AutoRefreshMinutes + " minute(s).";
 
-                        selectedPreviewLabel.Text = "Auto-refresh setting saved.";
+                        selectedPreviewLabel.Text =
+                            autoRefreshText + Environment.NewLine +
+                            "Settings updated immediately. Cloud sync is running in the background.";
+
+                        SetSyncStatus("Queued background sync");
+                        QueueBackgroundVaultSync("Auto-refresh setting changed");
+
+                        saved = true;
                         dialog.Close();
                     }
                     catch (Exception ex)
                     {
+                        saveButton.Enabled = true;
+                        cancelButton.Enabled = true;
                         statusLabel.Text = "Could not save auto-refresh setting.";
-                        MessageBox.Show("Could not save auto-refresh setting: " + ex.Message);
+                        statusLabel.ForeColor = dangerColor;
+
+                        MessageBox.Show(
+                            "Could not save auto-refresh setting: " + ex.Message,
+                            "Auto-refresh setting failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
                     }
                 };
 
@@ -2350,8 +2384,9 @@ namespace exam_test
 
                 dialog.ShowDialog(this);
             }
-        }
 
+            return saved;
+        }
         private void ShowRecoveryReminderSettingsDialog()
         {
             using (Form dialog = new Form())
