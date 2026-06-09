@@ -2825,6 +2825,11 @@ namespace exam_test
                 return;
             }
 
+            if (!RequireTrustedDeviceForSensitiveAction("Open Trust Center"))
+            {
+                return;
+            }
+
             currentVaultSettings.KnownDevices ??= new List<KnownVaultDevice>();
             currentVaultSettings.SafetyTimeline ??= new List<VaultSafetyEvent>();
 
@@ -5560,6 +5565,21 @@ namespace exam_test
             return true;
         }
 
+        private bool HasRecentSaveAndLoadWithinMinutes(int minutes)
+        {
+            DateTime now = DateTime.UtcNow;
+
+            bool recentSave =
+                lastCloudSaveUtc.HasValue &&
+                (now - lastCloudSaveUtc.Value).TotalMinutes <= minutes;
+
+            bool recentLoad =
+                lastCloudLoadUtc.HasValue &&
+                (now - lastCloudLoadUtc.Value).TotalMinutes <= minutes;
+
+            return recentSave && recentLoad;
+        }
+
         private void SetSyncStatus(string status, bool success = false, bool error = false)
         {
             string lastSaveText = lastCloudSaveUtc.HasValue
@@ -5570,12 +5590,27 @@ namespace exam_test
                 ? lastCloudLoadUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
                 : "Not yet";
 
+            bool recentSaveAndLoadOk = HasRecentSaveAndLoadWithinMinutes(10);
+
+            bool showRecentHealthyInsteadOfStreamerWarning =
+                error &&
+                recentSaveAndLoadOk &&
+                status.Equals("Streamer mode sync failed", StringComparison.OrdinalIgnoreCase);
+
+            string displayStatus = showRecentHealthyInsteadOfStreamerWarning
+                ? "Active (recent save/load)"
+                : status;
+
             syncStatusLabel.Text =
-                "Sync: " + status + Environment.NewLine +
+                "Sync: " + displayStatus + Environment.NewLine +
                 "Last save: " + lastSaveText + Environment.NewLine +
                 "Last load: " + lastLoadText;
 
-            if (error)
+            if (showRecentHealthyInsteadOfStreamerWarning)
+            {
+                syncStatusLabel.ForeColor = successColor;
+            }
+            else if (error)
             {
                 bool reviewState =
                     status.Contains("Conflict", StringComparison.OrdinalIgnoreCase) ||
@@ -6269,6 +6304,7 @@ namespace exam_test
                 "- Open + Fill" + Environment.NewLine +
                 "- Add/edit/delete entries" + Environment.NewLine +
                 "- Backup/import" + Environment.NewLine +
+                "- Trust Center and security reports" + Environment.NewLine +
                 "- Change vault code or recovery key" + Environment.NewLine +
                 "- Manage Device Trust" + Environment.NewLine + Environment.NewLine +
                 "To regain full access, open QuickForge on a trusted device, go to Security Center > Device Trust, select this device, and click Trust." + Environment.NewLine + Environment.NewLine +
@@ -6335,7 +6371,7 @@ namespace exam_test
                 SetPreviewText(
                     "UNTRUSTED DEVICE MODE",
                     "This device is not trusted for this vault.",
-                    "Sensitive actions are disabled. Refresh, Sync, Lock, and Security Center remain available."
+                    "Sensitive actions are disabled. Refresh, Sync, and Lock remain available. Backup and Trust Center are blocked until this device is trusted."
                 );
             }
 
@@ -6371,7 +6407,7 @@ namespace exam_test
                 secretVisibilityButton.Enabled = !restricted;
             }
 
-            securityCenterButton.Enabled = true;
+            securityCenterButton.Enabled = !restricted;
             refreshCloudButton.Enabled = true;
             manualSyncButton.Enabled = true;
             lockVaultButton.Enabled = true;
@@ -9477,6 +9513,11 @@ namespace exam_test
         }
         private void ShowBackupDialog()
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Create or restore encrypted backup"))
+            {
+                return;
+            }
+
             string backupStatusText = currentVaultSettings.LastBackupAtUtc.HasValue
                 ? "Last backup: " + currentVaultSettings.LastBackupAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
                 : "No encrypted backup recorded yet";
@@ -9758,6 +9799,11 @@ namespace exam_test
 
         private void ExportEncryptedBackup()
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Export encrypted backup"))
+            {
+                return;
+            }
+
             if (!isVaultUnlocked)
             {
                 MessageBox.Show("Unlock the vault before exporting a backup.");
@@ -10300,6 +10346,11 @@ if (currentDriveService == null)
         }
         private async Task OpenSecurityCenterWithRefreshAsync()
         {
+            if (!RequireTrustedDeviceForSensitiveAction("Open Trust Center"))
+            {
+                return;
+            }
+
             if (isVaultUnlocked &&
                 currentDriveService != null &&
                 currentDataKey != null &&
