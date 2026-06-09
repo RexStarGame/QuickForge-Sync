@@ -1,59 +1,88 @@
-# QuickForge Sync Security Test History Report
+# QuickForge Sync v0.2.1 Security Test History Report
 
 Version covered: `v0.1.x` through `v0.2.1-dev-preview`  
-Current public beta version: `v0.2.1-dev-preview`  
-Release ZIP: `QuickForge-Sync-v0.2.1-dev-preview-win-x64.zip`  
-Release ZIP SHA256: `CE7B20532BEB16C386F7D58B0FC32ECD6A65E448DF046B3723309A39FDA2B679`  
-Release branch used for the ZIP: `v0.2.1-dev-auth-settings`  
-Release code commit used for the ZIP: `76c54fe` / `Make Authenticator Lock changes feel faster`  
-Main merge commit after v0.2.1 merge: `dbaafa5`  
+Current beta version: `v0.2.1-dev-preview`  
+Current fixed source branch: `main`  
+Important fixed source commit: `51d7d38` / `Require backup password during import`  
 Status: beta-preview / controlled testing  
 External security audit: not completed
 
-> This document is not an external audit and does not claim that QuickForge Sync is professionally audited. It is a structured proof/history document for what has been implemented, manually tested, and checked during development.
+> This document is not an external audit and does not claim that QuickForge Sync is professionally audited. It is a structured internal/manual security test history for what has been implemented, tested, broken, fixed, and retested during development.
 
 ---
 
-## 1. Purpose of this report
+## 1. Purpose
 
-This report records the security and reliability testing history of QuickForge Sync from the early beta versions up to `v0.2.1-dev-preview`.
+This report records the security and reliability test history for QuickForge Sync up to `v0.2.1-dev-preview`.
 
-The goal is to turn the development and manual testing work into clear evidence:
+The goal is to document real proof instead of vague claims:
 
 - what was tested,
-- what was fixed,
 - what passed,
-- what is still limited,
-- and what should be tested next before trusting the app with high-risk real passwords.
+- what failed,
+- what was fixed,
+- what still needs deeper testing,
+- and what should not be claimed yet.
 
 ---
 
-## 2. Current honest safety status
+## 2. Honest safety status
 
-QuickForge Sync currently has enough functionality for controlled beta testing with fake/test data and careful personal testing.
+QuickForge Sync is now a serious beta security project, but it is still not a mature audited password manager.
 
-It should not yet be treated as a fully mature replacement for professional password managers such as Bitwarden, 1Password, KeePassXC, or Proton Pass.
+Recommended use right now:
 
-Current recommended use:
+- OK: fake/test data.
+- OK: controlled beta testing.
+- OK: careful low-risk personal testing after backups are verified.
+- Not recommended yet: banking, main email, crypto wallets, business admin accounts, government accounts, or anything that cannot be lost.
 
-- OK: fake/test data
-- OK: controlled personal beta testing
-- OK: low-risk personal secrets if the user keeps backups and understands the risk
-- Not recommended yet: banking, main email, crypto wallets, business admin credentials, government accounts, or anything that cannot be lost
-
-Main reason: the app has strong beta features and passing automated tests, but it has not received an external security audit or long-term real-world testing.
+Main reason: the app has strong beta features and many tests, but it has not received an external security audit, signed installer, or long-term broad real-world testing.
 
 ---
 
-## 3. Automated test evidence
+## 3. Current v0.2.1 security features tested
 
-Current local automated test result:
+v0.2.1 includes and has been manually tested around:
+
+- encrypted vault storage,
+- Google Drive `appDataFolder` sync,
+- vault code unlock,
+- recovery key unlock,
+- recovery key rotation,
+- change vault code,
+- vault-code lockout,
+- encrypted backup export,
+- encrypted backup restore,
+- corrupted/tampered backup rejection,
+- wrong backup password rejection after the v0.2.1 hotfix,
+- Authenticator Lock with 6-digit authenticator app codes,
+- vault code required before authenticator code,
+- Authenticator Lock OFF -> ON -> OFF -> ON without forcing a new QR every time,
+- broken/old/wrong authenticator QR recovery,
+- Trust Center Authenticator card connected to the real settings flow,
+- Optional / Active status with Set up / Manage actions,
+- Device Trust detection for same-account multi-device use,
+- untrusted-device restrictions,
+- backup/export blocked on untrusted devices,
+- Trust Center blocked on untrusted devices,
+- current device cannot be forgotten by accident,
+- Streamer / Privacy mode warning and feedback,
+- safe-close protection while sync/refresh/background sync is running,
+- auto-refresh behavior,
+- faster settings feedback.
+
+---
+
+## 4. Automated test evidence
+
+Current automated test status during v0.2.1 testing:
 
 ```text
 30/30 tests passing
 ```
 
-Covered areas include:
+Covered automated areas include:
 
 - vault code policy checks,
 - weak vault code rejection,
@@ -73,192 +102,172 @@ Covered areas include:
 - tampered backup file fails to import,
 - stronger KDF iteration check.
 
-Release build evidence for `v0.2.1-dev-preview`:
+Latest important security fix verification for commit `51d7d38`:
 
-- Debug build: passed
-- Release build: passed
-- Automated tests: 30/30 passed
-- Publish win-x64 self-contained build: passed
-- Release folder check: passed
-- ZIP content check: passed
-- Release safety check: passed
+- Debug build: passed.
+- Release build: passed.
+- Automated tests: 30/30 passed.
+- Release safety script: passed.
+- Fix committed and pushed to `main`.
 
 ---
 
-## 4. Release ZIP safety evidence
+## 5. Release ZIP and plaintext leakage self-test
 
-The v0.2.1 release builder created:
+A local attacker-style self-test was run using:
 
 ```text
-releases/QuickForge-Sync-v0.2.1-dev-preview-win-x64.zip
+scripts/Security-SelfTest-v0.2.1.ps1
 ```
 
-SHA256:
+Marker used:
 
 ```text
-CE7B20532BEB16C386F7D58B0FC32ECD6A65E448DF046B3723309A39FDA2B679
+QF_ATTACK_TEST_SECRET_2026_DO_NOT_USE
 ```
 
-Release safety checks confirmed:
+Self-test summary:
 
-- project file check passed,
-- git tracked file check passed,
-- unused OpenAI test file check passed,
-- release folder check passed,
-- ZIP content check passed.
+```text
+PASS: 8
+FAIL: 0
+WARN: 0
+```
 
-The release ZIP is expected to include:
+Passed checks:
 
-- `QuickForge Sync.exe`,
-- `credentials.json`,
-- documentation/release notes.
+- Release ZIP contains `QuickForge Sync.exe`.
+- Release ZIP contains `credentials.json`.
+- Release ZIP blocked-file scan passed.
+- No `token*.json`, `client_secret*.json`, `.qfvault`, `.qfbackup`, or `.pdb` files were found in the release ZIP.
+- Fake attack marker was not found in the release ZIP.
+- Fake attack marker was not found in exported backup files.
+- Fake attack marker was not found in local AppData files.
+- Corrupted backup copy was created for manual import rejection testing.
 
-The release ZIP must not include:
+Interpretation:
 
-- Google user tokens,
-- `.qfvault` vault/backup files,
-- `.qfbackup` files,
-- private test data,
-- debug `.pdb` files,
-- `token*.json`,
-- `client_secret*.json`.
-
----
-
-## 5. Version history and proof notes
-
-### Early v0.1.x beta foundation
-
-Main focus:
-
-- encrypted local/cloud vault,
-- Google Drive sync,
-- vault code unlock,
-- recovery key unlock,
-- recovery key rotation,
-- change vault code,
-- backup export/import,
-- basic Security Center / safety checks,
-- password generator and password strength feedback,
-- QuickFill and daily-use actions.
-
-Evidence and testing performed:
-
-- created and unlocked vaults,
-- tested wrong vault code rejection,
-- tested recovery key behavior,
-- tested backup export and restore,
-- tested corrupted/random backup rejection,
-- tested that encrypted backup data does not expose plaintext secrets,
-- tested save, copy, reveal, search, favorite, and open/fill daily-use behavior.
-
-Result:
-
-- PASS for controlled beta use.
-- Not enough proof yet for real-password main use.
+- This proves release/package safety checks and plaintext-marker leakage checks.
+- This does not prove the whole app is secure.
+- It is useful evidence that obvious plaintext secret leakage was not found in the tested ZIP, backup file, or local app data.
 
 ---
 
-### v0.1.5 beta-preview hardening
+## 6. Backup and restore security testing
 
-Main focus:
+### 6.1 Encrypted backup export
 
-- Security Center self-check button,
-- show/hide toggles for sensitive fields,
-- sensitive fields hidden by default,
-- release safety guard,
-- `.gitignore` cleanup for private files,
-- release ZIP safety direction.
+Result: PASS
 
-Evidence and testing performed:
+Expected:
 
-- Debug/Release builds passed,
-- automated test set passed at the time,
-- release safety script added to block private files,
-- verified that private credentials/tokens/vault/backup/debug files should not be shipped accidentally.
+- Backup is exported as an encrypted `.qfvault` file.
+- Backup should still require the vault code or recovery key to restore.
+- Backup file should not expose plaintext secrets casually.
 
-Result:
+Actual:
 
-- PASS as an improvement to beta release safety and daily usability.
+- Exported backup was created.
+- Self-test did not find the fake attack marker in the backup file.
 
 ---
 
-### v0.1.7 / v0.2.0 preparation
+### 6.2 Corrupted/tampered backup import
 
-Main focus:
+Result: PASS
 
-- cleaner security wording,
-- real-data readiness checklist,
-- release checklist,
-- installer/signing planning notes,
-- better backup export/restore guidance,
-- multi-device test checklist,
-- safer user safety dialogs.
+Expected:
 
-Evidence and testing performed:
+- A corrupted/tampered backup copy must be rejected.
 
-- backup/restore guidance reviewed,
-- readiness docs prepared,
-- release checklists prepared,
-- manual testing around backup restore and wrong-code/corrupted backup behavior.
+Actual:
 
-Result:
+- QuickForge rejected the corrupted backup copy.
+- The app showed a restore failure message and did not import the corrupted backup.
 
-- PASS for better release process and documentation maturity.
+Interpretation:
+
+- Damaged/tampered backup data was not accepted.
 
 ---
 
-### v0.2.0 beta-preview
+### 6.3 Valid backup import with correct vault code / recovery key
 
-Main focus:
+Result: PASS
 
-- safer logout flow,
-- safer close behavior during sync,
-- Device Trust visibility,
-- same-account multi-device sync,
-- sync conflict merge protection,
-- background cloud sync,
-- reduced Google Drive roundtrips,
-- faster Open + Fill and QuickFill timing,
-- release cleanup.
+Expected:
 
-Evidence and testing performed:
+- A valid encrypted backup should restore only when the correct vault code or recovery key is entered.
 
-- tested same-account multi-device sync,
-- tested backup export/import,
-- tested fresh-install restore,
-- tested corrupted/random backup rejection,
-- tested vault-code lockout,
-- tested recovery-key unlock and rotation,
-- tested change vault code,
-- tested delete entry safety,
-- tested Device Trust visibility,
-- tested sync conflict merge,
-- tested background cloud sync,
-- tested safe-close warning while sync was running.
+Actual:
 
-Result:
+- QuickForge verified the backup.
+- QuickForge showed the backup preview.
+- QuickForge restored the backup successfully with the correct secret.
+- QuickForge uploaded/replaced the cloud vault after restore.
 
-- PASS for controlled beta testing.
-- Still required stronger Authenticator Lock and Device Trust behavior before wider use.
+Note:
+
+- One tested backup contained `0` saved entries, so it proved the import/decryption/restore flow. A future test should repeat this with a backup containing several fake entries.
 
 ---
 
-### v0.2.1-dev-preview
+### 6.4 Valid backup import with wrong vault code: bug found
 
-Main focus:
+Result before fix: FAIL
 
-- optional Authenticator Lock,
-- Trust Center Authenticator integration,
-- stronger Device Trust rules,
-- untrusted-device restrictions,
-- Streamer / Privacy mode polish,
-- better Settings feedback,
-- safer sync/refresh behavior,
-- current-device forget prevention,
-- release ZIP safety.
+Expected:
 
-#### Authenticator Lock work
+- A valid encrypted backup with the wrong vault code/recovery key must be rejected.
+
+Actual before fix:
+
+- While the vault was already unlocked, the wrong typed code could still succeed if the backup matched the current in-memory data key.
+
+Root cause:
+
+- The restore flow first tried the typed vault code.
+- Then it tried the typed recovery key.
+- If both failed, and the app was already unlocked, it silently tried the current in-memory data key.
+- That fallback let the already-unlocked session bypass the backup password prompt for a backup using the same data key.
+
+Risk:
+
+- The backup was still encrypted.
+- But the restore prompt did not truly require the typed vault code/recovery key in that unlocked-session scenario.
+- This was a real security/UX bug and was not acceptable for v0.2.1 release.
+
+Fix:
+
+- Removed the `DecryptVaultWithExistingDataKey` fallback from backup import.
+- Backup import now requires the typed vault code or recovery key.
+- Existing unlocked data key can no longer bypass the backup password prompt.
+
+Fixed in:
+
+```text
+51d7d38 Require backup password during import
+```
+
+Verification after fix:
+
+- PASS: code verification confirmed the existing-data-key fallback was removed from backup import.
+- PASS: Debug build succeeded.
+- PASS: Release build succeeded.
+- PASS: Automated tests passed 30/30.
+- PASS: Release safety script passed.
+- PASS: fix was committed and pushed to `main`.
+
+Retest requirement:
+
+- Rebuilt v0.2.1 ZIP must be used.
+- Old uploaded ZIP must be replaced.
+- Valid backup + wrong vault code must be rejected in the rebuilt app.
+- Valid backup + correct vault code/recovery key must still restore.
+
+---
+
+## 7. Authenticator Lock testing
 
 Implemented and tested:
 
@@ -269,22 +278,26 @@ Implemented and tested:
 - QR setup confirmation before enabling,
 - recovery path for broken, deleted, old, or wrong QR setups,
 - recovery key remains emergency path if authenticator access is lost,
-- ON/OFF UI made faster with safe background sync,
-- authenticator changes no longer feel blocked by slow Google Drive operations.
+- ON/OFF UI made faster with safe background sync.
 
-Manual test result:
+Manual test results:
 
 - PASS: setup flow works.
-- PASS: wrong/old QR recovery flow works.
+- PASS: wrong authenticator code is rejected.
+- PASS: vault remains locked after wrong authenticator code.
+- PASS: correct current authenticator code unlocks.
 - PASS: OFF -> ON -> OFF -> ON behavior works.
+- PASS: broken/old QR recovery flow works.
 - PASS: unlock order requires vault code before authenticator code.
-- PASS: authenticator changes feel faster after final sync behavior fix.
+- PASS: Authenticator Lock changes feel faster after final sync behavior fix.
 
 Known limitation:
 
-- Authenticator Lock still needs deeper automated test coverage around TOTP replay, old-code rejection, and sync conflict edge cases.
+- Authenticator Lock still needs deeper automated test coverage around old-code replay, TOTP time-window behavior, and sync conflict edge cases.
 
-#### Trust Center work
+---
+
+## 8. Trust Center and Device Trust testing
 
 Implemented and tested:
 
@@ -292,18 +305,7 @@ Implemented and tested:
 - Optional / Active status wording,
 - Set up / Manage actions,
 - Trust Center opens quickly without blocking on cloud refresh,
-- background refresh continues after UI opens.
-
-Manual test result:
-
-- PASS: Trust Center card opens correct Authenticator flow.
-- PASS: Trust Center opens quickly after delay fix.
-- PASS: UI updates correctly after Authenticator changes.
-
-#### Device Trust work
-
-Implemented and tested:
-
+- background refresh continues after UI opens,
 - improved same-account multi-device detection,
 - new/untrusted devices sync their registration automatically,
 - trusted device can see and approve new device after refresh/background sync,
@@ -313,13 +315,17 @@ Implemented and tested:
 - current device cannot be forgotten by accident,
 - other non-current devices can still be forgotten.
 
-Manual test result:
+Manual test results:
 
+- PASS: Trust Center card opens correct Authenticator flow.
+- PASS: Trust Center opens quickly after delay fix.
+- PASS: UI updates correctly after Authenticator changes.
 - PASS: new device detection restored after auto-sync fix.
 - PASS: Trust Center and Device Trust open quickly after removing blocking refresh.
 - PASS: untrusted device restrictions block sensitive actions.
 - PASS: backup/export is blocked on untrusted devices.
 - PASS: Trust Center is blocked on untrusted devices.
+- PASS: same Google account alone is not enough to become trusted.
 - PASS: current device cannot be forgotten.
 - PASS: other devices can still be managed.
 
@@ -327,7 +333,9 @@ Known limitation:
 
 - Device Trust still relies on cloud sync/refresh rather than live push between devices.
 
-#### Streamer / Privacy mode work
+---
+
+## 9. Streamer / Privacy mode testing
 
 Implemented and tested:
 
@@ -336,13 +344,15 @@ Implemented and tested:
 - faster Streamer mode save feedback,
 - Streamer mode changes queue background sync instead of showing annoying sync warning popups.
 
-Manual test result:
+Manual test results:
 
 - PASS: Streamer mode save feedback improved.
 - PASS: annoying sync warning popup behavior removed.
 - PASS: Streamer mode warning/feedback included in v0.2.1.
 
-#### Settings feedback work
+---
+
+## 10. Settings feedback and sync testing
 
 Implemented and tested:
 
@@ -350,25 +360,17 @@ Implemented and tested:
 - Auto-refresh settings feedback improved,
 - Background animation settings feedback improved,
 - Recovery reminder settings feedback improved,
-- Streamer mode settings feedback improved.
-
-Manual test result:
-
-- PASS: Save actions close/update quickly instead of leaving user confused.
-- PASS: settings return/refresh behavior improved.
-
-#### Sync / refresh / close behavior
-
-Implemented and tested:
-
+- Streamer mode settings feedback improved,
 - safe-close protection while sync/refresh/background sync is running,
 - background sync queue and retry behavior,
 - auto-refresh behavior restored after it was accidentally not running correctly,
 - sync status color/wording improved to avoid constant scary red state when sync/load was recent,
 - Authenticator and Device Trust changes update quickly while syncing safely.
 
-Manual test result:
+Manual test results:
 
+- PASS: Save actions close/update quickly instead of leaving user confused.
+- PASS: settings return/refresh behavior improved.
 - PASS: safe-close blocks closing during sync/refresh.
 - PASS: auto-refresh restored.
 - PASS: Authenticator UI no longer feels too slow.
@@ -376,82 +378,87 @@ Manual test result:
 
 ---
 
-## 6. Manual test cases completed or partially completed
+## 11. Manual test case summary
 
 ### Core vault
 
-- PASS: create vault
-- PASS: unlock vault
-- PASS: wrong vault code rejected
-- PASS: vault-code lockout behavior
-- PASS: recovery key unlock
-- PASS: recovery key rotation
-- PASS: change vault code
+- PASS: create vault.
+- PASS: unlock vault.
+- PASS: wrong vault code rejected.
+- PASS: vault-code lockout behavior.
+- PASS: recovery key unlock.
+- PASS: recovery key rotation.
+- PASS: change vault code.
 
 ### Backup and restore
 
-- PASS: encrypted backup export
-- PASS: encrypted backup restore
-- PASS: wrong-code backup rejection
-- PASS: corrupted/random backup rejection
-- PASS: backup restore preserves entries
-- PASS: backup restore preserves vault settings
+- PASS: encrypted backup export.
+- PASS: encrypted backup restore with correct vault code/recovery key.
+- PASS: corrupted/tampered backup rejection.
+- PASS: backup file not plaintext in self-test marker scan.
+- PASS after fix: wrong-code backup import bypass removed.
+- PASS after fix: build/test/release-safety checks passed.
+- Retest required with rebuilt ZIP: valid backup + wrong code should reject.
 
 ### Daily use
 
-- PASS: add entry
-- PASS: edit entry
-- PASS: delete entry confirmation
-- PASS: search/filter entries
-- PASS: favorite entries
-- PASS: copy username
-- PASS: copy password/secret
-- PASS: open website
-- PASS: Open + Fill timing improvements
-- PASS: QuickFill timing improvements
+- PASS: add entry.
+- PASS: edit entry.
+- PASS: delete entry confirmation.
+- PASS: search/filter entries.
+- PASS: favorite entries.
+- PASS: copy username.
+- PASS: copy password/secret.
+- PASS: open website.
+- PASS: Open + Fill timing improvements.
+- PASS: QuickFill timing improvements.
 
 ### Authenticator Lock
 
-- PASS: setup with QR
-- PASS: vault code required first
-- PASS: authenticator code required after vault code
-- PASS: OFF -> ON -> OFF -> ON without new QR
-- PASS: wrong/old QR recovery flow
-- PASS: Authenticator UI speed fix
+- PASS: setup with QR.
+- PASS: vault code required first.
+- PASS: authenticator code required after vault code.
+- PASS: wrong authenticator code rejected.
+- PASS: correct authenticator code accepted.
+- PASS: OFF -> ON -> OFF -> ON without new QR.
+- PASS: wrong/old QR recovery flow.
+- PASS: Authenticator UI speed fix.
 
 ### Trust Center and Device Trust
 
-- PASS: Trust Center Authenticator card opens real settings flow
-- PASS: Optional / Active status behavior
-- PASS: Device Trust detects same-account multi-device state
-- PASS: new device registration syncs automatically
-- PASS: untrusted device restrictions
-- PASS: backup/export blocked on untrusted devices
-- PASS: Trust Center blocked on untrusted devices
-- PASS: current device cannot be forgotten
-- PASS: other non-current devices can be forgotten/managed
+- PASS: Trust Center Authenticator card opens real settings flow.
+- PASS: Optional / Active status behavior.
+- PASS: Device Trust detects same-account multi-device state.
+- PASS: new device registration syncs automatically.
+- PASS: untrusted-device restrictions.
+- PASS: backup/export blocked on untrusted devices.
+- PASS: Trust Center blocked on untrusted devices.
+- PASS: current device cannot be forgotten.
+- PASS: other non-current devices can be forgotten/managed.
 
 ### Streamer / Privacy mode
 
-- PASS: Streamer mode setting works
-- PASS: Streamer mode warning/feedback improved
-- PASS: Streamer mode sync warning popup reduced/removed
-- PASS: sensitive UI visibility improved where possible
+- PASS: Streamer mode setting works.
+- PASS: Streamer mode warning/feedback improved.
+- PASS: Streamer mode sync warning popup reduced/removed.
+- PASS: sensitive UI visibility improved where possible.
 
 ### Release safety
 
-- PASS: build and release build
-- PASS: 30/30 automated tests
-- PASS: publish win-x64 self-contained release
-- PASS: release folder safety check
-- PASS: ZIP content safety check
-- PASS: SHA256 generated
-- PASS: README updated for v0.2.1
-- PASS: v0.2.1 branch merged into main
+- PASS: build and release build.
+- PASS: 30/30 automated tests.
+- PASS: publish win-x64 self-contained release.
+- PASS: release folder safety check.
+- PASS: ZIP content safety check.
+- PASS: SHA256 generated during release build.
+- PASS: README updated for v0.2.1.
+- PASS: v0.2.1 branch merged into main.
+- PASS: self-security script added.
+- PASS: security test history report added.
 
 ---
 
-## 7. Current known limitations
+## 12. Current known limitations
 
 QuickForge Sync is still beta. Known limitations:
 
@@ -464,14 +471,19 @@ QuickForge Sync is still beta. Known limitations:
 - app cannot protect if the attacker has the vault code or recovery key,
 - Authenticator/Device Trust logic needs more automated unit/integration tests,
 - real-world beta feedback is still limited,
-- long-term crash/offline/bad-network testing is still needed.
+- long-term crash/offline/bad-network testing is still needed,
+- backup restore should be retested with several fake entries after the wrong-code bypass fix.
 
 ---
 
-## 8. What should be tested next
+## 13. What should be tested next
 
 Before raising trust level for real-password use, test:
 
+- rebuilt v0.2.1 ZIP after commit `51d7d38`,
+- valid backup + wrong vault code after the fix,
+- valid backup + correct vault code/recovery key after the fix,
+- backup restore with several fake entries,
 - one-week two-device soak test,
 - bad internet/offline-then-online sync,
 - interrupted sync while closing,
@@ -493,11 +505,12 @@ Recommended next automated tests:
 - untrusted device cannot open Trust Center,
 - current device cannot be forgotten,
 - other device can be forgotten,
+- backup import cannot fall back to current unlocked data key,
 - security settings merge correctly across cloud refresh.
 
 ---
 
-## 9. Conclusion
+## 14. Conclusion
 
 QuickForge Sync v0.2.1-dev-preview has moved from a simple encrypted vault beta into a more serious controlled beta security project.
 
@@ -515,12 +528,21 @@ The app now has:
 - Streamer / Privacy mode,
 - safe-close protection,
 - release safety checks,
+- self-security test script,
+- security test history report,
 - and 30/30 automated tests passing.
+
+Most important result from attacker-style testing:
+
+- A real backup import wrong-code bypass was discovered.
+- It was fixed in commit `51d7d38`.
+- Build, tests, and release safety checks passed after the fix.
 
 Honest status:
 
 - Good enough for controlled beta testing with fake/test data.
-- Promising for careful personal low-risk use after more soak testing.
+- Better security proof than before because failures were found, fixed, and documented.
+- Promising for careful personal low-risk use after retesting the rebuilt ZIP.
 - Not yet ready to replace a mature audited password manager for critical accounts.
 
-This report should be updated after each release and after each structured tester feedback round.
+This report should be updated after each release, after each structured tester feedback round, and after any future security bug is found and fixed.
