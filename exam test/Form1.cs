@@ -4511,7 +4511,7 @@ namespace exam_test
             securityCenterButton.ForeColor = Color.White;
             securityCenterButton.BackColor = Color.FromArgb(45, 90, 160);
             securityCenterButton.FlatAppearance.BorderColor = borderColor;
-            securityCenterButton.Click += (s, e) => ShowTrustCenterDialog();
+            securityCenterButton.Click += async (s, e) => await OpenSecurityCenterWithRefreshAsync();
 
             backupButton.Text = "Backup";
             backupButton.Left = 430;
@@ -6701,7 +6701,9 @@ namespace exam_test
 
         private void SyncDeviceTrustRegistrationAfterUnlockIfNeeded(bool deviceTrustChanged)
         {
-            if (!deviceTrustChanged ||
+            bool shouldSyncCurrentUntrustedDevice = IsRestrictedModeActive();
+
+            if ((!deviceTrustChanged && !shouldSyncCurrentUntrustedDevice) ||
                 currentDriveService == null ||
                 currentDataKey == null ||
                 currentEncryptedVaultFile == null)
@@ -6709,15 +6711,60 @@ namespace exam_test
                 return;
             }
 
-            SetSyncStatus("Device Trust sync pending");
+            string reason = shouldSyncCurrentUntrustedDevice
+                ? "Untrusted Device Trust registration updated: " + localDeviceName
+                : "Device Trust registration updated: " + localDeviceName;
+
+            SetSyncStatus("Device Trust syncing...");
 
             SetPreviewText(
                 "Device Trust updated.",
-                "This device was added to the vault device list.",
-                "QuickForge is syncing this so trusted PCs can review it."
+                "This device was added or refreshed in the vault device list.",
+                "QuickForge is syncing it now so trusted PCs can review it."
             );
 
-            QueueBackgroundVaultSync("Device Trust registration updated: " + localDeviceName);
+            hasUnsyncedLocalChanges = true;
+            backgroundVaultSyncReason = reason;
+
+            if (backgroundVaultSyncRunning || backgroundVaultSyncRequested)
+            {
+                QueueBackgroundVaultSync(reason);
+                return;
+            }
+
+            _ = SyncDeviceTrustRegistrationNowAsync(reason);
+        }
+
+        private async Task SyncDeviceTrustRegistrationNowAsync(string reason)
+        {
+            try
+            {
+                SetSyncStatus("Syncing Device Trust...");
+
+                bool merged = await SaveCurrentVaultToCloudWithAutoMergeAsync();
+
+                hasUnsyncedLocalChanges = false;
+                backgroundVaultSyncRetryCount = 0;
+
+                SetSyncStatus("Device Trust synced", success: true);
+
+                selectedPreviewLabel.Text = merged
+                    ? reason + Environment.NewLine + "Cloud Device Trust changes were merged and synced."
+                    : reason + Environment.NewLine + "Synced. Trusted devices can now review this device.";
+            }
+            catch (Exception ex)
+            {
+                SetSyncStatus("Device Trust sync pending", error: true);
+
+                SetPreviewText(
+                    "Device Trust sync pending.",
+                    "This device was added locally, but immediate sync failed.",
+                    "QuickForge will retry background sync.",
+                    "Error: " + ex.Message
+                );
+
+                QueueBackgroundVaultSync(reason);
+            }
         }
         private void AddSafetyTimelineEvent(string action, string detail)
         {
@@ -11354,8 +11401,33 @@ if (currentDriveService == null)
                 );
             }
         }
-        private void ShowDeviceTrustDialog()
+        private async void ShowDeviceTrustDialog()
         {
+            if (isVaultUnlocked &&
+                currentDriveService != null &&
+                currentDataKey != null &&
+                currentEncryptedVaultFile != null)
+            {
+                try
+                {
+                    SetSyncStatus("Refreshing Device Trust...");
+                    await MergeLatestCloudVaultIntoCurrentSessionAsync();
+                    RegisterCurrentDeviceForVault(false);
+                    ApplyRecoverySettingsToUi();
+                    ApplyPerformanceSettingsToUi();
+                    ApplyDeviceTrustRestrictionsToUi();
+                    SetSyncStatus("Device Trust refreshed", success: true);
+                }
+                catch (Exception ex)
+                {
+                    SetSyncStatus("Device Trust refresh skipped", error: true);
+                    selectedPreviewLabel.Text =
+                        "Device Trust opened with local data." + Environment.NewLine +
+                        "Could not refresh latest cloud devices first." + Environment.NewLine +
+                        "Error: " + ex.Message;
+                }
+            }
+
             EnsureLocalDeviceIdentity();
             EnsureVaultSafetyCollections();
             RegisterCurrentDeviceForVault(false);
