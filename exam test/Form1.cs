@@ -10187,29 +10187,6 @@ namespace exam_test
                     );
             }
 
-            if (!decrypted &&
-                isVaultUnlocked &&
-                currentDataKey != null)
-            {
-                try
-                {
-                    importedVaultData = VaultCryptoService.DecryptVaultWithExistingDataKey(
-                        encryptedJson,
-                        currentDataKey,
-                        out importedEncryptedVaultFile
-                    );
-
-                    importedDataKey = currentDataKey;
-                    decrypted = true;
-                }
-                catch
-                {
-                    importedVaultData = null;
-                    importedDataKey = null;
-                    importedEncryptedVaultFile = null;
-                    decrypted = false;
-                }
-            }
 
             if (!decrypted ||
                 importedVaultData == null ||
