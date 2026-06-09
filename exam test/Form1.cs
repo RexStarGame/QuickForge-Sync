@@ -851,7 +851,16 @@ namespace exam_test
                     320,
                     150,
                     "Recovery options",
-                    () => ShowRecoveryReminderSettingsDialog(),
+                    () =>
+                    {
+                        bool changed = ShowRecoveryReminderSettingsDialog();
+
+                        if (changed)
+                        {
+                            dialog.Close();
+                            BeginInvoke(new Action(() => ShowSettingsDialog(0)));
+                        }
+                    },
                     true
                 ));
 
@@ -2420,8 +2429,10 @@ namespace exam_test
 
             return saved;
         }
-        private void ShowRecoveryReminderSettingsDialog()
+        private bool ShowRecoveryReminderSettingsDialog()
         {
+            bool saved = false;
+
             using (Form dialog = new Form())
             {
                 dialog.Width = 470;
@@ -2508,12 +2519,18 @@ namespace exam_test
                 statusLabel.ForeColor = softTextColor;
                 statusLabel.BackColor = Color.Transparent;
 
-                saveButton.Click += async (s, e) =>
+                saveButton.Click += (s, e) =>
                 {
                     if (!RequireTrustedDeviceForSensitiveAction("Change recovery reminder setting"))
                     {
                         return;
                     }
+
+                    saveButton.Enabled = false;
+                    rotateButton.Enabled = false;
+                    closeButton.Enabled = false;
+                    statusLabel.Text = "Saved. Updating Settings...";
+                    statusLabel.ForeColor = successColor;
 
                     if (comboBox.SelectedIndex == 1)
                     {
@@ -2532,23 +2549,42 @@ namespace exam_test
                     {
                         ApplyRecoverySettingsToUi();
                         HideMainPanelSettingsForV021();
-                        MarkVaultChangedByCurrentDevice("Streamer mode changed");
+                        MarkVaultChangedByCurrentDevice("Recovery reminder setting changed");
 
-                        await SaveCurrentVaultToCloudAsync();
+                        string recoveryText = currentVaultSettings.RecoveryKeyReminderDays <= 0
+                            ? "Recovery reminder turned off."
+                            : "Recovery reminder set to " + currentVaultSettings.RecoveryKeyReminderDays + " days.";
 
-                        selectedPreviewLabel.Text = "Recovery reminder setting saved.";
+                        selectedPreviewLabel.Text =
+                            recoveryText + Environment.NewLine +
+                            "Settings updated immediately. Cloud sync is running in the background.";
+
+                        SetSyncStatus("Queued background sync");
+                        QueueBackgroundVaultSync("Recovery reminder setting changed");
+
+                        saved = true;
                         dialog.Close();
                     }
                     catch (Exception ex)
                     {
+                        saveButton.Enabled = true;
+                        rotateButton.Enabled = true;
+                        closeButton.Enabled = true;
                         statusLabel.Text = "Could not save recovery reminder.";
-                        MessageBox.Show("Could not save recovery reminder: " + ex.Message);
+                        statusLabel.ForeColor = dangerColor;
+
+                        MessageBox.Show(
+                            "Could not save recovery reminder: " + ex.Message,
+                            "Recovery reminder failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
                     }
                 };
 
                 rotateButton.Click += (s, e) =>
                 {
-                                        RotateRecoveryKeyButton_Click(this, EventArgs.Empty);
+                    RotateRecoveryKeyButton_Click(this, EventArgs.Empty);
                 };
 
                 dialog.Controls.Add(titleLabel);
@@ -2561,8 +2597,9 @@ namespace exam_test
 
                 dialog.ShowDialog(this);
             }
-        }
 
+            return saved;
+        }
         private bool ShowBackgroundAnimationSettingsDialog()
         {
             bool saved = false;
