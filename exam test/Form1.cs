@@ -932,7 +932,16 @@ namespace exam_test
                     320,
                     150,
                     "Change animation",
-                    () => ShowBackgroundAnimationSettingsDialog(),
+                    () =>
+                    {
+                        bool changed = ShowBackgroundAnimationSettingsDialog();
+
+                        if (changed)
+                        {
+                            dialog.Close();
+                            BeginInvoke(new Action(() => ShowSettingsDialog(2)));
+                        }
+                    },
                     true
                 ));
 
@@ -2530,8 +2539,10 @@ namespace exam_test
             }
         }
 
-        private void ShowBackgroundAnimationSettingsDialog()
+        private bool ShowBackgroundAnimationSettingsDialog()
         {
+            bool saved = false;
+
             using (Form dialog = new Form())
             {
                 dialog.Width = 430;
@@ -2598,12 +2609,17 @@ namespace exam_test
                 statusLabel.ForeColor = softTextColor;
                 statusLabel.BackColor = Color.Transparent;
 
-                saveButton.Click += async (s, e) =>
+                saveButton.Click += (s, e) =>
                 {
                     if (!RequireTrustedDeviceForSensitiveAction("Change animation setting"))
                     {
                         return;
                     }
+
+                    saveButton.Enabled = false;
+                    cancelButton.Enabled = false;
+                    statusLabel.Text = "Saved. Updating Settings...";
+                    statusLabel.ForeColor = successColor;
 
                     currentVaultSettings.BackgroundAnimationEnabled = animationCheckBox.Checked;
 
@@ -2612,17 +2628,35 @@ namespace exam_test
                         ApplyPerformanceSettingsToUi();
                         HideMainPanelSettingsForV021();
                         UpdateAnimationState();
-                        MarkVaultChangedByCurrentDevice("Streamer mode changed");
+                        MarkVaultChangedByCurrentDevice("Background animation setting changed");
 
-                        await SaveCurrentVaultToCloudAsync();
+                        string animationText = currentVaultSettings.BackgroundAnimationEnabled
+                            ? "Background animation turned on."
+                            : "Background animation turned off.";
 
-                        selectedPreviewLabel.Text = "Background animation setting saved.";
+                        selectedPreviewLabel.Text =
+                            animationText + Environment.NewLine +
+                            "Settings updated immediately. Cloud sync is running in the background.";
+
+                        SetSyncStatus("Queued background sync");
+                        QueueBackgroundVaultSync("Background animation setting changed");
+
+                        saved = true;
                         dialog.Close();
                     }
                     catch (Exception ex)
                     {
+                        saveButton.Enabled = true;
+                        cancelButton.Enabled = true;
                         statusLabel.Text = "Could not save animation setting.";
-                        MessageBox.Show("Could not save animation setting: " + ex.Message);
+                        statusLabel.ForeColor = dangerColor;
+
+                        MessageBox.Show(
+                            "Could not save animation setting: " + ex.Message,
+                            "Background animation failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
                     }
                 };
 
@@ -2635,6 +2669,8 @@ namespace exam_test
 
                 dialog.ShowDialog(this);
             }
+
+            return saved;
         }
         private int GetPasswordHealthScore(string secret)
         {
