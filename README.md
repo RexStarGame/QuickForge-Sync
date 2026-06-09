@@ -39,6 +39,41 @@ The beta ZIP must **not** include:
 
 ---
 
+## Looking for Beta Testers
+
+QuickForge Sync v0.2.1 is looking for testers.
+
+Please use **fake/test data only**. Do not use real passwords, banking accounts, main email accounts, crypto wallets, business admin accounts, or anything you cannot afford to lose.
+
+Suggested test steps:
+
+1. Download and extract the ZIP.
+2. Run `QuickForge Sync.exe`.
+3. Login with Google.
+4. Create a vault.
+5. Add 3 fake entries.
+6. Lock and unlock the vault.
+7. Try QuickFill if possible.
+8. Export an encrypted backup.
+9. Restore the backup.
+10. Enable Authenticator Lock.
+11. Lock and unlock with Authenticator Lock.
+12. Turn Authenticator Lock off and on again.
+13. Try Streamer / Privacy mode.
+14. Report anything confusing, scary, slow, or broken.
+
+Feedback format:
+
+```text
+Worked:
+Failed:
+Confusing:
+Screenshot:
+Windows version:
+```
+
+---
+
 ## What QuickForge Sync Does
 
 QuickForge Sync helps you save and use:
@@ -247,6 +282,10 @@ For multi-device sync and restore testing:
 Before publishing a beta release:
 
 [QuickForge Sync Release Checklist](RELEASE_CHECKLIST.md)
+
+Security test history:
+
+[QuickForge Sync v0.2.1 Security Test History Report](SECURITY_TEST_REPORT_v0.2.1.md)
 
 Installer/signing planning notes:
 
