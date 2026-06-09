@@ -274,17 +274,57 @@ namespace exam_test
         }
 
 
+        private bool safeCloseApproved = false;
+
+        private bool IsCloseBlockedBySyncOrRefresh()
+        {
+            return HasPendingBackgroundVaultSync() ||
+                   backgroundVaultSyncRunning ||
+                   backgroundVaultSyncRequested ||
+                   hasUnsyncedLocalChanges ||
+                   autoRefreshRunning ||
+                   deviceTrustBackgroundRefreshRunning ||
+                   (isVaultUnlocked && (!refreshCloudButton.Enabled || !manualSyncButton.Enabled));
+        }
+
+        private void ShowCloseBlockedBySyncOrRefreshMessage()
+        {
+            SetSyncStatus("Close blocked - sync or refresh running", error: true);
+
+            MessageBox.Show(
+                "QuickForge is still syncing or refreshing your encrypted vault." + Environment.NewLine + Environment.NewLine +
+                "Please wait until sync/refresh is finished before closing the app." + Environment.NewLine + Environment.NewLine +
+                "This protects you from closing while this device may still have vault changes that Google Drive has not finished saving or loading.",
+                "Sync or refresh still running",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
+        }
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            if (!ConfirmPendingBackgroundSyncBeforeExit("close QuickForge"))
+            if (safeCloseApproved)
             {
+                base.OnFormClosing(e);
+                return;
+            }
+
+            if (IsCloseBlockedBySyncOrRefresh())
+            {
+                ShowCloseBlockedBySyncOrRefreshMessage();
                 e.Cancel = true;
                 return;
             }
 
+            safeCloseApproved = true;
+
+            if (isVaultUnlocked)
+            {
+                LockVaultForSafety("Vault locked before closing QuickForge.");
+            }
+
             base.OnFormClosing(e);
-        }
-        private void Form1_Load(object? sender, EventArgs e)
+        }        private void Form1_Load(object? sender, EventArgs e)
         {
             // Empty method, safe for Windows Forms Designer.
         }
