@@ -704,9 +704,9 @@ namespace exam_test
                     320,
                     150,
                     authenticatorLockStatus == "On" ? "Manage" : "Set up",
-                    () =>
+                    async () =>
                     {
-                        bool changed = ShowAuthenticatorLockSettingsDialog();
+                        bool changed = await ShowAuthenticatorLockSettingsDialogAsync();
 
                         if (changed)
                         {
@@ -1183,7 +1183,7 @@ namespace exam_test
             return verified;
         }
 
-        private bool ShowAuthenticatorLockSettingsDialog()
+        private async Task<bool> ShowAuthenticatorLockSettingsDialogAsync()
         {
             if (!isVaultUnlocked || currentEncryptedVaultFile == null)
             {
@@ -1204,7 +1204,7 @@ namespace exam_test
 
             if (IsAuthenticatorLockConfigured())
             {
-                return ShowDisableAuthenticatorLockDialog();
+                return await ShowDisableAuthenticatorLockDialogAsync();
             }
 
             return ShowAuthenticatorSetupDialog();
@@ -1460,7 +1460,7 @@ namespace exam_test
             return saved;
         }
 
-        private bool ShowDisableAuthenticatorLockDialog()
+        private async Task<bool> ShowDisableAuthenticatorLockDialogAsync()
         {
             DialogResult choice = MessageBox.Show(
                 "Authenticator Lock is currently ON." + Environment.NewLine + Environment.NewLine +
@@ -1525,7 +1525,7 @@ namespace exam_test
                 currentVaultSettings.LastAuthenticatorTimeWindowUsed = null;
 
                 MarkVaultChangedByCurrentDevice("Authenticator Lock disabled");
-                SaveCurrentVaultToCloudAsync().GetAwaiter().GetResult();
+                await SaveCurrentVaultToCloudAsync();
 
                 SetPreviewText(
                     "Authenticator Lock disabled.",
