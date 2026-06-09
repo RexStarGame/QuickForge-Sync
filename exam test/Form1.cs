@@ -684,7 +684,12 @@ namespace exam_test
                     ? "Off"
                     : currentVaultSettings.RecoveryKeyReminderDays + " days";
 
-                string authenticatorLockStatus = IsAuthenticatorLockConfigured() ? "On" : "Off";
+                bool authenticatorIsConfigured = IsAuthenticatorLockConfigured();
+                bool authenticatorIsEnabled = IsAuthenticatorLockEnabled();
+
+                string authenticatorLockStatus = authenticatorIsEnabled
+                    ? "On"
+                    : (authenticatorIsConfigured ? "Off" : "Not set up");
                 string lastSaveSettingsText = lastCloudSaveUtc.HasValue
                     ? lastCloudSaveUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
                     : "Not yet";
@@ -696,14 +701,16 @@ namespace exam_test
                 securityTab.Controls.Add(CreateSettingsCard(
                     "Two-step vault unlock",
                     authenticatorLockStatus,
-                    authenticatorLockStatus == "On"
+                    authenticatorIsEnabled
                         ? "After your vault code, QuickForge asks for a 6-digit authenticator code."
-                        : "Add an optional authenticator-app code after your vault code.",
+                        : (authenticatorIsConfigured
+                            ? "Authenticator is already set up. Enable it again without scanning a new QR code."
+                            : "Add an optional authenticator-app code after your vault code."),
                     16,
                     18,
                     320,
                     150,
-                    authenticatorLockStatus == "On" ? "Manage" : "Set up",
+                    authenticatorIsEnabled ? "Manage" : (authenticatorIsConfigured ? "Enable" : "Set up"),
                     async () =>
                     {
                         bool changed = await ShowAuthenticatorLockSettingsDialogAsync();
@@ -938,8 +945,13 @@ namespace exam_test
         private bool IsAuthenticatorLockConfigured()
         {
             return currentVaultSettings != null &&
-                   currentVaultSettings.AuthenticatorLockEnabled &&
                    !string.IsNullOrWhiteSpace(currentVaultSettings.AuthenticatorSecretBase32);
+        }
+
+        private bool IsAuthenticatorLockEnabled()
+        {
+            return IsAuthenticatorLockConfigured() &&
+                   currentVaultSettings.AuthenticatorLockEnabled;
         }
 
         private string GenerateAuthenticatorSecretBase32()
@@ -1202,12 +1214,115 @@ namespace exam_test
                 return false;
             }
 
-            if (IsAuthenticatorLockConfigured())
+            if (IsAuthenticatorLockEnabled())
             {
                 return await ShowDisableAuthenticatorLockDialogAsync();
             }
 
+            if (IsAuthenticatorLockConfigured())
+            {
+                return await ShowEnableExistingAuthenticatorLockDialogAsync();
+            }
+
             return ShowAuthenticatorSetupDialog();
+        }
+
+        private async Task<bool> ShowEnableExistingAuthenticatorLockDialogAsync()
+        {
+            DialogResult choice = MessageBox.Show(
+                "Authenticator Lock is currently OFF, but an authenticator is already set up." + Environment.NewLine + Environment.NewLine +
+                "Enable it again using the same authenticator app?",
+                "Enable Authenticator Lock",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+
+            if (choice != DialogResult.Yes)
+            {
+                return false;
+            }
+
+            string? unlockCheck = ShowPasswordPrompt(
+                "Enable Authenticator Lock",
+                "Enter your vault code or recovery key:"
+            );
+
+            if (string.IsNullOrWhiteSpace(unlockCheck) ||
+                currentEncryptedVaultFile == null ||
+                !VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, unlockCheck))
+            {
+                MessageBox.Show(
+                    "Wrong vault code or recovery key. Authenticator Lock was not enabled.",
+                    "Confirmation failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return false;
+            }
+
+            string? code = ShowAuthenticatorCodePrompt(
+                "Enable Authenticator Lock",
+                "Enter the current 6-digit code from your existing authenticator app:"
+            );
+
+            if (string.IsNullOrWhiteSpace(code) ||
+                !VerifyAuthenticatorCode(currentVaultSettings.AuthenticatorSecretBase32, code, out _))
+            {
+                MessageBox.Show(
+                    "Wrong or expired authenticator code. Authenticator Lock was not enabled.",
+                    "Authenticator check failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return false;
+            }
+
+            bool previousEnabled = currentVaultSettings.AuthenticatorLockEnabled;
+            DateTime? previousEnabledAt = currentVaultSettings.AuthenticatorEnabledAtUtc;
+            long? previousWindow = currentVaultSettings.LastAuthenticatorTimeWindowUsed;
+
+            try
+            {
+                currentVaultSettings.AuthenticatorLockEnabled = true;
+                currentVaultSettings.AuthenticatorEnabledAtUtc = DateTime.UtcNow;
+                currentVaultSettings.LastAuthenticatorTimeWindowUsed = null;
+
+                MarkVaultChangedByCurrentDevice("Authenticator Lock re-enabled");
+                await SaveCurrentVaultToCloudAsync();
+
+                SetPreviewText(
+                    "Authenticator Lock enabled.",
+                    "QuickForge reused the existing authenticator setup.",
+                    "No new QR code was created."
+                );
+
+                MessageBox.Show(
+                    "Authenticator Lock is now enabled again." + Environment.NewLine + Environment.NewLine +
+                    "The same authenticator app/code is still used.",
+                    "Authenticator Lock enabled",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                currentVaultSettings.AuthenticatorLockEnabled = previousEnabled;
+                currentVaultSettings.AuthenticatorEnabledAtUtc = previousEnabledAt;
+                currentVaultSettings.LastAuthenticatorTimeWindowUsed = previousWindow;
+
+                MessageBox.Show(
+                    "Could not enable Authenticator Lock: " + ex.Message,
+                    "Save failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+
+                return false;
+            }
         }
 
         private bool ShowAuthenticatorSetupDialog()
@@ -1520,7 +1635,6 @@ namespace exam_test
             try
             {
                 currentVaultSettings.AuthenticatorLockEnabled = false;
-                currentVaultSettings.AuthenticatorSecretBase32 = "";
                 currentVaultSettings.AuthenticatorEnabledAtUtc = null;
                 currentVaultSettings.LastAuthenticatorTimeWindowUsed = null;
 
@@ -1530,11 +1644,11 @@ namespace exam_test
                 SetPreviewText(
                     "Authenticator Lock disabled.",
                     "QuickForge will unlock with Google login and vault code only.",
-                    "You can enable it again from Settings > Security."
+                    "You can enable it again from Settings > Security without scanning a new QR code."
                 );
 
                 MessageBox.Show(
-                    "Authenticator Lock has been disabled.",
+                    "Authenticator Lock has been disabled, but the existing authenticator setup was kept.",
                     "Authenticator Lock disabled",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information
