@@ -341,7 +341,9 @@ namespace exam_test
             }
 
             base.OnFormClosing(e);
-        }        private void Form1_Load(object? sender, EventArgs e)
+        }
+
+        private void Form1_Load(object? sender, EventArgs e)
         {
             // Empty method, safe for Windows Forms Designer.
         }
