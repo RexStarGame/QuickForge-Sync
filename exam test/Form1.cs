@@ -2870,6 +2870,24 @@ namespace exam_test
                     ? "Looks good"
                     : weakPasswords + " to review / " + reusedPasswords + " reused";
 
+            bool authenticatorLockActive = IsAuthenticatorLockEnabled();
+
+            string authenticatorStatus = authenticatorLockActive
+                ? "Active"
+                : "Optional";
+
+            string authenticatorDetail = authenticatorLockActive
+                ? "Vault unlock requires vault code + authenticator code."
+                : "Adds a 6-digit authenticator code after your vault code.";
+
+            string authenticatorActionText = authenticatorLockActive
+                ? "Manage"
+                : "Set up";
+
+            Color authenticatorStatusColor = authenticatorLockActive
+                ? successColor
+                : Color.FromArgb(255, 190, 90);
+
             string overallStatus;
 
             if (untrustedDevices > 0 ||
@@ -2994,6 +3012,66 @@ namespace exam_test
                     return card;
                 }
 
+                Panel CreateAuthenticatorTrustCard(
+                    string status,
+                    string detail,
+                    Color statusColor,
+                    string actionText,
+                    bool primaryAction)
+                {
+                    Panel card = CreateTrustCard(
+                        "Authenticator Lock",
+                        status,
+                        detail,
+                        420,
+                        480,
+                        statusColor,
+                        actionText,
+                        () => { },
+                        primaryAction
+                    );
+
+                    Button? actionButton = card.Controls.OfType<Button>().FirstOrDefault();
+
+                    if (actionButton != null)
+                    {
+                        actionButton.Click += async (s, e) =>
+                        {
+                            actionButton.Enabled = false;
+                            actionButton.Text = "Opening...";
+
+                            try
+                            {
+                                bool changed = await ShowAuthenticatorLockSettingsDialogAsync();
+
+                                if (changed)
+                                {
+                                    dialog.Close();
+                                    BeginInvoke(new Action(() => ShowTrustCenterDialog()));
+                                    return;
+                                }
+
+                                actionButton.Text = actionText;
+                                actionButton.Enabled = true;
+                            }
+                            catch (Exception ex)
+                            {
+                                actionButton.Text = actionText;
+                                actionButton.Enabled = true;
+
+                                MessageBox.Show(
+                                    "Could not open Authenticator Lock settings: " + ex.Message,
+                                    "Authenticator Lock",
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Error
+                                );
+                            }
+                        };
+                    }
+
+                    return card;
+                }
+
                 Panel deviceCard = CreateTrustCard(
                     "Device Trust",
                     deviceStatus,
@@ -3069,24 +3147,12 @@ namespace exam_test
                     !hasRecentCloudLoad
                 );
 
-                Panel authenticatorCard = CreateTrustCard(
-                    "Authenticator Lock",
-                    "Planned for v0.2.1",
-                    "Optional two-step vault unlock will add a 6-digit authenticator-code check after vault code.",
-                    420,
-                    480,
-                    Color.FromArgb(255, 190, 90),
-                    "What is this?",
-                    () =>
-                    {
-                        MessageBox.Show(
-                            "Authenticator Lock is planned for v0.2.1." + Environment.NewLine + Environment.NewLine +
-                            "It will be optional, never forced, and should work with authenticator apps generally.",
-                            "Authenticator Lock planned",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information
-                        );
-                    }
+                Panel authenticatorCard = CreateAuthenticatorTrustCard(
+                    authenticatorStatus,
+                    authenticatorDetail,
+                    authenticatorStatusColor,
+                    authenticatorActionText,
+                    authenticatorLockActive
                 );
 
                 Button legacyReportButton = new Button();
