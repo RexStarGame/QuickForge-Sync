@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -1291,6 +1291,97 @@ namespace exam_test
             }
         }
 
+        private string ShowExistingAuthenticatorFailedChoiceDialog()
+        {
+            string choice = "cancel";
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 560;
+                dialog.Height = 285;
+                dialog.Text = "Authenticator check failed";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Wrong or expired authenticator code";
+                titleLabel.Left = 22;
+                titleLabel.Top = 18;
+                titleLabel.Width = 500;
+                titleLabel.Height = 30;
+                titleLabel.ForeColor = Color.FromArgb(255, 190, 90);
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
+
+                Label infoLabel = new Label();
+                infoLabel.Text =
+                    "The 6-digit code was not accepted." + Environment.NewLine + Environment.NewLine +
+                    "This can happen if the code expired, if you typed it wrong, or if the authenticator entry is old, deleted, or from the wrong QR code." + Environment.NewLine + Environment.NewLine +
+                    "Try again first. Only set up a new QR code if your authenticator entry is broken or missing.";
+                infoLabel.Left = 22;
+                infoLabel.Top = 58;
+                infoLabel.Width = 500;
+                infoLabel.Height = 120;
+                infoLabel.ForeColor = softTextColor;
+                infoLabel.BackColor = Color.Transparent;
+                infoLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Button tryAgainButton = new Button();
+                tryAgainButton.Text = "Try again";
+                tryAgainButton.Left = 22;
+                tryAgainButton.Top = 195;
+                tryAgainButton.Width = 115;
+                tryAgainButton.Height = 34;
+                StyleActionButton(tryAgainButton, true);
+                tryAgainButton.Click += (s, e) =>
+                {
+                    choice = "retry";
+                    dialog.Close();
+                };
+
+                Button newQrButton = new Button();
+                newQrButton.Text = "Set up new QR";
+                newQrButton.Left = 152;
+                newQrButton.Top = 195;
+                newQrButton.Width = 130;
+                newQrButton.Height = 34;
+                StyleActionButton(newQrButton);
+                newQrButton.Click += (s, e) =>
+                {
+                    choice = "new-qr";
+                    dialog.Close();
+                };
+
+                Button cancelButton = new Button();
+                cancelButton.Text = "Cancel";
+                cancelButton.Left = 402;
+                cancelButton.Top = 195;
+                cancelButton.Width = 100;
+                cancelButton.Height = 34;
+                StyleActionButton(cancelButton);
+                cancelButton.Click += (s, e) =>
+                {
+                    choice = "cancel";
+                    dialog.Close();
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(infoLabel);
+                dialog.Controls.Add(tryAgainButton);
+                dialog.Controls.Add(newQrButton);
+                dialog.Controls.Add(cancelButton);
+
+                dialog.AcceptButton = tryAgainButton;
+                dialog.CancelButton = cancelButton;
+
+                dialog.ShowDialog(this);
+            }
+
+            return choice;
+        }
         private bool ShowAuthenticatorUnlockDialog(string authenticatorSecretBase32)
         {
             if (string.IsNullOrWhiteSpace(authenticatorSecretBase32))
@@ -1474,27 +1565,31 @@ namespace exam_test
                 );
 
                 return false;
-            }
-
-            string? code = ShowAuthenticatorCodePrompt(
-                "Enable Authenticator Lock",
-                "Enter the current 6-digit code from your existing authenticator app:"
-            );
-
-            if (string.IsNullOrWhiteSpace(code) ||
-                !VerifyAuthenticatorCode(currentVaultSettings.AuthenticatorSecretBase32, code, out _))
+            }            while (true)
             {
-                DialogResult setupNewChoice = MessageBox.Show(
-                    "Wrong or expired authenticator code. Authenticator Lock was not enabled." + Environment.NewLine + Environment.NewLine +
-                    "If this authenticator entry is old, deleted, or from the wrong QR code, you can set up a new QR code now." + Environment.NewLine + Environment.NewLine +
-                    "Set up a new QR code?",
-                    "Authenticator check failed",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Warning,
-                    MessageBoxDefaultButton.Button2
+                string? code = ShowAuthenticatorCodePrompt(
+                    "Enable Authenticator Lock",
+                    "Enter the current 6-digit code from your existing authenticator app:"
                 );
 
-                if (setupNewChoice == DialogResult.Yes)
+                if (string.IsNullOrWhiteSpace(code))
+                {
+                    return false;
+                }
+
+                if (VerifyAuthenticatorCode(currentVaultSettings.AuthenticatorSecretBase32, code, out _))
+                {
+                    break;
+                }
+
+                string failedChoice = ShowExistingAuthenticatorFailedChoiceDialog();
+
+                if (failedChoice == "retry")
+                {
+                    continue;
+                }
+
+                if (failedChoice == "new-qr")
                 {
                     return ShowAuthenticatorSetupDialog();
                 }
@@ -1832,22 +1927,57 @@ namespace exam_test
                 );
 
                 return false;
-            }
-
-            string? code = ShowAuthenticatorCodePrompt(
-                "Disable Authenticator Lock",
-                "Enter the current 6-digit authenticator code:"
-            );
-
-            if (string.IsNullOrWhiteSpace(code) ||
-                !VerifyAuthenticatorCode(currentVaultSettings.AuthenticatorSecretBase32, code, out _))
+            }            while (true)
             {
-                MessageBox.Show(
-                    "Wrong or expired authenticator code. Authenticator Lock was not disabled.",
-                    "Authenticator check failed",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning
+                string? code = ShowAuthenticatorCodePrompt(
+                    "Disable Authenticator Lock",
+                    "Enter the current 6-digit authenticator code:"
                 );
+
+                if (string.IsNullOrWhiteSpace(code))
+                {
+                    return false;
+                }
+
+                if (VerifyAuthenticatorCode(currentVaultSettings.AuthenticatorSecretBase32, code, out _))
+                {
+                    break;
+                }
+
+                string failedChoice = ShowExistingAuthenticatorFailedChoiceDialog();
+
+                if (failedChoice == "retry")
+                {
+                    continue;
+                }
+
+                if (failedChoice == "new-qr")
+                {
+                    string? recoveryCheck = ShowPasswordPrompt(
+                        "Set up new Authenticator QR",
+                        "Enter your recovery key to replace the current authenticator setup:"
+                    );
+
+                    bool looksLikeRecoveryKey =
+                        !string.IsNullOrWhiteSpace(recoveryCheck) &&
+                        recoveryCheck.Trim().StartsWith("QF-", StringComparison.OrdinalIgnoreCase);
+
+                    if (!looksLikeRecoveryKey ||
+                        currentEncryptedVaultFile == null ||
+                        !VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, recoveryCheck ?? ""))
+                    {
+                        MessageBox.Show(
+                            "Wrong recovery key. Authenticator setup was not changed.",
+                            "Recovery check failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning
+                        );
+
+                        return false;
+                    }
+
+                    return ShowAuthenticatorSetupDialog();
+                }
 
                 return false;
             }
@@ -4925,7 +5055,7 @@ namespace exam_test
             {
                 vaultUnlockStatusLabel.Text =
                     "Vault-code locked for about " + FormatRemainingLockoutTime(state.LockedUntilUtc) + "." + Environment.NewLine +
-                    "Recovery key can bypass the waiting time." + Environment.NewLine +
+                    "Recovery key can bypass the waiting time. Authenticator Lock may still be required." + Environment.NewLine +
                     "If the cloud vault is damaged, use Import Backup.";
 
                 vaultUnlockStatusLabel.ForeColor = Color.FromArgb(255, 190, 90);
@@ -5326,7 +5456,7 @@ namespace exam_test
             MessageBox.Show(
                 "Vault-code unlock is temporarily locked." + Environment.NewLine + Environment.NewLine +
                 "Try again in about " + FormatRemainingLockoutTime(state.LockedUntilUtc) + "." + Environment.NewLine + Environment.NewLine +
-                "If this is your vault, you can still unlock immediately with your recovery key." + Environment.NewLine + Environment.NewLine +
+                "If this is your vault, your recovery key can bypass the vault-code waiting time. Authenticator Lock may still be required." + Environment.NewLine + Environment.NewLine +
                 "If the cloud vault is damaged, use Import encrypted backup.",
                 "Vault code locked",
                 MessageBoxButtons.OK,
@@ -5528,7 +5658,7 @@ namespace exam_test
                 SetPreviewText(
                     "Vault-code unlock is temporarily locked.",
                     "Checking whether this is your recovery key...",
-                    "Recovery key can bypass the waiting time."
+                    "Recovery key can bypass the waiting time. Authenticator Lock may still be required."
                 );
 
                 await Task.Yield();
@@ -5578,7 +5708,7 @@ namespace exam_test
                     SetSyncStatus("Checking recovery key...");
                     SetPreviewText(
                         "Checking recovery key...",
-                        "Recovery keys start with QF-, so QuickForge skips the slower vault-code check.",
+                        "Recovery keys start with QF-, so QuickForge checks the recovery key path first.",
                         "Please wait."
                     );
 
@@ -5679,7 +5809,6 @@ namespace exam_test
             VaultSettings unlockedVaultSettings = vaultData.Settings ?? new VaultSettings();
 
             bool authenticatorRequired =
-                !usedRecoveryKey &&
                 unlockedVaultSettings.AuthenticatorLockEnabled &&
                 !string.IsNullOrWhiteSpace(unlockedVaultSettings.AuthenticatorSecretBase32);
 
@@ -13891,6 +14020,11 @@ if (currentDriveService == null)
         }
     }
 }
+
+
+
+
+
 
 
 
