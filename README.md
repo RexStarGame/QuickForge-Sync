@@ -358,3 +358,37 @@ QuickForge Sync is a learning/prototype project and beta-preview password vault.
 Do not rely on it as your only password manager until the code has been reviewed, tested more widely, and externally audited.
 
 Use fake/test data unless a controlled personal beta test was explicitly planned.
+
+
+
+## Screenshots
+
+### Encrypted Vault
+QuickForge stores account notes, secrets, and private snippets in an encrypted vault. Streamer mode can hide sensitive details while screen sharing.
+
+![Encrypted Vault with Streamer Mode](docs/screenshots/encrypted-vault-streamer.png)
+
+### Security Settings
+Manage Authenticator Lock, vault code, auto-lock, and recovery options.
+
+![Security Settings](docs/screenshots/settings-security.png)
+
+### Trust Center
+Review device trust, recovery, backups, password health, sync safety, and Authenticator Lock from one place.
+
+![Trust Center](docs/screenshots/trust-center.png)
+
+### Sync Settings
+QuickForge syncs the encrypted vault through Google Drive appDataFolder, with manual refresh and manual sync controls.
+
+![Sync Settings](docs/screenshots/settings-sync.png)
+
+### Privacy Settings
+Streamer mode, sensitive previews, clipboard cleanup, and background animation controls.
+
+![Privacy Settings](docs/screenshots/settings-privacy.png)
+
+### Encrypted Backup and Restore
+Create encrypted backups and restore them using your vault code or recovery key.
+
+![Backup and Restore](docs/screenshots/backup-restore.png)
