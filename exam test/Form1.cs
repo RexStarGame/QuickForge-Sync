@@ -1018,12 +1018,88 @@ namespace exam_test
             }
         }
 
+        private string NormalizeAuthenticatorCodeInput(string value)
+        {
+            string digits = new string((value ?? "").Where(char.IsDigit).ToArray());
+
+            if (digits.Length > 6)
+            {
+                return digits.Substring(0, 6);
+            }
+
+            return digits;
+        }
+
+        private void StyleAuthenticatorCodeInput(TextBox codeBox)
+        {
+            codeBox.MaxLength = 6;
+            codeBox.Width = 190;
+            codeBox.Height = 38;
+            codeBox.PlaceholderText = "000000";
+            codeBox.Font = new Font("Consolas", 18, FontStyle.Bold);
+            codeBox.TextAlign = HorizontalAlignment.Center;
+        }
+
+        private void AttachAuthenticatorAutoSubmit(
+            TextBox codeBox,
+            Label statusLabel,
+            Button submitButton,
+            string waitingText,
+            string readyText)
+        {
+            bool changingCodeText = false;
+            bool submittedAutomatically = false;
+
+            codeBox.TextChanged += (s, e) =>
+            {
+                if (changingCodeText)
+                {
+                    return;
+                }
+
+                string digits = NormalizeAuthenticatorCodeInput(codeBox.Text);
+
+                if (codeBox.Text != digits)
+                {
+                    changingCodeText = true;
+                    codeBox.Text = digits;
+                    codeBox.SelectionStart = codeBox.Text.Length;
+                    changingCodeText = false;
+                }
+
+                if (digits.Length < 6)
+                {
+                    submittedAutomatically = false;
+                    statusLabel.Text = waitingText + " " + digits.Length + "/6 digits entered.";
+                    statusLabel.ForeColor = softTextColor;
+                    return;
+                }
+
+                statusLabel.Text = readyText;
+                statusLabel.ForeColor = successColor;
+
+                if (submittedAutomatically)
+                {
+                    return;
+                }
+
+                submittedAutomatically = true;
+
+                BeginInvoke(new Action(() =>
+                {
+                    if (!submitButton.IsDisposed && submitButton.Enabled)
+                    {
+                        submitButton.PerformClick();
+                    }
+                }));
+            };
+        }
         private string? ShowAuthenticatorCodePrompt(string title, string message)
         {
             using (Form dialog = new Form())
             {
                 dialog.Width = 420;
-                dialog.Height = 210;
+                dialog.Height = 275;
                 dialog.Text = title;
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -1032,28 +1108,31 @@ namespace exam_test
                 dialog.BackColor = Color.FromArgb(16, 20, 34);
 
                 Label messageLabel = new Label();
-                messageLabel.Text = message;
+                messageLabel.Text =
+                    message + Environment.NewLine + Environment.NewLine +
+                    "Open your authenticator app, find QuickForge, and type the 6 digits shown there. QuickForge continues automatically after 6 digits.";
                 messageLabel.Left = 20;
                 messageLabel.Top = 18;
                 messageLabel.Width = 360;
-                messageLabel.Height = 45;
+                messageLabel.Height = 82;
                 messageLabel.ForeColor = softTextColor;
                 messageLabel.BackColor = Color.Transparent;
                 messageLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
 
                 TextBox codeBox = new TextBox();
                 codeBox.Left = 20;
-                codeBox.Top = 75;
+                codeBox.Top = 112;
                 codeBox.Width = 150;
                 codeBox.Height = 28;
                 codeBox.MaxLength = 6;
                 codeBox.PlaceholderText = "6-digit code";
                 codeBox.Font = new Font("Consolas", 12, FontStyle.Bold);
+                StyleAuthenticatorCodeInput(codeBox);
 
                 Button cancelButton = new Button();
                 cancelButton.Text = "Cancel";
                 cancelButton.Left = 180;
-                cancelButton.Top = 120;
+                cancelButton.Top = 175;
                 cancelButton.Width = 90;
                 cancelButton.Height = 32;
                 cancelButton.DialogResult = DialogResult.Cancel;
@@ -1062,11 +1141,19 @@ namespace exam_test
                 Button confirmButton = new Button();
                 confirmButton.Text = "Continue";
                 confirmButton.Left = 285;
-                confirmButton.Top = 120;
+                confirmButton.Top = 175;
                 confirmButton.Width = 95;
                 confirmButton.Height = 32;
                 confirmButton.DialogResult = DialogResult.OK;
                 StyleActionButton(confirmButton, true);
+
+                AttachAuthenticatorAutoSubmit(
+                    codeBox,
+                    messageLabel,
+                    confirmButton,
+                    "Type the code from your authenticator app.",
+                    "6 digits entered. Continuing..."
+                );
 
                 dialog.Controls.Add(messageLabel);
                 dialog.Controls.Add(codeBox);
@@ -1116,28 +1203,29 @@ namespace exam_test
                 titleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
 
                 Label detailLabel = new Label();
-                detailLabel.Text = "Enter the 6-digit code from your authenticator app.";
+                detailLabel.Text = "Open your authenticator app, find QuickForge, and type the 6-digit code. QuickForge continues automatically after 6 digits.";
                 detailLabel.Left = 22;
                 detailLabel.Top = 55;
                 detailLabel.Width = 390;
-                detailLabel.Height = 32;
+                detailLabel.Height = 48;
                 detailLabel.ForeColor = softTextColor;
                 detailLabel.BackColor = Color.Transparent;
                 detailLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
 
                 TextBox codeBox = new TextBox();
                 codeBox.Left = 22;
-                codeBox.Top = 95;
+                codeBox.Top = 108;
                 codeBox.Width = 160;
                 codeBox.Height = 30;
                 codeBox.MaxLength = 6;
                 codeBox.PlaceholderText = "6-digit code";
                 codeBox.Font = new Font("Consolas", 12, FontStyle.Bold);
+                StyleAuthenticatorCodeInput(codeBox);
 
                 Label statusLabel = new Label();
                 statusLabel.Text = "";
                 statusLabel.Left = 22;
-                statusLabel.Top = 132;
+                statusLabel.Top = 152;
                 statusLabel.Width = 390;
                 statusLabel.Height = 28;
                 statusLabel.ForeColor = softTextColor;
@@ -1147,7 +1235,7 @@ namespace exam_test
                 Button cancelButton = new Button();
                 cancelButton.Text = "Cancel";
                 cancelButton.Left = 220;
-                cancelButton.Top = 170;
+                cancelButton.Top = 184;
                 cancelButton.Width = 90;
                 cancelButton.Height = 34;
                 StyleActionButton(cancelButton);
@@ -1156,7 +1244,7 @@ namespace exam_test
                 Button unlockButton = new Button();
                 unlockButton.Text = "Unlock";
                 unlockButton.Left = 325;
-                unlockButton.Top = 170;
+                unlockButton.Top = 184;
                 unlockButton.Width = 90;
                 unlockButton.Height = 34;
                 StyleActionButton(unlockButton, true);
@@ -1173,11 +1261,19 @@ namespace exam_test
                         return;
                     }
 
-                    statusLabel.Text = "Wrong or expired code. Try the newest 6-digit code.";
+                    statusLabel.Text = "Wrong or expired code. Open your authenticator app and try the newest 6-digit code.";
                     statusLabel.ForeColor = dangerColor;
                     codeBox.SelectAll();
                     codeBox.Focus();
                 };
+
+                AttachAuthenticatorAutoSubmit(
+                    codeBox,
+                    statusLabel,
+                    unlockButton,
+                    "Type the code from your authenticator app.",
+                    "6 digits entered. Checking code..."
+                );
 
                 dialog.Controls.Add(titleLabel);
                 dialog.Controls.Add(detailLabel);
@@ -1367,11 +1463,11 @@ namespace exam_test
                 titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
 
                 Label subtitleLabel = new Label();
-                subtitleLabel.Text = "Scan this QR code with an authenticator app, then enter the 6-digit code.";
+                subtitleLabel.Text = "Step 1: scan the QR code. Step 2: type the 6-digit code from your authenticator app. QuickForge continues automatically after 6 digits.";
                 subtitleLabel.Left = 24;
                 subtitleLabel.Top = 58;
                 subtitleLabel.Width = 640;
-                subtitleLabel.Height = 28;
+                subtitleLabel.Height = 42;
                 subtitleLabel.ForeColor = softTextColor;
                 subtitleLabel.BackColor = Color.Transparent;
                 subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
@@ -1441,10 +1537,10 @@ namespace exam_test
                 manualKeyBox.Font = new Font("Consolas", 9, FontStyle.Regular);
 
                 Label codeLabel = new Label();
-                codeLabel.Text = "6-digit code";
+                codeLabel.Text = "Type the 6-digit code from your authenticator app";
                 codeLabel.Left = 24;
                 codeLabel.Top = 445;
-                codeLabel.Width = 180;
+                codeLabel.Width = 420;
                 codeLabel.Height = 22;
                 codeLabel.ForeColor = Color.White;
                 codeLabel.BackColor = Color.Transparent;
@@ -1458,9 +1554,10 @@ namespace exam_test
                 codeBox.MaxLength = 6;
                 codeBox.PlaceholderText = "123456";
                 codeBox.Font = new Font("Consolas", 12, FontStyle.Bold);
+                StyleAuthenticatorCodeInput(codeBox);
 
                 Label statusLabel = new Label();
-                statusLabel.Text = "Scan QR, enter the current code, then enable.";
+                statusLabel.Text = "After scanning the QR code, open your authenticator app and type the 6 digits here.";
                 statusLabel.Left = 195;
                 statusLabel.Top = 470;
                 statusLabel.Width = 485;
@@ -1490,7 +1587,7 @@ namespace exam_test
                 {
                     if (!VerifyAuthenticatorCode(secretBase32, codeBox.Text, out long timeWindowUsed))
                     {
-                        statusLabel.Text = "Wrong or expired code. Wait for a fresh code and try again.";
+                        statusLabel.Text = "Wrong or expired code. Open your authenticator app and try the newest 6-digit code.";
                         statusLabel.ForeColor = dangerColor;
                         codeBox.SelectAll();
                         codeBox.Focus();
@@ -1546,6 +1643,14 @@ namespace exam_test
                         );
                     }
                 };
+
+                AttachAuthenticatorAutoSubmit(
+                    codeBox,
+                    statusLabel,
+                    enableButton,
+                    "Type the code from your authenticator app.",
+                    "6 digits entered. Enabling Authenticator Lock..."
+                );
 
                 dialog.Controls.Add(titleLabel);
                 dialog.Controls.Add(subtitleLabel);
