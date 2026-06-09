@@ -1515,14 +1515,16 @@ namespace exam_test
                 MarkVaultChangedByCurrentDevice("Authenticator Lock re-enabled");
 
                 SetSyncStatus("Syncing Authenticator Lock...");
-                bool merged = await SaveCurrentVaultToCloudWithAutoMergeAsync();
 
                 SetPreviewText(
-                    "Authenticator Lock enabled and synced.",
+                    "Authenticator Lock enabled.",
                     "QuickForge reused the existing authenticator setup.",
-                    merged ? "Cloud changes were merged and saved." : "This setting was saved to Google Drive."
+                    "Syncing this setting to Google Drive in the background."
                 );
 
+                QueueBackgroundVaultSync("Authenticator Lock re-enabled");
+
+                await Task.CompletedTask;
                 return true;
             }
             catch (Exception ex)
@@ -1735,24 +1737,19 @@ namespace exam_test
 
                         MarkVaultChangedByCurrentDevice("Authenticator Lock enabled");
                         SetSyncStatus("Syncing Authenticator Lock...");
-                        bool merged = await SaveCurrentVaultToCloudWithAutoMergeAsync();
 
-                        saved = true;
                         SetPreviewText(
                             "Authenticator Lock enabled.",
                             "QuickForge will ask for a 6-digit authenticator code after your vault code.",
-                            merged ? "Cloud changes were merged and Authenticator Lock was synced." : "Authenticator Lock was synced to Google Drive."
+                            "Syncing this setting to Google Drive in the background."
                         );
 
+                        QueueBackgroundVaultSync("Authenticator Lock enabled");
+
+                        saved = true;
                         dialog.Close();
 
-                        MessageBox.Show(
-                            "Authenticator Lock is now enabled." + Environment.NewLine + Environment.NewLine +
-                            "Keep your recovery key safe. It is your emergency path if you lose your authenticator app.",
-                            "Authenticator Lock enabled",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information
-                        );
+                        await Task.CompletedTask;
                     }
                     catch (Exception ex)
                     {
@@ -1869,14 +1866,16 @@ namespace exam_test
                 MarkVaultChangedByCurrentDevice("Authenticator Lock disabled");
 
                 SetSyncStatus("Syncing Authenticator Lock...");
-                bool merged = await SaveCurrentVaultToCloudWithAutoMergeAsync();
 
                 SetPreviewText(
-                    "Authenticator Lock disabled and synced.",
+                    "Authenticator Lock disabled.",
                     "QuickForge will unlock with Google login and vault code only.",
-                    merged ? "Cloud changes were merged and saved. You can enable it again without scanning a new QR code." : "This setting was saved to Google Drive. You can enable it again without scanning a new QR code."
+                    "Syncing this setting to Google Drive in the background. You can enable it again without scanning a new QR code."
                 );
 
+                QueueBackgroundVaultSync("Authenticator Lock disabled");
+
+                await Task.CompletedTask;
                 return true;
             }
             catch (Exception ex)
