@@ -209,6 +209,7 @@ namespace exam_test
         private readonly ToolTip vaultToolTip = new ToolTip();
 
         private DateTime lastVaultActivityUtc = DateTime.UtcNow;
+        private int openSettingsDialogCount = 0;
         // Colors
         private readonly Color backgroundColor = Color.FromArgb(8, 10, 18);
         private readonly Color panelColor = Color.FromArgb(18, 22, 36);
@@ -288,6 +289,27 @@ namespace exam_test
             autoRefreshTimer.Start();
 
             SetSyncStatus("Auto-refresh every " + intervalMinutes + " minute(s)");
+        }
+
+        private bool IsSettingsDialogOpen()
+        {
+            return openSettingsDialogCount > 0;
+        }
+
+        private void BeginSettingsDialogActivity()
+        {
+            openSettingsDialogCount++;
+            lastVaultActivityUtc = DateTime.UtcNow;
+        }
+
+        private void EndSettingsDialogActivity()
+        {
+            if (openSettingsDialogCount > 0)
+            {
+                openSettingsDialogCount--;
+            }
+
+            lastVaultActivityUtc = DateTime.UtcNow;
         }
 
 
@@ -1025,6 +1047,8 @@ namespace exam_test
                 dialog.Controls.Add(tabs);
                 dialog.Controls.Add(closeButton);
 
+                BeginSettingsDialogActivity();
+                dialog.FormClosed += (s, e) => EndSettingsDialogActivity();
                 dialog.ShowDialog(this);
             }
         }
@@ -12892,6 +12916,12 @@ if (currentDriveService == null)
 
         private void AutoLockTimer_Tick(object? sender, EventArgs e)
         {
+            if (IsSettingsDialogOpen())
+            {
+                lastVaultActivityUtc = DateTime.UtcNow;
+                return;
+            }
+
             if (!isVaultUnlocked)
             {
                 return;
