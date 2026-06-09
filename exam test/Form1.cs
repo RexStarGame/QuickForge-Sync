@@ -4511,7 +4511,11 @@ namespace exam_test
             securityCenterButton.ForeColor = Color.White;
             securityCenterButton.BackColor = Color.FromArgb(45, 90, 160);
             securityCenterButton.FlatAppearance.BorderColor = borderColor;
-            securityCenterButton.Click += async (s, e) => await OpenSecurityCenterWithRefreshAsync();
+            securityCenterButton.Click += (s, e) =>
+            {
+                _ = RefreshDeviceTrustFromCloudInBackgroundAsync();
+                ShowTrustCenterDialog();
+            };
 
             backupButton.Text = "Backup";
             backupButton.Left = 430;
@@ -11401,34 +11405,18 @@ if (currentDriveService == null)
                 );
             }
         }
-        private async void ShowDeviceTrustDialog()
+        private void ShowDeviceTrustDialog()
         {
+            EnsureLocalDeviceIdentity();
+
             if (isVaultUnlocked &&
                 currentDriveService != null &&
                 currentDataKey != null &&
-                currentEncryptedVaultFile != null)
+                currentEncryptedVaultFile != null &&
+                !deviceTrustBackgroundRefreshRunning)
             {
-                try
-                {
-                    SetSyncStatus("Refreshing Device Trust...");
-                    await MergeLatestCloudVaultIntoCurrentSessionAsync();
-                    RegisterCurrentDeviceForVault(false);
-                    ApplyRecoverySettingsToUi();
-                    ApplyPerformanceSettingsToUi();
-                    ApplyDeviceTrustRestrictionsToUi();
-                    SetSyncStatus("Device Trust refreshed", success: true);
-                }
-                catch (Exception ex)
-                {
-                    SetSyncStatus("Device Trust refresh skipped", error: true);
-                    selectedPreviewLabel.Text =
-                        "Device Trust opened with local data." + Environment.NewLine +
-                        "Could not refresh latest cloud devices first." + Environment.NewLine +
-                        "Error: " + ex.Message;
-                }
+                _ = RefreshDeviceTrustFromCloudInBackgroundAsync();
             }
-
-            EnsureLocalDeviceIdentity();
             EnsureVaultSafetyCollections();
             RegisterCurrentDeviceForVault(false);
 
