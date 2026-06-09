@@ -1,4 +1,4 @@
-﻿# QuickForge Sync Real-Data Readiness Checklist
+# QuickForge Sync Real-Data Readiness Checklist
 
 QuickForge Sync is still a beta preview.
 
@@ -31,6 +31,9 @@ QuickForge Sync has improved security and recovery features, but it still needs 
 - [x] Multi-device test checklist.
 - [x] Release checklist.
 - [x] Installer/signing planning notes.
+- [x] Optional Authenticator Lock implementation.
+- [x] Authenticator Lock setup, disable, and re-enable flow.
+- [x] Trust Center Authenticator Lock integration.
 
 ## Required before real data
 
@@ -41,6 +44,8 @@ Do not use real passwords until all of these are complete:
 - [ ] 3+ successful encrypted backup export/import tests.
 - [ ] 3+ successful corrupted-backup tests.
 - [ ] 3+ successful sync conflict tests.
+- [ ] 3+ successful Authenticator Lock setup/off/on/unlock test cycles.
+- [ ] Authenticator Lock recovery path reviewed carefully before real data.
 - [ ] GitHub Actions green on the release commit.
 - [ ] Local Debug build passes.
 - [ ] Local Release build passes.
@@ -109,6 +114,8 @@ Before real-data candidate:
 - [ ] Review cryptography flow.
 - [ ] Review Google Drive appDataFolder usage.
 - [ ] Review local secret handling.
+- [ ] Review Authenticator Lock/TOTP flow.
+- [ ] Review Authenticator Lock lost-device/recovery-key guidance.
 - [ ] Review clipboard cleanup behavior.
 - [ ] Review backup/restore flow.
 - [ ] Review sync conflict flow.

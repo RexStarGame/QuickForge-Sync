@@ -332,3 +332,51 @@ Expected result:
 - Debug build succeeds
 - Release build succeeds
 - Automated tests pass: 30/30
+
+## 9. Authenticator Lock
+
+Test steps:
+
+- Open Settings → Security.
+- If Authenticator Lock is not set up, click Set up.
+- Scan the QR code with an authenticator app.
+- Type the 6-digit code.
+- Confirm that the app continues automatically after 6 digits.
+- Lock the vault and unlock again with vault code + authenticator code.
+- Open Settings → Security again.
+- Turn Authenticator Lock off.
+- Confirm that it turns off without deleting the authenticator setup.
+- Turn Authenticator Lock on again.
+- Confirm that it asks for the existing authenticator code and does not show a new QR code.
+- Open Trust Center.
+- Confirm Authenticator Lock shows Optional / Set up when off.
+- Confirm Authenticator Lock shows Active / Manage when on.
+- Confirm Trust Center Set up / Manage opens the same real flow as Settings → Security.
+- Try a wrong authenticator code.
+- Try a correct authenticator code.
+
+Expected result:
+
+- First setup shows QR once.
+- OFF → ON reuses the same authenticator app.
+- Wrong codes are rejected clearly.
+- Correct codes continue quickly.
+- The 6-digit field auto-submits after 6 digits.
+- Trust Center refreshes after successful Set up / Manage.
+- Background sync runs safely without freezing the UI.
+
+## 10. X Close During Sync / Refresh
+
+Test steps:
+
+- Open the app while no sync or refresh is running.
+- Press X.
+- Reopen the app.
+- Start manual Sync or Refresh.
+- Press X while sync/refresh is still running.
+
+Expected result:
+
+- When no sync/refresh is running, X closes the app normally.
+- While sync/refresh/pending local changes are active, X blocks close and asks the user to wait.
+- Logout flow remains separate from X close behavior.

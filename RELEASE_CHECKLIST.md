@@ -1,4 +1,4 @@
-﻿# QuickForge Sync Release Checklist
+# QuickForge Sync Release Checklist
 
 Use this checklist before publishing any beta preview release.
 
@@ -43,6 +43,19 @@ Release is blocked if Debug build, Release build, tests, or GitHub Actions fail.
 - [ ] Unsafe upload is blocked if the cloud vault changed on another device.
 - [ ] Conflict warning recommends Refresh or encrypted backup.
 - [ ] Last save and last load timestamps update correctly.
+
+## Authenticator Lock test
+
+- [ ] Settings → Security shows Set up / Manage correctly.
+- [ ] First-time setup shows QR and accepts a valid 6-digit code.
+- [ ] 6-digit code auto-submit works.
+- [ ] Wrong authenticator code is rejected clearly.
+- [ ] Vault unlock requires vault code + authenticator code when enabled.
+- [ ] Turning Authenticator Lock off does not delete the existing authenticator setup.
+- [ ] Turning Authenticator Lock on again reuses the same authenticator app without showing a new QR code.
+- [ ] Trust Center shows Optional / Set up when off.
+- [ ] Trust Center shows Active / Manage when on.
+- [ ] Trust Center uses the same real settings flow as Settings → Security.
 
 ## Backup and restore test
 

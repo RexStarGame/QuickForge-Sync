@@ -1,12 +1,15 @@
-﻿name: QuickForge Tests
+name: QuickForge Tests
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
+      - v0.2.1-dev-auth-settings
   pull_request:
     branches:
       - main
+      - v0.2.1-dev-auth-settings
 
 jobs:
   test:
