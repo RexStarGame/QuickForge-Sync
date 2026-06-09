@@ -1514,14 +1514,14 @@ namespace exam_test
 
                 MarkVaultChangedByCurrentDevice("Authenticator Lock re-enabled");
 
-                SetPreviewText(
-                    "Authenticator Lock enabled.",
-                    "QuickForge reused the existing authenticator setup.",
-                    "Cloud sync is running in the background."
-                );
+                SetSyncStatus("Syncing Authenticator Lock...");
+                bool merged = await SaveCurrentVaultToCloudWithAutoMergeAsync();
 
-                SetSyncStatus("Queued background sync");
-                QueueBackgroundVaultSync("Authenticator Lock re-enabled");
+                SetPreviewText(
+                    "Authenticator Lock enabled and synced.",
+                    "QuickForge reused the existing authenticator setup.",
+                    merged ? "Cloud changes were merged and saved." : "This setting was saved to Google Drive."
+                );
 
                 return true;
             }
@@ -1734,13 +1734,14 @@ namespace exam_test
                         currentVaultSettings.LastAuthenticatorTimeWindowUsed = timeWindowUsed;
 
                         MarkVaultChangedByCurrentDevice("Authenticator Lock enabled");
-                        await SaveCurrentVaultToCloudAsync();
+                        SetSyncStatus("Syncing Authenticator Lock...");
+                        bool merged = await SaveCurrentVaultToCloudWithAutoMergeAsync();
 
                         saved = true;
                         SetPreviewText(
                             "Authenticator Lock enabled.",
                             "QuickForge will ask for a 6-digit authenticator code after your vault code.",
-                            "Keep your recovery key safe."
+                            merged ? "Cloud changes were merged and Authenticator Lock was synced." : "Authenticator Lock was synced to Google Drive."
                         );
 
                         dialog.Close();
@@ -1867,14 +1868,14 @@ namespace exam_test
 
                 MarkVaultChangedByCurrentDevice("Authenticator Lock disabled");
 
-                SetPreviewText(
-                    "Authenticator Lock disabled.",
-                    "QuickForge will unlock with Google login and vault code only.",
-                    "Cloud sync is running in the background. You can enable it again without scanning a new QR code."
-                );
+                SetSyncStatus("Syncing Authenticator Lock...");
+                bool merged = await SaveCurrentVaultToCloudWithAutoMergeAsync();
 
-                SetSyncStatus("Queued background sync");
-                QueueBackgroundVaultSync("Authenticator Lock disabled");
+                SetPreviewText(
+                    "Authenticator Lock disabled and synced.",
+                    "QuickForge will unlock with Google login and vault code only.",
+                    merged ? "Cloud changes were merged and saved. You can enable it again without scanning a new QR code." : "This setting was saved to Google Drive. You can enable it again without scanning a new QR code."
+                );
 
                 return true;
             }
