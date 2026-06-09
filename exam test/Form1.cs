@@ -273,6 +273,23 @@ namespace exam_test
             deviceTrustRefreshTimer.Start();
         }
 
+        private void RestartAutoRefreshTimerFromSettings()
+        {
+            autoRefreshTimer.Stop();
+
+            if (!isVaultUnlocked ||
+                currentVaultSettings.AutoRefreshMinutes <= 0)
+            {
+                return;
+            }
+
+            int intervalMinutes = Math.Max(1, currentVaultSettings.AutoRefreshMinutes);
+            autoRefreshTimer.Interval = intervalMinutes * 60 * 1000;
+            autoRefreshTimer.Start();
+
+            SetSyncStatus("Auto-refresh every " + intervalMinutes + " minute(s)");
+        }
+
 
         private bool safeCloseApproved = false;
 
@@ -2190,7 +2207,7 @@ namespace exam_test
                 comboBox.Items.Add("Never");
                 comboBox.Items.Add("Every 1 minute");
                 comboBox.Items.Add("Every 5 minutes");
-                comboBox.Items.Add("Every 15 minutes");
+                comboBox.Items.Add("Every 10 minutes");
                 comboBox.Items.Add("Every 30 minutes");
 
                 if (currentVaultSettings.AutoRefreshMinutes == 1)
@@ -2201,7 +2218,7 @@ namespace exam_test
                 {
                     comboBox.SelectedIndex = 2;
                 }
-                else if (currentVaultSettings.AutoRefreshMinutes == 15)
+                else if (currentVaultSettings.AutoRefreshMinutes == 10 || currentVaultSettings.AutoRefreshMinutes == 15)
                 {
                     comboBox.SelectedIndex = 3;
                 }
@@ -2257,7 +2274,7 @@ namespace exam_test
                     }
                     else if (comboBox.SelectedIndex == 3)
                     {
-                        currentVaultSettings.AutoRefreshMinutes = 15;
+                        currentVaultSettings.AutoRefreshMinutes = 10;
                     }
                     else if (comboBox.SelectedIndex == 4)
                     {
@@ -2272,7 +2289,7 @@ namespace exam_test
                     {
                         ApplyPerformanceSettingsToUi();
                         HideMainPanelSettingsForV021();
-                        ConfigureAutoRefreshTimer();
+                        RestartAutoRefreshTimerFromSettings();
                         MarkVaultChangedByCurrentDevice("Streamer mode changed");
 
                         await SaveCurrentVaultToCloudAsync();
@@ -4505,7 +4522,7 @@ namespace exam_test
                 }
 
                 currentVaultSettings.AutoRefreshMinutes = GetAutoRefreshMinutesFromSelection();
-                ConfigureAutoRefreshTimer();
+                RestartAutoRefreshTimerFromSettings();
                 MarkVaultChangedByCurrentDevice("Streamer mode changed");
 
                 if (isVaultUnlocked)
@@ -5022,6 +5039,7 @@ namespace exam_test
 
                     currentDataKey = dataKey;
                     currentEncryptedVaultFile = encryptedVaultFile;
+            RestartAutoRefreshTimerFromSettings();
 
                     await GoogleDriveVaultService.UploadEncryptedVaultAsync(
                         currentDriveService,
@@ -5038,6 +5056,7 @@ namespace exam_test
                     GrantSecretAccessWindow();
 
                     ShowVaultUi();
+                    RestartAutoRefreshTimerFromSettings();
                     ShowEmergencyBackupGuidance();
                 }
                 catch (Exception ex)
@@ -6931,6 +6950,7 @@ namespace exam_test
             ApplyRecoverySettingsToUi();
             currentDataKey = dataKey;
             currentEncryptedVaultFile = encryptedVaultFile;
+            RestartAutoRefreshTimerFromSettings();
 
             vaultEntries.Clear();
 
@@ -7901,7 +7921,8 @@ namespace exam_test
                 accountStatusLabel.ForeColor = softTextColor;
                 logoutButton.Enabled = false;
             settingsButton.Enabled = false;
-                isVaultUnlocked = false;
+                autoRefreshTimer.Stop();
+            isVaultUnlocked = false;
                 ClearSecretAccessWindow();
                 currentDataKey = null;
                 currentEncryptedVaultFile = null;
@@ -7973,7 +7994,8 @@ namespace exam_test
                 currentEncryptedVaultFile = null;
                 currentVaultSettings = new VaultSettings();
                 hasShownRecoveryReminderThisSession = false;
-                isVaultUnlocked = false;
+                autoRefreshTimer.Stop();
+            isVaultUnlocked = false;
                 cloudVaultExists = false;
 
                 lastKnownCloudFingerprint = null;
@@ -8033,6 +8055,7 @@ namespace exam_test
         {
             unlockStatusTimer.Stop();
             isVaultUnlocked = true;
+            RestartAutoRefreshTimerFromSettings();
             ApplyStreamerModeToUi();
             ApplyRecoverySettingsToUi();
             ApplyPerformanceSettingsToUi();
@@ -10102,6 +10125,7 @@ if (currentDriveService == null)
                     RefreshVaultList();
                     GrantSecretAccessWindow();
                     ShowVaultUi();
+                    RestartAutoRefreshTimerFromSettings();
 
                     SetPreviewText(
                         "Encrypted backup imported successfully.",
@@ -12584,7 +12608,7 @@ if (currentDriveService == null)
             {
                 autoRefreshComboBox.SelectedIndex = 1;
             }
-            else if (currentVaultSettings.AutoRefreshMinutes == 15)
+            else if (currentVaultSettings.AutoRefreshMinutes == 10 || currentVaultSettings.AutoRefreshMinutes == 15)
             {
                 autoRefreshComboBox.SelectedIndex = 3;
             }
@@ -12602,7 +12626,7 @@ if (currentDriveService == null)
                 currentVaultSettings.AutoRefreshMinutes = 5;
             }
 
-            ConfigureAutoRefreshTimer();
+            RestartAutoRefreshTimerFromSettings();
             UpdateAnimationState();
         }
 
@@ -12662,7 +12686,7 @@ if (currentDriveService == null)
             }
             finally
             {
-                ConfigureAutoRefreshTimer();
+                RestartAutoRefreshTimerFromSettings();
             }
         }
 
@@ -12845,6 +12869,7 @@ if (currentDriveService == null)
         {
             autoRefreshTimer.Stop();
 
+            autoRefreshTimer.Stop();
             isVaultUnlocked = false;
             ClearUnlockedVaultSessionSecrets();
 
@@ -13378,7 +13403,8 @@ if (currentDriveService == null)
             {
                 quickFillForm?.Hide();
 
-                isVaultUnlocked = false;
+                autoRefreshTimer.Stop();
+            isVaultUnlocked = false;
                 ClearSecretAccessWindow();
 
                 vaultCode = "";
