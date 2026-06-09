@@ -14,19 +14,17 @@ It focuses on being fast to use, easy to understand, and safer than storing secr
 
 The easiest way to test QuickForge Sync is through GitHub Releases:
 
-Warning: Older versions may have issues. Please use the latest release.
+> **Warning:** Older versions may have issues. Please use the latest release.
 
 [Download QuickForge Sync Beta Preview](https://github.com/RexStarGame/QuickForge-Sync/releases)
 
-Warning: Older versions may have issues. Please use the latest release.
-
 For normal testers:
 
-1. Download the latest `QuickForge-Sync-v0.2.0-beta-preview-win-x64.zip`.
+1. Download the latest `QuickForge-Sync-v0.2.1-dev-preview-win-x64.zip`.
 2. Extract the ZIP first.
 3. Open the extracted folder.
 4. Run `QuickForge Sync.exe`.
-5. Click `Continue with Google`.
+5. Click **Continue with Google**.
 6. Create or unlock your encrypted vault.
 
 The beta ZIP includes the app Google OAuth desktop configuration file, `credentials.json`, so testers can sign in with their own Google account.
@@ -52,7 +50,7 @@ QuickForge Sync helps you save and use:
 - Private snippets
 - Website/app login details
 
-Your vault is encrypted before it is saved or synced.
+Your vault is encrypted before it is saved locally or synced to Google Drive.
 
 ---
 
@@ -69,14 +67,41 @@ Your vault is encrypted before it is saved or synced.
 - Lockout after repeated wrong unlock attempts
 - Auto-lock for safety
 
+### Authenticator Lock
+
+- Optional Authenticator Lock with 6-digit authenticator app codes
+- Vault code is required before the authenticator code
+- Works with common authenticator apps such as Google Authenticator, Microsoft Authenticator, Aegis, 2FAS, and similar apps
+- QR setup confirmation before enabling Authenticator Lock
+- OFF → ON → OFF → ON behavior without forcing a new QR every time
+- Setup/manage flow fixes so Authenticator Lock no longer freezes
+- Broken, deleted, old, or wrong QR recovery path
+- Recovery key remains the emergency path if authenticator access is lost
+- Fast ON/OFF UI feedback with safe background sync
+
 ### Google Drive Sync
 
 - App-managed Google Drive `appDataFolder` storage
 - Background cloud sync
 - Manual sync
+- Auto-refresh support
 - Cloud-vault-missing recovery guidance
-- Safer logout flow
 - Same-account multi-device sync support
+- Sync conflict merge protection
+- Safe-close protection while sync/refresh/background sync is running
+
+### Trust Center and Device Trust
+
+- Trust Center overview
+- Device Trust overview
+- Authenticator Lock card with Optional / Active status
+- Authenticator Lock Set up / Manage actions from Trust Center
+- Same-account multi-device Device Trust detection
+- Untrusted-device restrictions for sensitive actions
+- Backup/export and Trust Center access blocked on untrusted devices
+- Device Trust “Forget selected” behavior for old, unknown, work, test, or lost devices
+- Current device cannot be forgotten by accident
+- Clear feedback for which saved accounts and security areas need attention
 
 ### Backup and Restore
 
@@ -86,6 +111,7 @@ Your vault is encrypted before it is saved or synced.
 - Backup restore warning
 - Wrong-code backup rejection
 - Corrupted/random backup rejection
+- Backup/export blocked on untrusted devices
 
 Example backup filename:
 
@@ -111,20 +137,37 @@ Backup files are still encrypted. They require your vault code or recovery key b
 - Weak password warnings
 - Reused password warnings
 - Security Center overview
-- Device Trust overview
 - Clear feedback for which saved accounts need attention
+
+### Streamer / Privacy Mode
+
+- Streamer mode for safer screen sharing, screenshots, and recordings
+- Hides or reduces visible sensitive details where possible
+- Clear warning/feedback when Streamer mode is off and sensitive details may be visible
+- Faster Streamer mode save feedback
+- Safe background sync for Streamer mode changes
 
 ### User Safety Dialogs
 
-v0.2.0 improves safety and affordance around:
+v0.2.1 improves safety and affordance around:
 
+- Authenticator Lock setup
+- Authenticator Lock disable/re-enable
+- Broken/old authenticator QR recovery
+- Device Trust
+- Forget selected device
+- Current-device forget prevention
+- Streamer mode warning/feedback
+- Auto-lock settings
+- Auto-refresh settings
+- Background animation settings
+- Recovery reminder settings
 - Delete entry confirmation
 - Backup restore confirmation
 - Change vault code
 - Recovery key creation/rotation
-- Logout
+- Logout / close while sync is running
 - Cloud vault missing
-- Device trust warnings
 
 ---
 
@@ -141,6 +184,7 @@ QuickForge Sync focuses on:
 - Manual encrypted backups
 - Better recovery guidance
 - Low-friction daily use
+- Safer multi-device behavior
 
 ---
 
@@ -156,6 +200,7 @@ Important:
 - Save your recovery key somewhere safe.
 - Do not share exported backup files.
 - Do not store recovery keys in public folders.
+- If you lose authenticator access, use your recovery key as the emergency path.
 - If you do not recognize a trusted device, untrust it and rotate your vault code/recovery key.
 - This beta has not received an external security audit.
 
@@ -174,6 +219,8 @@ Vault files are not meant to be opened manually. Use QuickForge to:
 - Import backup
 - Restore
 - Sync
+- Refresh
+- QuickFill
 
 ---
 
@@ -213,7 +260,7 @@ Before using real passwords:
 
 ## Current Beta Status
 
-Current development version: `v0.2.0-beta-preview`
+Current development version: `v0.2.1-dev-preview`
 
 Current local automated test result: `30/30 tests passing`
 
@@ -228,11 +275,20 @@ Passed local readiness areas:
 - Recovery-key unlock and rotation
 - Change vault code
 - Delete entry safety
-- Device trust visibility
+- Authenticator Lock setup
+- Authenticator Lock OFF → ON → OFF → ON
+- Broken/old authenticator QR recovery
+- Trust Center Authenticator Lock integration
+- Device Trust visibility
+- Untrusted-device restrictions
+- Current-device forget prevention
 - Sync conflict merge
 - Background cloud sync
-- Safe-close warning while sync is still running
+- Auto-refresh
+- Safe-close warning while sync/refresh/background sync is running
 - Faster Open + Fill and QuickFill timing
+- Faster settings feedback
+- Streamer / Privacy mode feedback
 - Reduced animation load
 - Reduced Google Drive roundtrips
 - Release safety cleanup
@@ -245,11 +301,12 @@ QuickForge Sync is an active beta-preview project.
 
 Current focus:
 
-- Final v0.2.0 beta packaging
+- v0.2.1 controlled beta testing
 - Manual release testing
 - Controlled tester feedback
 - Cleaner release notes
 - Future installer/code-signing planning
+- v0.2.2 planning
 
 UI styling is paused unless a real bug is found.
 
