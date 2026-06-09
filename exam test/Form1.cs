@@ -1290,21 +1290,15 @@ namespace exam_test
                 currentVaultSettings.LastAuthenticatorTimeWindowUsed = null;
 
                 MarkVaultChangedByCurrentDevice("Authenticator Lock re-enabled");
-                await SaveCurrentVaultToCloudAsync();
 
                 SetPreviewText(
                     "Authenticator Lock enabled.",
                     "QuickForge reused the existing authenticator setup.",
-                    "No new QR code was created."
+                    "Cloud sync is running in the background."
                 );
 
-                MessageBox.Show(
-                    "Authenticator Lock is now enabled again." + Environment.NewLine + Environment.NewLine +
-                    "The same authenticator app/code is still used.",
-                    "Authenticator Lock enabled",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
+                SetSyncStatus("Queued background sync");
+                QueueBackgroundVaultSync("Authenticator Lock re-enabled");
 
                 return true;
             }
@@ -1639,20 +1633,15 @@ namespace exam_test
                 currentVaultSettings.LastAuthenticatorTimeWindowUsed = null;
 
                 MarkVaultChangedByCurrentDevice("Authenticator Lock disabled");
-                await SaveCurrentVaultToCloudAsync();
 
                 SetPreviewText(
                     "Authenticator Lock disabled.",
                     "QuickForge will unlock with Google login and vault code only.",
-                    "You can enable it again from Settings > Security without scanning a new QR code."
+                    "Cloud sync is running in the background. You can enable it again without scanning a new QR code."
                 );
 
-                MessageBox.Show(
-                    "Authenticator Lock has been disabled, but the existing authenticator setup was kept.",
-                    "Authenticator Lock disabled",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
+                SetSyncStatus("Queued background sync");
+                QueueBackgroundVaultSync("Authenticator Lock disabled");
 
                 return true;
             }
