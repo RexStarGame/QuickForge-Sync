@@ -210,7 +210,8 @@ namespace exam_test
         private readonly ToolTip vaultToolTip = new ToolTip();
 
         private DateTime lastVaultActivityUtc = DateTime.UtcNow;
-        private int openSettingsDialogCount = 0;
+        private int openSettingsDialogCount = 0;
+
         private bool localHardeningSystemEventsRegistered = false;
         // Colors
         private readonly Color backgroundColor = Color.FromArgb(8, 10, 18);
@@ -7476,6 +7477,17 @@ namespace exam_test
                 return;
             }
 
+            if (autoRefreshRunning)
+            {
+                SetSyncStatus("Refresh already running", error: true);
+                SetPreviewText(
+                    "Refresh already running.",
+                    "QuickForge is already loading the latest encrypted vault from Google Drive.",
+                    "Wait for the current refresh to finish."
+                );
+                return;
+            }
+
             DialogResult confirm = MessageBox.Show(
                 "Refresh will load the latest encrypted vault from Google Drive." + Environment.NewLine + Environment.NewLine +
                 "This is the safest option if another device may have newer changes." + Environment.NewLine + Environment.NewLine +
@@ -7491,37 +7503,68 @@ namespace exam_test
                 return;
             }
 
+            refreshCloudButton.Enabled = false;
+            refreshCloudButton.Text = ResponsivenessFeedbackPolicy.GetButtonBusyText("Refreshing");
+            manualSyncButton.Enabled = false;
+
+            SetSyncStatus(ResponsivenessFeedbackPolicy.GetRefreshStartedStatus());
+
+            SetPreviewText(
+                "Refreshing in background.",
+                "QuickForge started loading the latest encrypted vault from Google Drive.",
+                "You can continue using non-sensitive UI while refresh runs."
+            );
+
+            await Task.Yield();
+
+            _ = RunManualRefreshInBackgroundAsync();
+        }
+
+        private async Task RunManualRefreshInBackgroundAsync()
+        {
+            autoRefreshRunning = true;
+
             try
             {
-                refreshCloudButton.Enabled = false;
-                manualSyncButton.Enabled = false;
-
-                selectedPreviewLabel.Text = "Refreshing from Google Drive...";
-
                 await LoadVaultFromCloudAsync();
 
-                selectedPreviewLabel.Text =
-                    "Refresh completed." + Environment.NewLine +
-                    "Latest encrypted vault loaded from Google Drive.";
+                RegisterCurrentDeviceForVault(false);
+                ApplyRecoverySettingsToUi();
+                ApplyPerformanceSettingsToUi();
+                ApplyDeviceTrustRestrictionsToUi();
+                ShowRestrictedModeWarningIfNeeded();
+
+                SetSyncStatus("Refresh completed", success: true);
+
+                SetPreviewText(
+                    "Refresh completed.",
+                    "Latest encrypted vault and Device Trust status loaded from Google Drive.",
+                    "Last load was updated."
+                );
             }
             catch (Exception ex)
             {
                 SetSyncStatus("Refresh failed", error: true);
-                MessageBox.Show(
-                    "Refresh from cloud failed: " + ex.Message,
-                    "Refresh failed",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error
+
+                SetPreviewText(
+                    "Refresh failed.",
+                    "QuickForge could not load the latest encrypted vault from Google Drive.",
+                    "Try again, or export an encrypted backup before changing more data.",
+                    "Error: " + ex.Message
                 );
             }
             finally
             {
+                autoRefreshRunning = false;
+
+                refreshCloudButton.Text = "Refresh";
                 refreshCloudButton.Enabled = true;
                 manualSyncButton.Enabled = true;
+                UpdateManualSyncButtonState();
             }
         }
 
-        private async void ManualSyncButton_Click(object? sender, EventArgs e)
+        private void ManualSyncButton_Click(object? sender, EventArgs e)
         {
             if (currentDriveService == null)
             {
@@ -7547,37 +7590,22 @@ namespace exam_test
                 return;
             }
 
-            try
-            {
-                manualSyncButton.Enabled = false;
-                selectedPreviewLabel.Text = "Manual sync started. Checking cloud and saving encrypted vault...";
+            bool alreadyRunning = backgroundVaultSyncRunning || backgroundVaultSyncRequested;
 
-                bool merged = await SaveCurrentVaultToCloudWithAutoMergeAsync();
+            SetSyncStatus(ResponsivenessFeedbackPolicy.GetQueuedSyncStatus(alreadyRunning));
 
-                selectedPreviewLabel.Text = merged
-                    ? "Manual sync completed after merging cloud changes." + Environment.NewLine +
-                      "Your local changes and the other PC changes were saved together."
-                    : "Manual sync completed." + Environment.NewLine +
-                      "Your encrypted vault was saved to Google Drive.";
-            }
-            catch (Exception ex) when (IsCloudConflictException(ex))
-            {
-                ShowCloudConflictMessage(ex);
-            }
-            catch (Exception ex)
-            {
-                SetSyncStatus("Sync failed", error: true);
-                MessageBox.Show(
-                    "Manual sync failed: " + ex.Message,
-                    "Sync failed",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error
-                );
-            }
-            finally
-            {
-                manualSyncButton.Enabled = true;
-            }
+            SetPreviewText(
+                alreadyRunning ? "Sync already running." : "Manual sync queued.",
+                alreadyRunning
+                    ? "QuickForge queued your latest sync request instead of starting a parallel sync."
+                    : "QuickForge queued your encrypted vault save in the background.",
+                "You can keep using non-sensitive UI while sync runs."
+            );
+
+            manualSyncButton.Text = "Queued";
+            manualSyncButton.Enabled = true;
+
+            QueueBackgroundVaultSync("Manual sync requested");
         }
 
         private void LockVaultButton_Click(object? sender, EventArgs e)
@@ -14185,6 +14213,7 @@ if (currentDriveService == null)
         }
     }
 }
+
 
 
 
