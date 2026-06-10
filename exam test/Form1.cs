@@ -210,7 +210,8 @@ namespace exam_test
         private readonly ToolTip vaultToolTip = new ToolTip();
 
         private DateTime lastVaultActivityUtc = DateTime.UtcNow;
-        private int openSettingsDialogCount = 0;
+        private int openSettingsDialogCount = 0;
+        private bool localHardeningSystemEventsRegistered = false;
         // Colors
         private readonly Color backgroundColor = Color.FromArgb(8, 10, 18);
         private readonly Color panelColor = Color.FromArgb(18, 22, 36);
@@ -275,6 +276,94 @@ namespace exam_test
             deviceTrustRefreshTimer.Start();
         }
 
+        private void RegisterLocalHardeningSystemEvents()
+        {
+            if (localHardeningSystemEventsRegistered)
+            {
+                return;
+            }
+
+            try
+            {
+                Microsoft.Win32.SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
+                Microsoft.Win32.SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
+                localHardeningSystemEventsRegistered = true;
+            }
+            catch
+            {
+                localHardeningSystemEventsRegistered = false;
+            }
+        }
+
+        private void UnregisterLocalHardeningSystemEvents()
+        {
+            if (!localHardeningSystemEventsRegistered)
+            {
+                return;
+            }
+
+            try
+            {
+                Microsoft.Win32.SystemEvents.SessionSwitch -= SystemEvents_SessionSwitch;
+                Microsoft.Win32.SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
+            }
+            catch
+            {
+                // Ignore cleanup errors during shutdown.
+            }
+
+            localHardeningSystemEventsRegistered = false;
+        }
+
+        private void SystemEvents_SessionSwitch(object sender, Microsoft.Win32.SessionSwitchEventArgs e)
+        {
+            if (!LocalHardeningPolicy.ShouldLockForSessionSwitch(isVaultUnlocked, e.Reason))
+            {
+                return;
+            }
+
+            LockVaultFromSystemEvent(LocalHardeningPolicy.GetSessionLockMessage(e.Reason));
+        }
+
+        private void SystemEvents_PowerModeChanged(object sender, Microsoft.Win32.PowerModeChangedEventArgs e)
+        {
+            if (!LocalHardeningPolicy.ShouldLockForPowerModeChange(isVaultUnlocked, e.Mode))
+            {
+                return;
+            }
+
+            LockVaultFromSystemEvent(LocalHardeningPolicy.GetPowerModeLockMessage(e.Mode));
+        }
+
+        private void LockVaultFromSystemEvent(string message)
+        {
+            try
+            {
+                if (!isVaultUnlocked)
+                {
+                    return;
+                }
+
+                if (IsHandleCreated && !IsDisposed)
+                {
+                    BeginInvoke(new Action(() =>
+                    {
+                        if (isVaultUnlocked)
+                        {
+                            LockVaultForSafety(message);
+                        }
+                    }));
+                }
+                else
+                {
+                    LockVaultForSafety(message);
+                }
+            }
+            catch
+            {
+                // Best-effort safety lock only.
+            }
+        }
         private void RestartAutoRefreshTimerFromSettings()
         {
             autoRefreshTimer.Stop();
@@ -5409,7 +5498,7 @@ namespace exam_test
             catch
             {
                 vaultCode = "";
-                currentDataKey = null;
+                SecurelyClearCurrentDataKey();
                 currentEncryptedVaultFile = null;
                 vaultCodeTextBox.Clear();
                 confirmVaultCodeTextBox.Clear();
@@ -5763,7 +5852,7 @@ namespace exam_test
                     else
                     {
                         vaultCode = "";
-                        currentDataKey = null;
+                        SecurelyClearCurrentDataKey();
                         currentEncryptedVaultFile = null;
 
                         RecordFailedVaultUnlockAttempt();
@@ -5811,7 +5900,7 @@ namespace exam_test
                     else
                     {
                         vaultCode = "";
-                        currentDataKey = null;
+                        SecurelyClearCurrentDataKey();
                         currentEncryptedVaultFile = null;
 
                         RecordFailedVaultUnlockAttempt();
@@ -5842,7 +5931,7 @@ namespace exam_test
                 if (!ShowAuthenticatorUnlockDialog(unlockedVaultSettings))
                 {
                     vaultCode = "";
-                    currentDataKey = null;
+                    SecurelyClearCurrentDataKey();
                     currentEncryptedVaultFile = null;
                     currentVaultSettings = new VaultSettings();
                     vaultEntries.Clear();
@@ -5887,7 +5976,7 @@ namespace exam_test
                 if (!rotated)
                 {
                     vaultCode = "";
-                    currentDataKey = null;
+                    SecurelyClearCurrentDataKey();
                     currentEncryptedVaultFile = null;
                     vaultEntries.Clear();
                     RefreshVaultList();
@@ -8321,7 +8410,7 @@ namespace exam_test
                 autoRefreshTimer.Stop();
             isVaultUnlocked = false;
                 ClearSecretAccessWindow();
-                currentDataKey = null;
+                SecurelyClearCurrentDataKey();
                 currentEncryptedVaultFile = null;
                 currentVaultSettings = new VaultSettings();
                 hasShownRecoveryReminderThisSession = false;
@@ -8387,7 +8476,7 @@ namespace exam_test
                 ClearEntryInputs();
                 ClearSecretAccessWindow();
 
-                currentDataKey = null;
+                SecurelyClearCurrentDataKey();
                 currentEncryptedVaultFile = null;
                 currentVaultSettings = new VaultSettings();
                 hasShownRecoveryReminderThisSession = false;
@@ -11987,7 +12076,8 @@ if (currentDriveService == null)
 
             if (currentDataKey != null)
             {
-                Pass("Vault data key is available in memory for this unlocked session.");
+                Pass("Vault data key is available only for this unlocked session.");
+                Warn(LocalHardeningPolicy.GetCompromisedPcRiskStatement());
             }
             else
             {
@@ -13852,7 +13942,7 @@ if (currentDriveService == null)
 
                 vaultCode = "";
                 vaultEntries.Clear();
-                currentDataKey = null;
+                SecurelyClearCurrentDataKey();
                 currentEncryptedVaultFile = null;
 
                 UnregisterHotKey(Handle, QuickFillHotkeyId);
@@ -14095,6 +14185,9 @@ if (currentDriveService == null)
         }
     }
 }
+
+
+
 
 
 

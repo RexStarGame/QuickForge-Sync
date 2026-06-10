@@ -36,13 +36,18 @@ namespace exam_test
                 FileAccess.Read
             );
 
+            string tokenFolderPath = GetTokenFolderPath();
+            LocalFileHardeningService.TryHardenDirectory(tokenFolderPath);
+
             UserCredential credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                 GoogleClientSecrets.FromStream(stream).Secrets,
                 Scopes,
                 "user",
                 CancellationToken.None,
-                new FileDataStore(GetTokenFolderPath(), true)
+                new FileDataStore(tokenFolderPath, true)
             );
+
+            LocalFileHardeningService.TryHardenDirectory(tokenFolderPath);
 
             DriveService service = new DriveService(new BaseClientService.Initializer
             {
@@ -105,13 +110,20 @@ namespace exam_test
 
             ValidateGoogleCredentialsFile(sourceFilePath);
 
-            Directory.CreateDirectory(GetGoogleSetupFolderPath());
+            string setupFolderPath = GetGoogleSetupFolderPath();
+            string storedCredentialsPath = GetStoredCredentialsPath();
+
+            Directory.CreateDirectory(setupFolderPath);
+            LocalFileHardeningService.TryHardenDirectory(setupFolderPath);
 
             File.Copy(
                 sourceFilePath,
-                GetStoredCredentialsPath(),
+                storedCredentialsPath,
                 true
             );
+
+            LocalFileHardeningService.TryHardenFile(storedCredentialsPath);
+            LocalFileHardeningService.TryHardenDirectory(setupFolderPath);
         }
 
         private static void ValidateGoogleCredentialsFile(string sourceFilePath)
@@ -181,3 +193,4 @@ namespace exam_test
         }
     }
 }
+
