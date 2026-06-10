@@ -768,8 +768,8 @@ namespace exam_test
                 TabControl tabs = new TabControl();
                 tabs.Left = 20;
                 tabs.Top = 90;
-                tabs.Width = 705;
-                tabs.Height = 440;
+                tabs.Width = 765;
+                tabs.Height = 500;
 
                 TabPage securityTab = new TabPage("Security");
                 TabPage syncTab = new TabPage("Sync");
@@ -1143,8 +1143,8 @@ namespace exam_test
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 625;
-                closeButton.Top = 548;
+                closeButton.Left = 680;
+                closeButton.Top = 610;
                 closeButton.Width = 100;
                 closeButton.Height = 34;
                 StyleActionButton(closeButton, true);
@@ -1351,7 +1351,7 @@ namespace exam_test
                 cancelButton.Text = "Cancel";
                 cancelButton.Left = 180;
                 cancelButton.Top = 175;
-                cancelButton.Width = 90;
+                cancelButton.Width = 100;
                 cancelButton.Height = 32;
                 cancelButton.DialogResult = DialogResult.Cancel;
                 StyleActionButton(cancelButton);
@@ -1506,7 +1506,7 @@ namespace exam_test
                 titleLabel.Text = "Authenticator code required";
                 titleLabel.Left = 22;
                 titleLabel.Top = 18;
-                titleLabel.Width = 390;
+                titleLabel.Width = 500;
                 titleLabel.Height = 28;
                 titleLabel.ForeColor = Color.White;
                 titleLabel.BackColor = Color.Transparent;
@@ -1516,15 +1516,15 @@ namespace exam_test
                 detailLabel.Text = "Vault code accepted. Authenticator code required. Open your authenticator app, find QuickForge, and type the 6-digit code. QuickForge continues automatically after 6 digits.";
                 detailLabel.Left = 22;
                 detailLabel.Top = 55;
-                detailLabel.Width = 390;
-                detailLabel.Height = 58;
+                detailLabel.Width = 500;
+                detailLabel.Height = 78;
                 detailLabel.ForeColor = softTextColor;
                 detailLabel.BackColor = Color.Transparent;
                 detailLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
 
                 TextBox codeBox = new TextBox();
                 codeBox.Left = 22;
-                codeBox.Top = 118;
+                codeBox.Top = 150;
                 codeBox.Width = 160;
                 codeBox.Height = 30;
                 codeBox.MaxLength = 6;
@@ -1535,27 +1535,27 @@ namespace exam_test
                 Label statusLabel = new Label();
                 statusLabel.Text = "Vault code accepted. Authenticator code required.";
                 statusLabel.Left = 22;
-                statusLabel.Top = 160;
-                statusLabel.Width = 390;
-                statusLabel.Height = 34;
+                statusLabel.Top = 195;
+                statusLabel.Width = 500;
+                statusLabel.Height = 44;
                 statusLabel.ForeColor = softTextColor;
                 statusLabel.BackColor = Color.Transparent;
                 statusLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
 
                 Button cancelButton = new Button();
                 cancelButton.Text = "Cancel";
-                cancelButton.Left = 220;
-                cancelButton.Top = 198;
-                cancelButton.Width = 90;
+                cancelButton.Left = 310;
+                cancelButton.Top = 270;
+                cancelButton.Width = 100;
                 cancelButton.Height = 34;
                 StyleActionButton(cancelButton);
                 cancelButton.Click += (s, e) => dialog.Close();
 
                 Button unlockButton = new Button();
                 unlockButton.Text = "Unlock";
-                unlockButton.Left = 325;
-                unlockButton.Top = 198;
-                unlockButton.Width = 90;
+                unlockButton.Left = 425;
+                unlockButton.Top = 270;
+                unlockButton.Width = 100;
                 unlockButton.Height = 34;
                 StyleActionButton(unlockButton, true);
 
@@ -1922,7 +1922,7 @@ namespace exam_test
                 cancelButton.Text = "Cancel";
                 cancelButton.Left = 460;
                 cancelButton.Top = 530;
-                cancelButton.Width = 90;
+                cancelButton.Width = 100;
                 cancelButton.Height = 34;
                 StyleActionButton(cancelButton);
                 cancelButton.Click += (s, e) => dialog.Close();
@@ -2606,7 +2606,7 @@ namespace exam_test
                 statusLabel.Text = "Stored inside your encrypted vault.";
                 statusLabel.Left = 20;
                 statusLabel.Top = 155;
-                statusLabel.Width = 390;
+                statusLabel.Width = 500;
                 statusLabel.Height = 32;
                 statusLabel.ForeColor = softTextColor;
                 statusLabel.BackColor = Color.Transparent;
@@ -2920,7 +2920,7 @@ namespace exam_test
                 cancelButton.Text = "Cancel";
                 cancelButton.Left = 20;
                 cancelButton.Top = 145;
-                cancelButton.Width = 90;
+                cancelButton.Width = 100;
                 cancelButton.Height = 32;
                 StyleActionButton(cancelButton);
                 cancelButton.Click += (s, e) => dialog.Close();
@@ -3410,7 +3410,7 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
                     auditStatus + " / " + readinessStatus;
                 subtitleLabel.Left = 24;
                 subtitleLabel.Top = 56;
-                subtitleLabel.Width = 700;
+                subtitleLabel.Width = 820;
                 subtitleLabel.Height = 44;
                 subtitleLabel.ForeColor = softTextColor;
                 subtitleLabel.BackColor = Color.Transparent;
@@ -3419,9 +3419,9 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
                 Label overallStatusLabel = new Label();
                 overallStatusLabel.Text = overallStatus + " / " + safetyWizardStatus;
                 overallStatusLabel.Left = 24;
-                overallStatusLabel.Top = 88;
+                overallStatusLabel.Top = 108;
                 overallStatusLabel.Width = 790;
-                overallStatusLabel.Height = 28;
+                overallStatusLabel.Height = 42;
                 overallStatusLabel.ForeColor = overallStatus == "Looks safe today"
                     ? successColor
                     : Color.FromArgb(255, 190, 90);
@@ -3683,7 +3683,7 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
                 Button legacyReportButton = new Button();
                 legacyReportButton.Text = "Full report";
                 legacyReportButton.Left = 24;
-                legacyReportButton.Top = 900;
+                legacyReportButton.Top = 855;
                 legacyReportButton.Width = 120;
                 legacyReportButton.Height = 30;
                 StyleActionButton(legacyReportButton);
@@ -3699,8 +3699,8 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 735;
-                closeButton.Top = 900;
+                closeButton.Left = 785;
+                closeButton.Top = 855;
                 closeButton.Width = 100;
                 closeButton.Height = 30;
                 StyleActionButton(closeButton, true);
@@ -13043,7 +13043,7 @@ if (currentDriveService == null)
                 cancelButton.Text = "Cancel";
                 cancelButton.Left = 290;
                 cancelButton.Top = 245;
-                cancelButton.Width = 90;
+                cancelButton.Width = 100;
                 cancelButton.Height = 32;
                 StyleActionButton(cancelButton);
                 cancelButton.Click += (s, e) => dialog.Close();
@@ -14525,6 +14525,7 @@ if (currentDriveService == null)
         }
     }
 }
+
 
 
 
