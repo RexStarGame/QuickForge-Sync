@@ -7,26 +7,25 @@ namespace exam_test
     {
         public static Size GetAuthenticatorUnlockSize()
         {
-            return new Size(560, 350);
+            return new Size(660, 430);
         }
 
         public static Size GetSettingsSize()
         {
-            return new Size(820, 720);
+            return new Size(980, 820);
         }
 
         public static Size GetTrustCenterSize(Rectangle workingArea)
         {
-            int width = Math.Min(940, Math.Max(860, workingArea.Width - 80));
-            int height = Math.Min(900, Math.Max(640, workingArea.Height - 80));
+            int width = Math.Min(1180, Math.Max(900, workingArea.Width - 20));
+            int height = Math.Min(980, Math.Max(640, workingArea.Height - 40));
 
             return new Size(width, height);
         }
 
         public static Size GetTrustCenterScrollArea()
         {
-            return new Size(900, 930);
+            return new Size(1040, 980);
         }
     }
 }
-

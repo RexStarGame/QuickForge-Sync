@@ -759,17 +759,17 @@ namespace exam_test
                 subtitleLabel.Text = "Manage QuickForge security, sync, privacy, and app options.";
                 subtitleLabel.Left = 22;
                 subtitleLabel.Top = 52;
-                subtitleLabel.Width = 690;
+                subtitleLabel.Width = 620;
                 subtitleLabel.Height = 44;
                 subtitleLabel.ForeColor = softTextColor;
                 subtitleLabel.BackColor = Color.Transparent;
                 subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
 
                 TabControl tabs = new TabControl();
-                tabs.Left = 20;
-                tabs.Top = 90;
-                tabs.Width = 765;
-                tabs.Height = 500;
+                tabs.Left = 24;
+                tabs.Top = 118;
+                tabs.Width = 910;
+                tabs.Height = 600;
 
                 TabPage securityTab = new TabPage("Security");
                 TabPage syncTab = new TabPage("Sync");
@@ -1143,8 +1143,8 @@ namespace exam_test
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 680;
-                closeButton.Top = 610;
+                closeButton.Left = 840;
+                closeButton.Top = 24;
                 closeButton.Width = 100;
                 closeButton.Height = 34;
                 StyleActionButton(closeButton, true);
@@ -1524,7 +1524,7 @@ namespace exam_test
 
                 TextBox codeBox = new TextBox();
                 codeBox.Left = 22;
-                codeBox.Top = 150;
+                codeBox.Top = 170;
                 codeBox.Width = 160;
                 codeBox.Height = 30;
                 codeBox.MaxLength = 6;
@@ -1535,7 +1535,7 @@ namespace exam_test
                 Label statusLabel = new Label();
                 statusLabel.Text = "Vault code accepted. Authenticator code required.";
                 statusLabel.Left = 22;
-                statusLabel.Top = 195;
+                statusLabel.Top = 225;
                 statusLabel.Width = 500;
                 statusLabel.Height = 44;
                 statusLabel.ForeColor = softTextColor;
@@ -1544,8 +1544,8 @@ namespace exam_test
 
                 Button cancelButton = new Button();
                 cancelButton.Text = "Cancel";
-                cancelButton.Left = 310;
-                cancelButton.Top = 270;
+                cancelButton.Left = 405;
+                cancelButton.Top = 335;
                 cancelButton.Width = 100;
                 cancelButton.Height = 34;
                 StyleActionButton(cancelButton);
@@ -1553,8 +1553,8 @@ namespace exam_test
 
                 Button unlockButton = new Button();
                 unlockButton.Text = "Unlock";
-                unlockButton.Left = 425;
-                unlockButton.Top = 270;
+                unlockButton.Left = 520;
+                unlockButton.Top = 335;
                 unlockButton.Width = 100;
                 unlockButton.Height = 34;
                 StyleActionButton(unlockButton, true);
@@ -3410,7 +3410,7 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
                     auditStatus + " / " + readinessStatus;
                 subtitleLabel.Left = 24;
                 subtitleLabel.Top = 56;
-                subtitleLabel.Width = 820;
+                subtitleLabel.Width = 620;
                 subtitleLabel.Height = 44;
                 subtitleLabel.ForeColor = softTextColor;
                 subtitleLabel.BackColor = Color.Transparent;
@@ -3419,7 +3419,7 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
                 Label overallStatusLabel = new Label();
                 overallStatusLabel.Text = overallStatus + " / " + safetyWizardStatus;
                 overallStatusLabel.Left = 24;
-                overallStatusLabel.Top = 108;
+                overallStatusLabel.Top = 116;
                 overallStatusLabel.Width = 790;
                 overallStatusLabel.Height = 42;
                 overallStatusLabel.ForeColor = overallStatus == "Looks safe today"
@@ -3442,7 +3442,7 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
                     Panel card = new Panel();
                     card.Left = left;
                     card.Top = top;
-                    card.Width = 365;
+                    card.Width = 390;
                     card.Height = 155;
                     card.BackColor = Color.FromArgb(24, 28, 44);
                     card.BorderStyle = BorderStyle.FixedSingle;
@@ -3451,7 +3451,7 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
                     cardTitle.Text = title;
                     cardTitle.Left = 14;
                     cardTitle.Top = 10;
-                    cardTitle.Width = 335;
+                    cardTitle.Width = 360;
                     cardTitle.Height = 22;
                     cardTitle.ForeColor = Color.White;
                     cardTitle.BackColor = Color.Transparent;
@@ -3461,7 +3461,7 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
                     cardStatus.Text = status;
                     cardStatus.Left = 14;
                     cardStatus.Top = 36;
-                    cardStatus.Width = 335;
+                    cardStatus.Width = 360;
                     cardStatus.Height = 22;
                     cardStatus.ForeColor = statusColor;
                     cardStatus.BackColor = Color.Transparent;
@@ -3471,7 +3471,7 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
                     cardDetail.Text = detail;
                     cardDetail.Left = 14;
                     cardDetail.Top = 62;
-                    cardDetail.Width = 335;
+                    cardDetail.Width = 360;
                     cardDetail.Height = 50;
                     cardDetail.ForeColor = softTextColor;
                     cardDetail.BackColor = Color.Transparent;
@@ -3682,8 +3682,8 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
 
                 Button legacyReportButton = new Button();
                 legacyReportButton.Text = "Full report";
-                legacyReportButton.Left = 24;
-                legacyReportButton.Top = 855;
+                legacyReportButton.Left = 620;
+                legacyReportButton.Top = 58;
                 legacyReportButton.Width = 120;
                 legacyReportButton.Height = 30;
                 StyleActionButton(legacyReportButton);
@@ -3699,8 +3699,8 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
 
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
-                closeButton.Left = 785;
-                closeButton.Top = 855;
+                closeButton.Left = 760;
+                closeButton.Top = 58;
                 closeButton.Width = 100;
                 closeButton.Height = 30;
                 StyleActionButton(closeButton, true);
@@ -11490,7 +11490,7 @@ if (currentDriveService == null)
                 headlineLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
 
                 TabControl tabs = new TabControl();
-                tabs.Left = 20;
+                tabs.Left = 24;
                 tabs.Top = 92;
                 tabs.Width = 725;
                 tabs.Height = 480;
@@ -14525,6 +14525,7 @@ if (currentDriveService == null)
         }
     }
 }
+
 
 
 

@@ -11,17 +11,17 @@ namespace QuickForge.Tests
         {
             Size size = DialogLayoutPolicy.GetAuthenticatorUnlockSize();
 
-            Assert.True(size.Width >= 540);
-            Assert.True(size.Height >= 330);
+            Assert.True(size.Width >= 640);
+            Assert.True(size.Height >= 400);
         }
 
         [Fact]
-        public void SettingsDialog_IsLargerThanOldCompactLayout()
+        public void SettingsDialog_IsLargeEnoughForTabsAndButtons()
         {
             Size size = DialogLayoutPolicy.GetSettingsSize();
 
-            Assert.True(size.Width >= 800);
-            Assert.True(size.Height >= 700);
+            Assert.True(size.Width >= 960);
+            Assert.True(size.Height >= 800);
         }
 
         [Fact]
@@ -31,8 +31,10 @@ namespace QuickForge.Tests
 
             Size size = DialogLayoutPolicy.GetTrustCenterSize(workingArea);
 
-            Assert.True(size.Width <= 944);
-            Assert.True(size.Height <= 688);
+            Assert.True(size.Width <= 1004);
+            Assert.True(size.Height <= 728);
+            Assert.True(size.Width >= 900);
+            Assert.True(size.Height >= 640);
         }
 
         [Fact]
@@ -40,7 +42,8 @@ namespace QuickForge.Tests
         {
             Size size = DialogLayoutPolicy.GetTrustCenterScrollArea();
 
-            Assert.True(size.Height >= 900);
+            Assert.True(size.Width >= 1000);
+            Assert.True(size.Height >= 950);
         }
     }
 }
