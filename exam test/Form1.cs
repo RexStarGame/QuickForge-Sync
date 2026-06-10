@@ -8747,30 +8747,76 @@ namespace exam_test
             OpenWebsite(entry.Website);
         }
 
+        private bool TryCopyTextWithCleanup(
+            string valueToCopy,
+            int clearDelayMs,
+            Action<string> showStatus,
+            string successMessage)
+        {
+            if (string.IsNullOrWhiteSpace(valueToCopy))
+            {
+                showStatus("Nothing to copy.");
+                return false;
+            }
+
+            try
+            {
+                Clipboard.SetText(valueToCopy);
+                showStatus(successMessage + Environment.NewLine + SafeFillPolicy.GetClipboardCountdownText(clearDelayMs));
+                _ = ClearClipboardLaterAsync(valueToCopy, clearDelayMs);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    if (Clipboard.ContainsText())
+                    {
+                        Clipboard.Clear();
+                    }
+                }
+                catch
+                {
+                    // Best-effort clipboard cleanup only.
+                }
+
+                showStatus(
+                    "Clipboard copy failed." + Environment.NewLine +
+                    "QuickForge tried to clear the clipboard." + Environment.NewLine +
+                    "Error: " + ex.Message
+                );
+
+                return false;
+            }
+        }
         private async Task OpenAndFillButton_Click()
         {
-            if (!RequireTrustedDeviceForSensitiveAction("Open + Fill"))
+            if (!RequireTrustedDeviceForSensitiveAction("Safe Fill"))
             {
                 return;
             }
 
             VaultEntry? entry = GetSelectedEntry();
 
+            SafeFillPlan plan = SafeFillPolicy.BuildStepByStepPlan(
+                entry,
+                IsStreamerModeEnabled(),
+                !IsRestrictedModeActive()
+            );
+
+            if (!plan.CanProceed)
+            {
+                MessageBox.Show(
+                    plan.UserMessage + Environment.NewLine + Environment.NewLine + plan.NextAction,
+                    "Safe Fill blocked",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+                return;
+            }
+
             if (entry == null)
             {
-                MessageBox.Show("Select an entry first.");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(entry.Website))
-            {
-                MessageBox.Show("This entry has no website link.");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(entry.Username) || string.IsNullOrWhiteSpace(entry.Secret))
-            {
-                MessageBox.Show("This entry needs both username and password for Open + Fill.");
                 return;
             }
 
@@ -8779,46 +8825,27 @@ namespace exam_test
                 return;
             }
 
-            string usernameToFill = entry.Username;
-            string passwordToFill = entry.Secret;
+            string streamerWarning = plan.ShouldWarnStreamerModeOff
+                ? "Warning: Streamer mode is OFF. Avoid screen sharing while using Safe Fill."
+                : "Streamer mode is ON.";
 
-            selectedPreviewLabel.Text =
-                "Open + Fill started." + Environment.NewLine +
-                "The website will open now." + Environment.NewLine +
-                "If the username field is not focused, click it within 5 seconds.";
+            SetPreviewText(
+                "Safe Fill started.",
+                "Full auto-fill is OFF. QuickForge will not paste credentials automatically.",
+                streamerWarning + Environment.NewLine +
+                "Opening the website and copying username first."
+            );
 
             OpenWebsite(entry.Website);
 
-            await Task.Delay(5000);
+            await Task.Delay(250);
 
-            try
-            {
-                Clipboard.SetText(usernameToFill);
-                SendKeys.SendWait("^v");
-
-                await Task.Delay(250);
-
-                SendKeys.SendWait("{TAB}");
-
-                await Task.Delay(250);
-
-                Clipboard.SetText(passwordToFill);
-                SendKeys.SendWait("^v");
-
-                selectedPreviewLabel.Text =
-                    "Open + Fill completed." + Environment.NewLine +
-                    "If the website did not fill correctly, click the username field and use Ctrl + Alt + Q." + Environment.NewLine +
-                    "Clipboard clears in 20 seconds.";
-
-                _ = ClearClipboardLaterAsync(passwordToFill, 20000);
-            }
-            catch (Exception ex)
-            {
-                selectedPreviewLabel.Text =
-                    "Open + Fill could not complete automatically." + Environment.NewLine +
-                    "Click the username field and use Ctrl + Alt + Q instead." + Environment.NewLine +
-                    "Error: " + ex.Message;
-            }
+            TryCopyTextWithCleanup(
+                entry.Username,
+                SafeFillPolicy.DefaultClipboardClearDelayMs,
+                text => selectedPreviewLabel.Text = text,
+                "Safe Fill step 1/2: username copied. Paste it into the website. Then click Copy Password when the password field is ready."
+            );
         }
 
         private void OpenWebsite(string website)
@@ -8879,7 +8906,11 @@ namespace exam_test
 
         private void CopySecretButton_Click(object? sender, EventArgs e)
         {
-            if (!RequireTrustedDeviceForSensitiveAction("Copy password/code"))             {                 return;             } 
+            if (!RequireTrustedDeviceForSensitiveAction("Copy password/code"))
+            {
+                return;
+            }
+
             VaultEntry? entry = GetSelectedEntry();
 
             if (entry == null)
@@ -8905,15 +8936,21 @@ namespace exam_test
                 return;
             }
 
-            Clipboard.SetText(entry.Secret);
-            selectedPreviewLabel.Text = "Copied password/code for: " + entry.GetDisplayName() +
-                ". Clipboard clears in 20 seconds.";
-
-            _ = ClearClipboardLaterAsync(entry.Secret, 20000);
+            TryCopyTextWithCleanup(
+                entry.Secret,
+                SafeFillPolicy.DefaultClipboardClearDelayMs,
+                text => selectedPreviewLabel.Text = text,
+                "Copied password/code for: " + entry.GetDisplayName()
+            );
         }
+
         private void CopyUsernameButton_Click(object? sender, EventArgs e)
         {
-            if (!RequireTrustedDeviceForSensitiveAction("Copy username"))             {                 return;             } 
+            if (!RequireTrustedDeviceForSensitiveAction("Copy username"))
+            {
+                return;
+            }
+
             VaultEntry? entry = GetSelectedEntry();
 
             if (entry == null)
@@ -8928,9 +8965,14 @@ namespace exam_test
                 return;
             }
 
-            Clipboard.SetText(entry.Username);
-            selectedPreviewLabel.Text = "Copied username for: " + entry.GetDisplayName();
+            TryCopyTextWithCleanup(
+                entry.Username,
+                SafeFillPolicy.DefaultClipboardClearDelayMs,
+                text => selectedPreviewLabel.Text = text,
+                "Copied username for: " + entry.GetDisplayName()
+            );
         }
+
         private bool ShowDeleteEntryConfirmationDialog(VaultEntry entry)
         {
             bool confirmed = false;
@@ -12446,26 +12488,14 @@ if (currentDriveService == null)
                 return;
             }
 
-            if (quickFillTargetWindow == IntPtr.Zero)
-            {
-                Clipboard.SetText(password);
-                MessageBox.Show("Password copied. Click the password field and paste it.");
-                return;
-            }
+            await Task.Yield();
 
-            quickFillForm?.Hide();
-
-            Clipboard.SetText(password);
-
-            await Task.Delay(100);
-
-            SetForegroundWindow(quickFillTargetWindow);
-
-            await Task.Delay(150);
-
-            SendKeys.SendWait("^v");
-
-            _ = ClearClipboardLaterAsync(password, 20000);
+            TryCopyTextWithCleanup(
+                password,
+                SafeFillPolicy.DefaultClipboardClearDelayMs,
+                text => selectedPreviewLabel.Text = text,
+                "Generated password copied. Paste it yourself into the password field."
+            );
         }
 
         private void ShowCreatePasswordDialog(PasswordGeneratorTarget target)
@@ -13537,7 +13567,7 @@ if (currentDriveService == null)
             copyPasswordButton.Click += (s, e) => QuickFillCopyPassword();
 
             Button fillLoginButton = new Button();
-            fillLoginButton.Text = "Fill login";
+            fillLoginButton.Text = "Safe Fill";
             fillLoginButton.Left = 600;
             fillLoginButton.Top = 290;
             fillLoginButton.Width = 110;
@@ -13674,8 +13704,12 @@ if (currentDriveService == null)
                 return;
             }
 
-            Clipboard.SetText(entry.Username);
-            SetQuickFillStatus("Username copied.");
+            TryCopyTextWithCleanup(
+                entry.Username,
+                SafeFillPolicy.DefaultClipboardClearDelayMs,
+                SetQuickFillStatus,
+                "Username copied. Paste it yourself."
+            );
         }
 
         private void QuickFillCopyPassword()
@@ -13706,15 +13740,17 @@ if (currentDriveService == null)
                 return;
             }
 
-            Clipboard.SetText(entry.Secret);
-            SetQuickFillStatus("Password copied.");
-
-            _ = ClearClipboardLaterAsync(entry.Secret, 20000);
+            TryCopyTextWithCleanup(
+                entry.Secret,
+                SafeFillPolicy.DefaultClipboardClearDelayMs,
+                SetQuickFillStatus,
+                "Password copied. Paste it yourself."
+            );
         }
 
         private async Task QuickFillAutoFillAsync()
         {
-            if (!RequireTrustedDeviceForSensitiveAction("QuickFill auto-fill"))
+            if (!RequireTrustedDeviceForSensitiveAction("QuickFill Safe Fill"))
             {
                 SetQuickFillStatus("Blocked: this device is untrusted.");
                 quickFillForm?.Hide();
@@ -13723,21 +13759,20 @@ if (currentDriveService == null)
 
             VaultEntry? entry = GetSelectedQuickFillEntry();
 
+            SafeFillPlan plan = SafeFillPolicy.BuildStepByStepPlan(
+                entry,
+                IsStreamerModeEnabled(),
+                !IsRestrictedModeActive()
+            );
+
+            if (!plan.CanProceed)
+            {
+                SetQuickFillStatus(plan.UserMessage);
+                return;
+            }
+
             if (entry == null)
             {
-                SetQuickFillStatus("Choose a saved login first.");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(entry.Username))
-            {
-                SetQuickFillStatus("This login has no username.");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(entry.Secret))
-            {
-                SetQuickFillStatus("This login has no password.");
                 return;
             }
 
@@ -13748,25 +13783,19 @@ if (currentDriveService == null)
 
             quickFillForm?.Hide();
 
-            SetQuickFillStatus("Filling username and password...");
+            await Task.Delay(50);
 
-            await Task.Delay(100);
+            TryCopyTextWithCleanup(
+                entry.Username,
+                SafeFillPolicy.DefaultClipboardClearDelayMs,
+                SetQuickFillStatus,
+                "Safe Fill step 1/2: username copied. Paste it yourself, then use Copy password."
+            );
 
-            Clipboard.SetText(entry.Username);
-            SendKeys.SendWait("^v");
-
-            await Task.Delay(120);
-
-            SendKeys.SendWait("{TAB}");
-
-            await Task.Delay(120);
-
-            Clipboard.SetText(entry.Secret);
-            SendKeys.SendWait("^v");
-
-            SetQuickFillStatus("Auto-fill completed. Clipboard clears in 20 seconds.");
-
-            _ = ClearClipboardLaterAsync(entry.Secret, 20000);
+            selectedPreviewLabel.Text =
+                "Safe Fill step-by-step." + Environment.NewLine +
+                "QuickForge copied the username only." + Environment.NewLine +
+                "Paste it yourself, then use Copy Password when the password field is ready.";
         }
 
         private async Task ClearClipboardLaterAsync(string valueToClear, int delayMs)
@@ -14066,6 +14095,7 @@ if (currentDriveService == null)
         }
     }
 }
+
 
 
 
