@@ -408,24 +408,28 @@ namespace exam_test
 
         private bool IsCloseBlockedBySyncOrRefresh()
         {
-            return HasPendingBackgroundVaultSync() ||
-                   backgroundVaultSyncRunning ||
-                   backgroundVaultSyncRequested ||
-                   hasUnsyncedLocalChanges ||
-                   autoRefreshRunning ||
-                   deviceTrustBackgroundRefreshRunning ||
-                   (isVaultUnlocked && (!refreshCloudButton.Enabled || !manualSyncButton.Enabled));
+            return BackgroundSyncPolicy.ShouldBlockClose(
+                hasUnsyncedLocalChanges,
+                backgroundVaultSyncRunning,
+                backgroundVaultSyncRequested,
+                autoRefreshRunning,
+                deviceTrustBackgroundRefreshRunning
+            );
         }
 
         private void ShowCloseBlockedBySyncOrRefreshMessage()
         {
-            SetSyncStatus("Close blocked - sync or refresh running", error: true);
+            SetSyncStatus(BackgroundSyncPolicy.GetCloseBlockedStatus(), error: true);
+
+            SetPreviewText(
+                "Close blocked.",
+                "QuickForge still has encrypted local changes waiting for sync.",
+                "Wait until Sync shows Active, or export an encrypted backup before closing."
+            );
 
             MessageBox.Show(
-                "QuickForge is still syncing or refreshing your encrypted vault." + Environment.NewLine + Environment.NewLine +
-                "Please wait until sync/refresh is finished before closing the app." + Environment.NewLine + Environment.NewLine +
-                "This protects you from closing while this device may still have vault changes that Google Drive has not finished saving or loading.",
-                "Sync or refresh still running",
+                BackgroundSyncPolicy.GetCloseBlockedMessage(),
+                "Unsynced changes pending",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning
             );
@@ -6534,14 +6538,24 @@ namespace exam_test
 
         private void QueueBackgroundVaultSync(string reason)
         {
+            bool alreadyRunningOrQueued = backgroundVaultSyncRunning || backgroundVaultSyncRequested;
+            bool isDeleteSync = IsDeleteSyncReason(reason);
+
             hasUnsyncedLocalChanges = true;
             backgroundVaultSyncRequested = true;
             backgroundVaultSyncReason = reason;
 
-            SetSyncStatus(IsDeleteSyncReason(reason) ? "Delete pending" : "Pending local changes");
+            SetSyncStatus(BackgroundSyncPolicy.GetQueuedStatus(isDeleteSync, alreadyRunningOrQueued));
+            UpdateManualSyncButtonState();
 
             if (backgroundVaultSyncRunning)
             {
+                SetPreviewText(
+                    alreadyRunningOrQueued ? "Sync already running." : "Sync queued.",
+                    "QuickForge queued the latest encrypted vault change instead of starting a parallel sync.",
+                    "The current background sync will finish first."
+                );
+
                 return;
             }
 
@@ -6562,7 +6576,7 @@ namespace exam_test
 
                     try
                     {
-                        SetSyncStatus(isDeleteSync ? "Delete pending" : "Syncing in background...");
+                        SetSyncStatus(BackgroundSyncPolicy.GetRunningStatus(isDeleteSync));
 
                         bool merged = await SaveCurrentVaultToCloudWithAutoMergeAsync();
 
@@ -14213,6 +14227,7 @@ if (currentDriveService == null)
         }
     }
 }
+
 
 
 
