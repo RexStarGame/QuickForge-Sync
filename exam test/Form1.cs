@@ -146,6 +146,7 @@ namespace exam_test
         private bool restrictedModeWarningShownThisSession = false;
         private const int MaxSafetyTimelineEvents = 25;
         private const int MaxDeletedEntryTombstones = 250;
+        private bool syncConflictDuplicateCreatedDuringMerge = false;
 
         private readonly Label platformLabel = new Label();
         private readonly TextBox platformTextBox = new TextBox();
@@ -6222,23 +6223,22 @@ namespace exam_test
 
         private void AddOrReplaceMergedEntry(List<VaultEntry> mergedEntries, VaultEntry entry)
         {
-            NormalizeVaultEntryForSync(entry);
-
-            int existingIndex = mergedEntries.FindIndex(existing =>
-                string.Equals(existing.Id, entry.Id, StringComparison.OrdinalIgnoreCase)
+            SyncConflictMergeResult result = SyncConflictPolicy.AddOrReplaceMergedEntry(
+                mergedEntries,
+                entry,
+                localDeviceName,
+                DateTime.UtcNow
             );
 
-            if (existingIndex >= 0)
+            if (result.ConflictDetected)
             {
-                // Local version wins for the same entry. This preserves the user's latest local edit.
-                mergedEntries[existingIndex] = entry;
-            }
-            else
-            {
-                mergedEntries.Add(entry);
+                syncConflictDuplicateCreatedDuringMerge = true;
+                AddSafetyTimelineEvent(
+                    "Sync conflict preserved",
+                    "Same entry changed on two devices. QuickForge kept both copies instead of silently overwriting."
+                );
             }
         }
-
 
         private DateTime GetDeviceTrustVersionUtc(KnownVaultDevice device)
         {
@@ -6423,11 +6423,22 @@ namespace exam_test
 
             RefreshVaultList();
 
-            SetPreviewText(
-                "Cloud changes merged.",
-                "QuickForge kept the latest cloud vault and your local unsynced changes.",
-                "Syncing merged encrypted vault..."
-            );
+            if (syncConflictDuplicateCreatedDuringMerge)
+            {
+                SetPreviewText(
+                    "Sync conflict preserved.",
+                    "Same entry changed on two devices. QuickForge kept both copies instead of silently overwriting.",
+                    "Export an encrypted backup before deleting or merging conflict copies."
+                );
+            }
+            else
+            {
+                SetPreviewText(
+                    "Cloud changes merged.",
+                    "QuickForge kept the latest cloud vault and your local unsynced changes.",
+                    "Syncing merged encrypted vault..."
+                );
+            }
         }
 
 
@@ -7204,11 +7215,22 @@ namespace exam_test
                 await MergeLatestCloudVaultIntoCurrentSessionAsync();
                 await SaveCurrentVaultToCloudAsync();
 
-                SetPreviewText(
-                    "Merged and synced.",
-                    "Your local changes and the other device changes were saved together.",
-                    "Refresh the other PC to see the merged vault."
-                );
+                if (syncConflictDuplicateCreatedDuringMerge)
+                {
+                    SetPreviewText(
+                        "Conflict copies synced.",
+                        "QuickForge detected same-entry changes from two devices and kept both copies.",
+                        "Review the conflict copies and export an encrypted backup before deleting anything."
+                    );
+                }
+                else
+                {
+                    SetPreviewText(
+                        "Merged and synced.",
+                        "Your local changes and the other device changes were saved together.",
+                        "Refresh the other PC to see the merged vault."
+                    );
+                }
 
                 return true;
             }
@@ -14044,6 +14066,9 @@ if (currentDriveService == null)
         }
     }
 }
+
+
+
 
 
 
