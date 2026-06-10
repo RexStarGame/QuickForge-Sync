@@ -6605,10 +6605,11 @@ namespace exam_test
             EnsureLocalDeviceIdentity();
             EnsureVaultSafetyCollections();
 
-            KnownVaultDevice? currentDevice = currentVaultSettings.KnownDevices
-                .FirstOrDefault(device => device.DeviceId == localDeviceId);
-
-            return currentDevice == null || currentDevice.IsTrusted;
+            return DeviceTrustPolicy.IsCurrentDeviceTrusted(
+                currentVaultSettings,
+                localDeviceId,
+                isVaultUnlocked
+            );
         }
 
         private bool IsRestrictedModeActive()
@@ -6644,7 +6645,7 @@ namespace exam_test
             restrictedModeWarningShownThisSession = true;
 
             string message =
-                "This device is marked as UNTRUSTED for this vault." + Environment.NewLine + Environment.NewLine +
+                "This device needs approval for this vault." + Environment.NewLine + Environment.NewLine +
                 "QuickForge has disabled sensitive actions on this device:" + Environment.NewLine +
                 "- Reveal/copy passwords" + Environment.NewLine +
                 "- Open + Fill" + Environment.NewLine +
@@ -6784,7 +6785,7 @@ namespace exam_test
                     TrustedChangedAtUtc = DateTime.UtcNow,
                     TrustNote = knownDeviceCountBefore == 0
                         ? "First device automatically trusted."
-                        : "New device awaits manual trust.",
+                        : "This device needs approval.",
                     IsHiddenFromTrustList = false,
                     RemovedFromTrustListAtUtc = null
                 };
@@ -6844,7 +6845,7 @@ namespace exam_test
                 untrustedDeviceDetectedName = localDeviceName;
 
                 MessageBox.Show(
-                    "This device is marked as untrusted for this vault." + Environment.NewLine + Environment.NewLine +
+                    "This device needs approval for this vault." + Environment.NewLine + Environment.NewLine +
                     "Device: " + localDeviceName + Environment.NewLine + Environment.NewLine +
                     "You can still view the vault, but sensitive trust changes should only be made from a trusted device.",
                     "Untrusted device",
@@ -14043,6 +14044,8 @@ if (currentDriveService == null)
         }
     }
 }
+
+
 
 
 

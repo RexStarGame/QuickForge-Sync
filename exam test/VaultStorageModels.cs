@@ -45,7 +45,7 @@ namespace exam_test
         public DateTime FirstSeenAtUtc { get; set; } = DateTime.UtcNow;
         public DateTime LastSeenAtUtc { get; set; } = DateTime.UtcNow;
         public int SyncCount { get; set; } = 0;
-        public bool IsTrusted { get; set; } = true;
+        public bool IsTrusted { get; set; } = false;
         public DateTime? TrustedChangedAtUtc { get; set; } = null;
         public string TrustNote { get; set; } = "";
         public bool IsHiddenFromTrustList { get; set; } = false;
@@ -93,6 +93,7 @@ namespace exam_test
         public string EncryptedDataKey { get; set; } = "";
     }
 }
+
 
 
 
