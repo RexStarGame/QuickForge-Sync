@@ -3600,7 +3600,7 @@ namespace exam_test
                 legacyReportButton.Click += (s, e) =>
                 {
                     MessageBox.Show(
-                        BuildVaultSafetyReport(vaultEntries.Count, weakPasswords, reusedPasswords, untrustedDevices),
+                        BuildVaultSafetyReport(vaultEntries.Count, weakPasswords, reusedPasswords, vaultEntries.Count(entry => string.IsNullOrWhiteSpace(entry.Website))),
                         "Full vault safety report",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information
@@ -12724,7 +12724,7 @@ if (currentDriveService == null)
                 StyleActionButton(copyButton);
 
                 Button fillButton = new Button();
-                fillButton.Text = "Fill password";
+                fillButton.Text = "Copy for fill";
                 fillButton.Left = 155;
                 fillButton.Top = 245;
                 fillButton.Width = 120;
@@ -12787,7 +12787,7 @@ if (currentDriveService == null)
                         return;
                     }
 
-                    statusLabel.Text = "Filling password...";
+                    statusLabel.Text = "Copying password for Safe Fill...";
                     dialog.Hide();
 
                     await FillGeneratedPasswordAsync(currentPassword);
@@ -14227,6 +14227,7 @@ if (currentDriveService == null)
         }
     }
 }
+
 
 
 
