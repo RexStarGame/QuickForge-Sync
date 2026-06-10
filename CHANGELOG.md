@@ -1,5 +1,39 @@
-# Changelog
+﻿# Changelog
 
+## v0.2.2-security-stability-trust
+
+### Focus
+
+Security Hardening + Stability + Usability release.
+
+This version focuses on Authenticator Lock hardening, Device Trust restrictions, sync-conflict safety, step-by-step Safe Fill, local session/token hardening, background sync/refresh responsiveness, Safety Wizard, Trust Center v2, and clearer user feedback.
+
+### Completed
+
+- Hardened Authenticator Lock with TOTP replay rejection and wrong-code rate limiting.
+- Hardened Device Trust so new devices start untrusted/review-required.
+- Preserved same-entry sync conflicts instead of silently overwriting.
+- Replaced auto-paste behavior with step-by-step Safe Fill.
+- Improved clipboard cleanup and countdown feedback.
+- Added local hardening for unlocked session secrets, Windows lock/sleep, and Google token/credential file permissions.
+- Improved sync/refresh responsiveness and queue feedback.
+- Hardened background sync queue and safe-close behavior.
+- Added first-run Safety Wizard.
+- Upgraded Trust Center readiness checks.
+- Improved user-facing microcopy using What happened / Why / Next.
+
+### Validation
+
+- Build passed locally.
+- Automated tests passed locally: 76/76.
+- SendKeys/autopaste check passed: no `SendKeys.SendWait` or `SetForegroundWindow(quickFillTargetWindow)` remains in Safe Fill flow.
+
+### Status
+
+- Active branch: `v0.2.2-security-stability-trust`.
+- Not merged to main.
+- Ready for manual self-testing before PR/merge.
+- Beta software. Not externally audited.
 ## v0.2.1-dev-preview
 
 ### Focus
@@ -17,7 +51,7 @@
 - Added support for turning Authenticator Lock off without deleting the existing authenticator setup.
 - Added support for enabling Authenticator Lock again using the same authenticator app.
 - Added 6-digit code auto-submit after the user types a complete authenticator code.
-- Connected the Trust Center Authenticator Lock card to the same real settings flow used by Settings → Security.
+- Connected the Trust Center Authenticator Lock card to the same real settings flow used by Settings â†’ Security.
 - Added close protection that blocks app close only while sync, refresh, or pending local changes are active.
 
 ### Improved
@@ -368,3 +402,4 @@ This is not a stable/final password manager release yet.
 - Fixed mojibake text issues in logout/change-vault-code UI strings.
 - UI polish is paused unless a real bug is found.
 - Automated tests pass: 30/30.
+

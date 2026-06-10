@@ -1,4 +1,4 @@
-# QuickForge Sync
+﻿# QuickForge Sync
 
 [![QuickForge Tests](https://github.com/RexStarGame/QuickForge-Sync/actions/workflows/dotnet-tests.yml/badge.svg)](https://github.com/RexStarGame/QuickForge-Sync/actions/workflows/dotnet-tests.yml)
 
@@ -20,7 +20,7 @@ The easiest way to test QuickForge Sync is through GitHub Releases:
 
 For normal testers:
 
-1. Download the latest `QuickForge-Sync-v0.2.1-dev-preview-win-x64.zip`.
+1. Download the latest `QuickForge-Sync-v0.2.2-security-stability-trust-win-x64.zip`.
 2. Extract the ZIP first.
 3. Open the extracted folder.
 4. Run `QuickForge Sync.exe`.
@@ -41,7 +41,7 @@ The beta ZIP must **not** include:
 
 ## Looking for Beta Testers
 
-QuickForge Sync v0.2.1 is looking for testers.
+QuickForge Sync v0.2.2 Security, Stability & Trust is ready for controlled self-testing.
 
 Please use **fake/test data only**. Do not use real passwords, banking accounts, main email accounts, crypto wallets, business admin accounts, or anything you cannot afford to lose.
 
@@ -108,7 +108,7 @@ Your vault is encrypted before it is saved locally or synced to Google Drive.
 - Vault code is required before the authenticator code
 - Works with common authenticator apps such as Google Authenticator, Microsoft Authenticator, Aegis, 2FAS, and similar apps
 - QR setup confirmation before enabling Authenticator Lock
-- OFF → ON → OFF → ON behavior without forcing a new QR every time
+- OFF â†’ ON â†’ OFF â†’ ON behavior without forcing a new QR every time
 - Setup/manage flow fixes so Authenticator Lock no longer freezes
 - Broken, deleted, old, or wrong QR recovery path
 - Recovery key remains the emergency path if authenticator access is lost
@@ -134,7 +134,7 @@ Your vault is encrypted before it is saved locally or synced to Google Drive.
 - Same-account multi-device Device Trust detection
 - Untrusted-device restrictions for sensitive actions
 - Backup/export and Trust Center access blocked on untrusted devices
-- Device Trust “Forget selected” behavior for old, unknown, work, test, or lost devices
+- Device Trust â€œForget selectedâ€ behavior for old, unknown, work, test, or lost devices
 - Current device cannot be forgotten by accident
 - Clear feedback for which saved accounts and security areas need attention
 
@@ -184,7 +184,7 @@ Backup files are still encrypted. They require your vault code or recovery key b
 
 ### User Safety Dialogs
 
-v0.2.1 improves safety and affordance around:
+v0.2.2 strengthens security, stability, trust, and affordance around:
 
 - Authenticator Lock setup
 - Authenticator Lock disable/re-enable
@@ -299,9 +299,9 @@ Before using real passwords:
 
 ## Current Beta Status
 
-Current development version: `v0.2.1-dev-preview`
+Current development version: `v0.2.2-security-stability-trust`
 
-Current local automated test result: `30/30 tests passing`
+Current local automated test result: `76/76 tests passing`
 
 Passed local readiness areas:
 
@@ -315,7 +315,7 @@ Passed local readiness areas:
 - Change vault code
 - Delete entry safety
 - Authenticator Lock setup
-- Authenticator Lock OFF → ON → OFF → ON
+- Authenticator Lock OFF â†’ ON â†’ OFF â†’ ON
 - Broken/old authenticator QR recovery
 - Trust Center Authenticator Lock integration
 - Device Trust visibility
@@ -340,12 +340,12 @@ QuickForge Sync is an active beta-preview project.
 
 Current focus:
 
-- v0.2.1 controlled beta testing
+- v0.2.2 Security, Stability & Trust controlled self-testing
 - Manual release testing
 - Controlled tester feedback
 - Cleaner release notes
 - Future installer/code-signing planning
-- v0.2.2 planning
+- v0.2.2 manual user testing before merge/release
 
 UI styling is paused unless a real bug is found.
 

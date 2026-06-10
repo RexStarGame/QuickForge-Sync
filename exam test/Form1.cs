@@ -19,7 +19,7 @@ namespace exam_test
     {
         private const string AppName = "QuickForge Sync";
         private const string AppStatus = "Beta Preview";
-        private const string AppVersion = "v0.2.1-dev-preview";
+        private const string AppVersion = "v0.2.2-security-stability-trust";
         private const string AppDisplayName = AppName + " " + AppStatus;
 
 
@@ -1100,7 +1100,7 @@ namespace exam_test
                 appTab.Controls.Add(CreateSettingsCard(
                     "Version",
                     AppVersion,
-                    "This branch is a development preview. Do not publish it as a public release yet.",
+                    "Security, Stability & Trust release branch for manual user testing. Do not merge to main until testing is complete.",
                     16,
                     18,
                     320,
@@ -14525,6 +14525,7 @@ if (currentDriveService == null)
         }
     }
 }
+
 
 
 
