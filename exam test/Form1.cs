@@ -756,7 +756,7 @@ namespace exam_test
                 subtitleLabel.Left = 22;
                 subtitleLabel.Top = 52;
                 subtitleLabel.Width = 690;
-                subtitleLabel.Height = 24;
+                subtitleLabel.Height = 44;
                 subtitleLabel.ForeColor = softTextColor;
                 subtitleLabel.BackColor = Color.Transparent;
                 subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
@@ -3284,21 +3284,30 @@ namespace exam_test
                 lastCloudLoadUtc.HasValue &&
                 (DateTime.UtcNow - lastCloudLoadUtc.Value).TotalMinutes <= 60;
 
-            string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
+            bool hasPendingSync = TrustCenterPolicy.HasPendingSync(
+                hasUnsyncedLocalChanges,
+                backgroundVaultSyncRunning,
+                backgroundVaultSyncRequested
+            );
+string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
                 ? "Last backup: " + currentVaultSettings.LastBackupAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
                 : "No backup recorded";
 
-            string syncStatus = lastCloudLoadUtc.HasValue
-                ? "Last cloud load: " + lastCloudLoadUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
-                : "No cloud load recorded";
+            string syncStatus = TrustCenterPolicy.GetSyncStatus(
+                lastCloudLoadUtc,
+                lastCloudSaveUtc,
+                hasPendingSync
+            );
 
             string deviceStatus = untrustedDevices > 0
                 ? untrustedDevices + " device(s) need review"
                 : visibleDevices + " known device(s)";
 
-            string recoveryStatus = currentVaultSettings.RecoveryKeyRotationRequired
-                ? "Rotation required"
-                : "Available";
+            string recoveryStatus = TrustCenterPolicy.GetRecoveryKeyStatus(
+                currentVaultSettings.LastRecoveryKeyRotatedAt,
+                currentVaultSettings.RecoveryKeyRotationRequired,
+                DateTime.UtcNow
+            );
 
             string passwordHealthStatus =
                 weakPasswords == 0 && reusedPasswords == 0
@@ -3323,25 +3332,41 @@ namespace exam_test
                 ? successColor
                 : Color.FromArgb(255, 190, 90);
 
-            string overallStatus;
+            bool currentDeviceTrusted = IsCurrentDeviceTrusted();
 
-            if (untrustedDevices > 0 ||
-                currentVaultSettings.RecoveryKeyRotationRequired ||
-                !hasRecentBackup ||
-                weakPasswords > 0 ||
-                reusedPasswords > 0)
-            {
-                overallStatus = "Review recommended";
-            }
-            else
-            {
-                overallStatus = "Looks safe today";
-            }
+            bool recoveryNeedsReview = TrustCenterPolicy.ShouldReviewRecoveryKey(
+                currentVaultSettings.LastRecoveryKeyRotatedAt,
+                currentVaultSettings.RecoveryKeyRotationRequired,
+                DateTime.UtcNow
+            );
+
+            string auditStatus = TrustCommunicationPolicy.GetExternalAuditStatus();
+
+            string readinessStatus = TrustCommunicationPolicy.GetRealPasswordReadinessStatus(
+                hasExternalAudit: false,
+                hasAuthenticatorLock: authenticatorLockActive,
+                hasTrustedDevice: currentDeviceTrusted
+            );
+
+            string safetyWizardStatus = TrustCenterPolicy.GetSafetyWizardStatus(
+                currentVaultSettings.SafetyWizardCompletedAtUtc,
+                currentVaultSettings.SafetyWizardSkippedAtUtc
+            );
+
+            string overallStatus = TrustCenterPolicy.GetOverallStatus(
+                hasUntrustedDevices: untrustedDevices > 0,
+                recoveryNeedsReview: recoveryNeedsReview,
+                hasRecentBackup: hasRecentBackup,
+                hasPasswordIssues: weakPasswords > 0 || reusedPasswords > 0,
+                hasPendingSync: hasPendingSync,
+                authenticatorLockActive: authenticatorLockActive,
+                safetyWizardCompleted: currentVaultSettings.SafetyWizardCompletedAtUtc.HasValue
+            );
 
             using (Form dialog = new Form())
             {
                 dialog.Width = 860;
-                dialog.Height = 790;
+                dialog.Height = 970;
                 dialog.Text = "QuickForge Trust Center";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -3360,20 +3385,22 @@ namespace exam_test
                 titleLabel.Font = new Font("Segoe UI", 16, FontStyle.Bold);
 
                 Label subtitleLabel = new Label();
-                subtitleLabel.Text = "Review your vault safety. Use each card action to fix or inspect that area.";
+                subtitleLabel.Text =
+                    "Review your vault safety. Use each card action to fix or inspect that area." + Environment.NewLine +
+                    auditStatus + " / " + readinessStatus;
                 subtitleLabel.Left = 24;
                 subtitleLabel.Top = 56;
                 subtitleLabel.Width = 700;
-                subtitleLabel.Height = 24;
+                subtitleLabel.Height = 44;
                 subtitleLabel.ForeColor = softTextColor;
                 subtitleLabel.BackColor = Color.Transparent;
                 subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
 
                 Label overallStatusLabel = new Label();
-                overallStatusLabel.Text = overallStatus;
+                overallStatusLabel.Text = overallStatus + " / " + safetyWizardStatus;
                 overallStatusLabel.Left = 24;
                 overallStatusLabel.Top = 88;
-                overallStatusLabel.Width = 700;
+                overallStatusLabel.Width = 790;
                 overallStatusLabel.Height = 28;
                 overallStatusLabel.ForeColor = overallStatus == "Looks safe today"
                     ? successColor
@@ -3528,7 +3555,7 @@ namespace exam_test
                     "Your recovery key protects you if the vault code is forgotten. Keep it separate from backups.",
                     420,
                     130,
-                    currentVaultSettings.RecoveryKeyRotationRequired ? Color.FromArgb(255, 190, 90) : successColor,
+                    recoveryNeedsReview ? Color.FromArgb(255, 190, 90) : successColor,
                     "Recovery options",
                     () =>
                     {
@@ -3590,10 +3617,53 @@ namespace exam_test
                     authenticatorLockActive
                 );
 
+                Panel readinessCard = CreateTrustCard(
+                    "Real Password Readiness",
+                    readinessStatus,
+                    safetyWizardStatus + ". Fix this by reviewing the Safety Wizard, enabling Authenticator Lock, and clearing pending sync.",
+                    24,
+                    655,
+                    readinessStatus.Contains("not externally audited") || !currentVaultSettings.SafetyWizardCompletedAtUtc.HasValue
+                        ? Color.FromArgb(255, 190, 90)
+                        : successColor,
+                    "Open wizard",
+                    () =>
+                    {
+                        dialog.Close();
+
+                        BeginInvoke(new Action(async () =>
+                        {
+                            await ShowSafetyWizardDialogAsync(firstRun: false);
+                            ShowTrustCenterDialog();
+                        }));
+                    },
+                    !currentVaultSettings.SafetyWizardCompletedAtUtc.HasValue
+                );
+
+                Panel auditCard = CreateTrustCard(
+                    "External Audit",
+                    auditStatus,
+                    "QuickForge is still beta software. It has internal tests, but no independent security audit yet.",
+                    420,
+                    655,
+                    Color.FromArgb(255, 190, 90),
+                    "Read statement",
+                    () =>
+                    {
+                        MessageBox.Show(
+                            TrustCommunicationPolicy.GetBetaTrustStatement(),
+                            "Trust statement",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information
+                        );
+                    },
+                    true
+                );
+
                 Button legacyReportButton = new Button();
                 legacyReportButton.Text = "Full report";
                 legacyReportButton.Left = 24;
-                legacyReportButton.Top = 720;
+                legacyReportButton.Top = 900;
                 legacyReportButton.Width = 120;
                 legacyReportButton.Height = 30;
                 StyleActionButton(legacyReportButton);
@@ -3610,7 +3680,7 @@ namespace exam_test
                 Button closeButton = new Button();
                 closeButton.Text = "Close";
                 closeButton.Left = 735;
-                closeButton.Top = 720;
+                closeButton.Top = 900;
                 closeButton.Width = 100;
                 closeButton.Height = 30;
                 StyleActionButton(closeButton, true);
@@ -5199,12 +5269,7 @@ namespace exam_test
         }
         private Task ShowSafetyWizardDialogAsync(bool firstRun)
         {
-            if (!firstRun && !SafetyWizardPolicy.ShouldShowFirstRunWizard(currentVaultSettings))
-            {
-                return Task.CompletedTask;
-            }
-
-            if (!SafetyWizardPolicy.ShouldShowFirstRunWizard(currentVaultSettings))
+            if (firstRun && !SafetyWizardPolicy.ShouldShowFirstRunWizard(currentVaultSettings))
             {
                 return Task.CompletedTask;
             }
@@ -14424,6 +14489,9 @@ if (currentDriveService == null)
         }
     }
 }
+
+
+
 
 
 
