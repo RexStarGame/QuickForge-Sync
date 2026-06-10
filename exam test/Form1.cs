@@ -721,7 +721,11 @@ namespace exam_test
             if (currentDriveService == null)
             {
                 MessageBox.Show(
-                    "Connect with Google first before opening Settings.",
+                    MicrocopyPolicy.FormatDialog(
+                    "Settings unavailable.",
+                    "QuickForge is not connected to Google Drive.",
+                    "Connect with Google, then open Settings again."
+                ),
                     "Settings unavailable",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information
@@ -1618,7 +1622,11 @@ namespace exam_test
             if (!isVaultUnlocked || currentEncryptedVaultFile == null)
             {
                 MessageBox.Show(
-                    "Unlock your vault before changing Authenticator Lock.",
+                    MicrocopyPolicy.FormatDialog(
+                    "Authenticator Lock blocked.",
+                    "The vault is locked, so QuickForge cannot change security settings.",
+                    "Unlock your vault, then open Authenticator Lock settings again."
+                ),
                     "Vault locked",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information
@@ -1670,7 +1678,11 @@ namespace exam_test
                 !VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, unlockCheck))
             {
                 MessageBox.Show(
-                    "Wrong vault code or recovery key. Authenticator Lock was not enabled.",
+                    MicrocopyPolicy.FormatDialog(
+                    "Confirmation failed.",
+                    "The vault code or recovery key did not unlock this vault.",
+                    "Try again, or use your saved recovery key."
+                ),
                     "Confirmation failed",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning
@@ -1763,7 +1775,11 @@ namespace exam_test
                 !VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, unlockCheck))
             {
                 MessageBox.Show(
-                    "Wrong vault code or recovery key. Authenticator Lock was not enabled.",
+                    MicrocopyPolicy.FormatDialog(
+                    "Confirmation failed.",
+                    "The vault code or recovery key did not unlock this vault.",
+                    "Try again, or use your saved recovery key."
+                ),
                     "Confirmation failed",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning
@@ -2032,7 +2048,11 @@ namespace exam_test
                 !VaultCryptoService.CanUnlockVault(currentEncryptedVaultFile, unlockCheck))
             {
                 MessageBox.Show(
-                    "Wrong vault code or recovery key. Authenticator Lock was not disabled.",
+                    MicrocopyPolicy.FormatDialog(
+                    "Confirmation failed.",
+                    "The vault code or recovery key did not unlock this vault.",
+                    "Try again, or use your saved recovery key."
+                ),
                     "Confirmation failed",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning
@@ -7733,7 +7753,11 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
             {
                 SetSyncStatus("Not connected", error: true);
                 MessageBox.Show(
-                    "Google Drive is not connected. Log in with Google before refreshing from cloud.",
+                    MicrocopyPolicy.FormatDialog(
+                    "Refresh unavailable.",
+                    "QuickForge is not connected to Google Drive.",
+                    "Log in with Google, then try Refresh again."
+                ),
                     "Refresh unavailable",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning
@@ -7745,7 +7769,11 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
             {
                 SetSyncStatus("Vault locked", error: true);
                 MessageBox.Show(
-                    "Unlock your vault before refreshing from cloud.",
+                    MicrocopyPolicy.FormatDialog(
+                    "Refresh blocked.",
+                    "The vault is locked, so QuickForge cannot safely merge cloud data.",
+                    "Unlock your vault, then refresh from cloud again."
+                ),
                     "Vault locked",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning
@@ -7846,7 +7874,11 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
             {
                 SetSyncStatus("Not connected", error: true);
                 MessageBox.Show(
-                    "Google Drive is not connected. Log in with Google before syncing.",
+                    MicrocopyPolicy.FormatDialog(
+                    "Sync unavailable.",
+                    "QuickForge is not connected to Google Drive.",
+                    "Log in with Google, then try Sync now again."
+                ),
                     "Sync unavailable",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning
@@ -7858,7 +7890,11 @@ string backupStatus = currentVaultSettings.LastBackupAtUtc.HasValue
             {
                 SetSyncStatus("Vault locked", error: true);
                 MessageBox.Show(
-                    "Unlock your vault before using Sync now.",
+                    MicrocopyPolicy.FormatDialog(
+                    "Sync blocked.",
+                    "The vault is locked, so QuickForge cannot encrypt and upload changes.",
+                    "Unlock your vault, then use Sync now again."
+                ),
                     "Vault locked",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning
@@ -14489,6 +14525,7 @@ if (currentDriveService == null)
         }
     }
 }
+
 
 
 

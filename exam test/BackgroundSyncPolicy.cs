@@ -20,9 +20,11 @@
 
         public static string GetCloseBlockedMessage()
         {
-            return
-                "QuickForge still has encrypted local changes that have not finished syncing." +
-                "\n\nWait until Sync shows Active, or export an encrypted backup before closing.";
+            return MicrocopyPolicy.FormatDialog(
+                "Close blocked.",
+                "QuickForge still has encrypted local changes that have not finished syncing.",
+                "Wait until Sync shows Active, or export an encrypted backup before closing."
+            );
         }
 
         public static string GetQueuedStatus(bool isDeleteSync, bool alreadyRunningOrQueued)
@@ -47,3 +49,4 @@
         }
     }
 }
+
