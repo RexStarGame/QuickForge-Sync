@@ -5197,6 +5197,203 @@ namespace exam_test
 
             vaultUnlockStatusLabel.ForeColor = softTextColor;
         }
+        private Task ShowSafetyWizardDialogAsync(bool firstRun)
+        {
+            if (!firstRun && !SafetyWizardPolicy.ShouldShowFirstRunWizard(currentVaultSettings))
+            {
+                return Task.CompletedTask;
+            }
+
+            if (!SafetyWizardPolicy.ShouldShowFirstRunWizard(currentVaultSettings))
+            {
+                return Task.CompletedTask;
+            }
+
+            EnsureLocalDeviceIdentity();
+            EnsureVaultSafetyCollections();
+
+            using (Form dialog = new Form())
+            {
+                dialog.Width = 720;
+                dialog.Height = 560;
+                dialog.Text = "QuickForge Safety Wizard";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(16, 20, 34);
+
+                Label titleLabel = new Label();
+                titleLabel.Text = "Safety Wizard";
+                titleLabel.Left = 24;
+                titleLabel.Top = 18;
+                titleLabel.Width = 520;
+                titleLabel.Height = 34;
+                titleLabel.ForeColor = Color.White;
+                titleLabel.BackColor = Color.Transparent;
+                titleLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+
+                Label subtitleLabel = new Label();
+                subtitleLabel.Text =
+                    "Your vault was created. Review the safety checklist before storing real passwords.";
+                subtitleLabel.Left = 24;
+                subtitleLabel.Top = 58;
+                subtitleLabel.Width = 640;
+                subtitleLabel.Height = 38;
+                subtitleLabel.ForeColor = softTextColor;
+                subtitleLabel.BackColor = Color.Transparent;
+                subtitleLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Label checklistLabel = new Label();
+                checklistLabel.Left = 24;
+                checklistLabel.Top = 110;
+                checklistLabel.Width = 640;
+                checklistLabel.Height = 230;
+                checklistLabel.ForeColor = Color.White;
+                checklistLabel.BackColor = Color.FromArgb(20, 25, 42);
+                checklistLabel.BorderStyle = BorderStyle.FixedSingle;
+                checklistLabel.Padding = new Padding(12);
+                checklistLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+
+                Label statusLabel = new Label();
+                statusLabel.Left = 24;
+                statusLabel.Top = 352;
+                statusLabel.Width = 640;
+                statusLabel.Height = 56;
+                statusLabel.ForeColor = softTextColor;
+                statusLabel.BackColor = Color.Transparent;
+                statusLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+                void RefreshWizardStatus()
+                {
+                    bool deviceTrusted = IsCurrentDeviceTrusted();
+
+                    var readiness = new SafetyWizardReadiness
+                    {
+                        StrongVaultCodeConfirmed = true,
+                        RecoveryKeyConfirmed = true,
+                        AuthenticatorLockEnabled = IsAuthenticatorLockEnabled(),
+                        DeviceTrusted = deviceTrusted,
+                        AutoLockEnabled = currentVaultSettings.AutoLockMinutes > 0,
+                        BackupReminderEnabled = currentVaultSettings.RecoveryKeyReminderDays > 0,
+                        SafeFillExplained = true
+                    };
+
+                    checklistLabel.Text =
+                        SafetyWizardPolicy.GetStepText(readiness.StrongVaultCodeConfirmed, "Strong vault code created") + Environment.NewLine +
+                        SafetyWizardPolicy.GetStepText(readiness.RecoveryKeyConfirmed, "Recovery key confirmed and saved") + Environment.NewLine +
+                        SafetyWizardPolicy.GetStepText(readiness.AuthenticatorLockEnabled, "Authenticator Lock enabled") + Environment.NewLine +
+                        SafetyWizardPolicy.GetStepText(readiness.DeviceTrusted, "This device is trusted") + Environment.NewLine +
+                        SafetyWizardPolicy.GetStepText(readiness.AutoLockEnabled, "Auto-lock enabled") + Environment.NewLine +
+                        SafetyWizardPolicy.GetStepText(readiness.BackupReminderEnabled, "Recovery/backup reminder enabled") + Environment.NewLine +
+                        SafetyWizardPolicy.GetStepText(readiness.SafeFillExplained, "Safe Fill is step-by-step, no auto-paste");
+
+                    statusLabel.Text =
+                        SafetyWizardPolicy.GetReadinessStatus(readiness) + Environment.NewLine +
+                        TrustCommunicationPolicy.GetExternalAuditStatus() + ". Use test data until you are comfortable with the beta.";
+                }
+
+                Button authenticatorButton = new Button();
+                authenticatorButton.Text = "Set up Authenticator";
+                authenticatorButton.Left = 24;
+                authenticatorButton.Top = 430;
+                authenticatorButton.Width = 160;
+                authenticatorButton.Height = 34;
+                StyleActionButton(authenticatorButton);
+                authenticatorButton.Click += async (s, e) =>
+                {
+                    authenticatorButton.Enabled = false;
+
+                    try
+                    {
+                        await ShowAuthenticatorLockSettingsDialogAsync();
+                    }
+                    finally
+                    {
+                        authenticatorButton.Enabled = true;
+                        RefreshWizardStatus();
+                    }
+                };
+
+                Button autoLockButton = new Button();
+                autoLockButton.Text = "Use 10 min auto-lock";
+                autoLockButton.Left = 200;
+                autoLockButton.Top = 430;
+                autoLockButton.Width = 155;
+                autoLockButton.Height = 34;
+                StyleActionButton(autoLockButton);
+                autoLockButton.Click += (s, e) =>
+                {
+                    currentVaultSettings.AutoLockMinutes = 10;
+                    ApplyPerformanceSettingsToUi();
+                    MarkVaultChangedByCurrentDevice("Safety Wizard set auto-lock");
+                    QueueBackgroundVaultSync("Safety Wizard set auto-lock");
+                    RefreshWizardStatus();
+                };
+
+                Button reminderButton = new Button();
+                reminderButton.Text = "Set 30 day reminder";
+                reminderButton.Left = 370;
+                reminderButton.Top = 430;
+                reminderButton.Width = 150;
+                reminderButton.Height = 34;
+                StyleActionButton(reminderButton);
+                reminderButton.Click += (s, e) =>
+                {
+                    currentVaultSettings.RecoveryKeyReminderDays = 30;
+                    ApplyRecoverySettingsToUi();
+                    MarkVaultChangedByCurrentDevice("Safety Wizard set recovery reminder");
+                    QueueBackgroundVaultSync("Safety Wizard set recovery reminder");
+                    RefreshWizardStatus();
+                };
+
+                Button skipButton = new Button();
+                skipButton.Text = "Remind me later";
+                skipButton.Left = 380;
+                skipButton.Top = 485;
+                skipButton.Width = 130;
+                skipButton.Height = 34;
+                StyleActionButton(skipButton);
+                skipButton.Click += (s, e) =>
+                {
+                    currentVaultSettings.SafetyWizardSkippedAtUtc = DateTime.UtcNow;
+                    AddSafetyTimelineEvent("Safety Wizard skipped", "User skipped optional first-run safety setup.");
+                    QueueBackgroundVaultSync("Safety Wizard skipped");
+                    dialog.Close();
+                };
+
+                Button finishButton = new Button();
+                finishButton.Text = "Finish setup";
+                finishButton.Left = 530;
+                finishButton.Top = 485;
+                finishButton.Width = 130;
+                finishButton.Height = 34;
+                StyleActionButton(finishButton, true);
+                finishButton.Click += (s, e) =>
+                {
+                    currentVaultSettings.SafetyWizardCompletedAtUtc = DateTime.UtcNow;
+                    currentVaultSettings.SafetyWizardSkippedAtUtc = null;
+                    AddSafetyTimelineEvent("Safety Wizard completed", "User reviewed first-run safety checklist.");
+                    QueueBackgroundVaultSync("Safety Wizard completed");
+                    dialog.Close();
+                };
+
+                dialog.Controls.Add(titleLabel);
+                dialog.Controls.Add(subtitleLabel);
+                dialog.Controls.Add(checklistLabel);
+                dialog.Controls.Add(statusLabel);
+                dialog.Controls.Add(authenticatorButton);
+                dialog.Controls.Add(autoLockButton);
+                dialog.Controls.Add(reminderButton);
+                dialog.Controls.Add(skipButton);
+                dialog.Controls.Add(finishButton);
+
+                RefreshWizardStatus();
+                dialog.ShowDialog(this);
+            }
+
+            return Task.CompletedTask;
+        }
         private void ConfigureVaultAccessForCreate()
         {
             unlockStatusTimer.Stop();
@@ -14227,6 +14424,7 @@ if (currentDriveService == null)
         }
     }
 }
+
 
 
 

@@ -36,6 +36,8 @@ namespace exam_test
         public DateTime? LastChangedAtUtc { get; set; } = null;
 
         public DateTime? LastBackupAtUtc { get; set; } = null;
+        public DateTime? SafetyWizardCompletedAtUtc { get; set; } = null;
+        public DateTime? SafetyWizardSkippedAtUtc { get; set; } = null;
     }
 
     public class KnownVaultDevice
@@ -93,6 +95,7 @@ namespace exam_test
         public string EncryptedDataKey { get; set; } = "";
     }
 }
+
 
 
 
