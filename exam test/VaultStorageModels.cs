@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace exam_test
@@ -22,6 +22,8 @@ namespace exam_test
         public string AuthenticatorSecretBase32 { get; set; } = "";
         public DateTime? AuthenticatorEnabledAtUtc { get; set; } = null;
         public long? LastAuthenticatorTimeWindowUsed { get; set; } = null;
+        public int AuthenticatorFailedAttempts { get; set; } = 0;
+        public DateTime? AuthenticatorLockoutUntilUtc { get; set; } = null;
         public int AutoLockMinutes { get; set; } = 10;
         public int AutoRefreshMinutes { get; set; } = 5;
 

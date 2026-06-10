@@ -1382,9 +1382,10 @@ namespace exam_test
 
             return choice;
         }
-        private bool ShowAuthenticatorUnlockDialog(string authenticatorSecretBase32)
+        private bool ShowAuthenticatorUnlockDialog(VaultSettings authenticatorSettings)
         {
-            if (string.IsNullOrWhiteSpace(authenticatorSecretBase32))
+            if (authenticatorSettings == null ||
+                string.IsNullOrWhiteSpace(authenticatorSettings.AuthenticatorSecretBase32))
             {
                 return true;
             }
@@ -1394,7 +1395,7 @@ namespace exam_test
             using (Form dialog = new Form())
             {
                 dialog.Width = 460;
-                dialog.Height = 250;
+                dialog.Height = 260;
                 dialog.Text = "Two-step vault unlock";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -1413,18 +1414,18 @@ namespace exam_test
                 titleLabel.Font = new Font("Segoe UI", 13, FontStyle.Bold);
 
                 Label detailLabel = new Label();
-                detailLabel.Text = "Open your authenticator app, find QuickForge, and type the 6-digit code. QuickForge continues automatically after 6 digits.";
+                detailLabel.Text = "Vault code accepted. Authenticator code required. Open your authenticator app, find QuickForge, and type the 6-digit code. QuickForge continues automatically after 6 digits.";
                 detailLabel.Left = 22;
                 detailLabel.Top = 55;
                 detailLabel.Width = 390;
-                detailLabel.Height = 48;
+                detailLabel.Height = 58;
                 detailLabel.ForeColor = softTextColor;
                 detailLabel.BackColor = Color.Transparent;
                 detailLabel.Font = new Font("Segoe UI", 9, FontStyle.Regular);
 
                 TextBox codeBox = new TextBox();
                 codeBox.Left = 22;
-                codeBox.Top = 108;
+                codeBox.Top = 118;
                 codeBox.Width = 160;
                 codeBox.Height = 30;
                 codeBox.MaxLength = 6;
@@ -1433,11 +1434,11 @@ namespace exam_test
                 StyleAuthenticatorCodeInput(codeBox);
 
                 Label statusLabel = new Label();
-                statusLabel.Text = "";
+                statusLabel.Text = "Vault code accepted. Authenticator code required.";
                 statusLabel.Left = 22;
-                statusLabel.Top = 152;
+                statusLabel.Top = 160;
                 statusLabel.Width = 390;
-                statusLabel.Height = 28;
+                statusLabel.Height = 34;
                 statusLabel.ForeColor = softTextColor;
                 statusLabel.BackColor = Color.Transparent;
                 statusLabel.Font = new Font("Segoe UI", 8, FontStyle.Bold);
@@ -1445,7 +1446,7 @@ namespace exam_test
                 Button cancelButton = new Button();
                 cancelButton.Text = "Cancel";
                 cancelButton.Left = 220;
-                cancelButton.Top = 184;
+                cancelButton.Top = 198;
                 cancelButton.Width = 90;
                 cancelButton.Height = 34;
                 StyleActionButton(cancelButton);
@@ -1454,24 +1455,40 @@ namespace exam_test
                 Button unlockButton = new Button();
                 unlockButton.Text = "Unlock";
                 unlockButton.Left = 325;
-                unlockButton.Top = 184;
+                unlockButton.Top = 198;
                 unlockButton.Width = 90;
                 unlockButton.Height = 34;
                 StyleActionButton(unlockButton, true);
 
                 unlockButton.Click += (s, e) =>
                 {
-                    if (VerifyAuthenticatorCode(
-                        authenticatorSecretBase32,
-                        codeBox.Text,
-                        out long timeWindowUsed))
+                    AuthenticatorLockVerificationResult result =
+                        AuthenticatorLockService.VerifyCode(
+                            authenticatorSettings,
+                            codeBox.Text,
+                            DateTime.UtcNow
+                        );
+
+                    if (result.Success)
                     {
                         verified = true;
                         dialog.Close();
                         return;
                     }
 
-                    statusLabel.Text = "Wrong or expired code. Open your authenticator app and try the newest 6-digit code.";
+                    if (result.RateLimited && result.LockoutUntilUtc.HasValue)
+                    {
+                        statusLabel.Text =
+                            result.UserMessage +
+                            " Try again in about " +
+                            FormatRemainingLockoutTime(result.LockoutUntilUtc.Value) +
+                            ".";
+                    }
+                    else
+                    {
+                        statusLabel.Text = result.UserMessage;
+                    }
+
                     statusLabel.ForeColor = dangerColor;
                     codeBox.SelectAll();
                     codeBox.Focus();
@@ -5817,11 +5834,11 @@ namespace exam_test
                 SetSyncStatus("Vault code accepted - authenticator required");
                 SetPreviewText(
                     "Vault code accepted.",
-                    "Enter the 6-digit authenticator code to finish unlocking.",
-                    "QuickForge will not open the vault until both checks pass."
+                    "Authenticator code required.",
+                    "Enter the 6-digit code to finish unlocking. QuickForge will not open the vault until both checks pass."
                 );
 
-                if (!ShowAuthenticatorUnlockDialog(unlockedVaultSettings.AuthenticatorSecretBase32))
+                if (!ShowAuthenticatorUnlockDialog(unlockedVaultSettings))
                 {
                     vaultCode = "";
                     currentDataKey = null;
@@ -5880,6 +5897,12 @@ namespace exam_test
 
             bool deviceTrustRegistrationChanged = RegisterCurrentDeviceForVault(true);
             SyncDeviceTrustRegistrationAfterUnlockIfNeeded(deviceTrustRegistrationChanged);
+
+            if (authenticatorRequired)
+            {
+                MarkVaultChangedByCurrentDevice("Authenticator replay guard updated");
+                QueueBackgroundVaultSync("Authenticator replay guard updated");
+            }
 
             ApplyRecoverySettingsToUi();
             ApplyDeviceTrustRestrictionsToUi();
@@ -14020,6 +14043,8 @@ if (currentDriveService == null)
         }
     }
 }
+
+
 
 
 
